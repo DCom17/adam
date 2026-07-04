@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Auth bootstrap: if opened with #token=... (desktop launcher or phone Connect-QR),
+     store the token to localStorage and strip it from the URL/history. The fragment
+     never reaches the server. No-op on normal navigation. -->
+<script>
+(function(){try{var h=(location.hash||"").replace(/^#/,"");if(h){var t=new URLSearchParams(h).get("token");if(t&&t.trim()){localStorage.setItem("jarvis_token",t.trim());localStorage.setItem("jarvis_url",location.origin);}}}catch(e){}try{if(location.hash){history.replaceState(null,document.title,location.pathname+location.search);}}catch(e){try{location.hash="";}catch(e2){}}})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Jarvis Voice Local — LinkedIn Setup</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 ui-monospace, "Cascadia Code", Consolas, monospace;
+         background: #0e1116; color: #d7dde5; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+           padding: 12px 18px; background: #151a22; border-bottom: 1px solid #232a35; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .3px; }
+  header .spacer { flex: 1; }
+  main { max-width: 760px; margin: 0 auto; padding: 18px; }
+  section { background: #141922; border: 1px solid #232a35; border-radius: 8px; margin: 0 0 16px; }
+  section > .head { padding: 10px 14px; border-bottom: 1px solid #232a35; font-weight: 600; }
+  section > .body { padding: 12px 14px; }
+  button, input, select { font: inherit; background: #1c232e; color: #d7dde5;
+                  border: 1px solid #2c3542; border-radius: 6px; padding: 6px 10px; }
+  button { cursor: pointer; } button:hover { background: #232c39; }
+  button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  a { color: #58a6ff; }
+  label { color: #9aa6b3; margin-right: 4px; }
+  ol.steps { margin: 0; padding-left: 0; list-style: none; counter-reset: step; }
+  ol.steps > li { position: relative; padding: 0 0 14px 38px; margin: 0; }
+  ol.steps > li::before { counter-increment: step; content: counter(step);
+    position: absolute; left: 0; top: -2px; width: 26px; height: 26px; border-radius: 50%;
+    background: #1c232e; border: 1px solid #2c3542; color: #9aa6b3;
+    display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  ol.steps > li h3 { margin: 2px 0 6px; font-size: 14px; font-weight: 600; }
+  .muted { color: #7c8794; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+  .hidden { display: none !important; }
+  pre.snippet { margin: 6px 0; padding: 8px 10px; background: #0c0f14; border: 1px solid #232a35;
+                border-radius: 6px; overflow: auto; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+  .warnbox { color: #e0a020; border: 1px solid #5c4410; border-radius: 6px; padding: 8px 11px; margin: 8px 0; white-space: pre-wrap; }
+  .errbox  { color: #e74c3c; border: 1px solid #5c2222; border-radius: 6px; padding: 8px 11px; margin: 8px 0; white-space: pre-wrap; }
+  .okbox   { color: #2ecc71; border: 1px solid #1e5631; border-radius: 6px; padding: 8px 11px; margin: 8px 0; white-space: pre-wrap; }
+  .status  { font-size: 13px; color: #9aa6b3; margin-left: 6px; }
+  .gate { max-width: 460px; margin: 12vh auto; }
+  details.advanced > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+  details.advanced { border-top: 1px dashed #2c3542; margin-top: 6px; padding-top: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>LinkedIn Setup <span class="muted">— Jarvis Voice Local</span></h1>
+  <span class="spacer"></span>
+  <a href="/console">Operator Console</a>
+  <button id="signOut" class="hidden">Sign out</button>
+</header>
+
+<!-- Token gate (carries no secret; token is pasted client-side, stored on this device only) -->
+<main id="gateView">
+  <section class="gate">
+    <div class="head">Sign in</div>
+    <div class="body">
+      <p class="muted">This page talks to your local server with your bearer token (the same
+        JARVIS_TOKEN the Operator Console uses). It is stored on this device only.</p>
+      <p class="muted">Easiest way in: on your computer, start Jarvis with the <b>Start Jarvis</b>
+        launcher (<code>scripts\start-jarvis.ps1</code>) — it opens you already signed in, so you
+        won't see this box. On a phone, open the Operator Console's <b>Connect phone</b> and scan the
+        sign-in QR. To copy the token by hand, run <code>scripts\copy-token.ps1</code> and paste it above.</p>
+      <div class="row">
+        <input id="tokenInput" type="password" placeholder="Paste JARVIS_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
+        <button class="primary" id="signIn">Sign in</button>
+      </div>
+      <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
+      <div class="errbox hidden" id="gateErr"></div>
+    </div>
+  </section>
+</main>
+
+<!-- Wizard -->
+<main id="wizardView" class="hidden">
+
+  <section>
+    <div class="body">
+      <div class="warnbox">This LinkedIn integration is <b>opt-in</b> and stays <b>disabled</b> until you
+turn it on. By default it is a <b>drafting</b> tool: Jarvis writes posts (and profile text) that
+<b>you</b> review and paste into LinkedIn by hand — no LinkedIn login, no automation. Jarvis <b>cannot
+read your LinkedIn feed</b> and <b>cannot delete</b> anything. Jarvis never creates or signs up for a
+LinkedIn account — automating signup violates LinkedIn's User Agreement.</div>
+    </div>
+  </section>
+
+  <!-- LANE 1 — DRAFT (default, no connection) -->
+  <section>
+    <div class="head">Lane 1 — Draft posts (default, recommended)</div>
+    <div class="body">
+      <p>This is the whole product for most people. With the connector on, Jarvis drafts a post or
+         profile blurb, you approve it like any other draft, and you copy it into LinkedIn yourself.</p>
+      <ul class="muted">
+        <li>No LinkedIn credentials needed — nothing to connect.</li>
+        <li>Every draft routes through the normal approval flow before you see it.</li>
+        <li>You paste the final text into LinkedIn by hand, so you always have the last word.</li>
+      </ul>
+      <p class="muted">To enable just the draft lane, save this in <b>settings.json</b> and restart Jarvis:</p>
+      <pre class="snippet" id="draftSnippet">"integrations": {
+  "linkedin": {
+    "enabled": true,
+    "api_enabled": false,
+    "client_id": "",
+    "author_urn": "",
+    "timeout_seconds": 20
+  }
+}</pre>
+      <div class="row">
+        <button class="primary" id="enableDraftBtn">Enable draft lane</button>
+        <button id="copyDraft">Copy settings instead</button>
+        <span class="status" id="enableDraftStatus"></span>
+      </div>
+      <div class="errbox hidden" id="enableDraftErr"></div>
+      <div class="okbox hidden" id="draftDoneBox">Saved. Draft lane is on. <b>Restart Jarvis</b> (close the
+black "Jarvis Voice Local" window and relaunch), then ask Jarvis to "draft a LinkedIn post about …".</div>
+    </div>
+  </section>
+
+  <!-- LANE 2 — API AUTO-POST (advanced, collapsible, off) -->
+  <section>
+    <div class="head">Lane 2 — Auto-post to your own feed (advanced, optional)</div>
+    <div class="body">
+      <div class="warnbox">Advanced and entirely optional. This lets Jarvis publish an
+<b>already-approved</b> post to <b>your own</b> LinkedIn feed over the API. It is <b>never automatic</b> —
+every post is an explicit action you take on a draft you already approved. It needs your own LinkedIn
+Developer App and a member access token, which <b>expires about every 60 days</b> (LinkedIn issues no
+long-lived token), so you will re-paste it periodically. There is <b>no shared Jarvis app</b> — it must
+be fully your own. Jarvis still cannot read your feed and cannot delete posts.</div>
+
+      <details class="advanced">
+        <summary>Set up the API auto-post lane</summary>
+        <ol class="steps">
+          <li>
+            <h3>Create a LinkedIn Company Page</h3>
+            <p class="muted">A Developer App must be tied to a Page. Make one (it can be a personal
+              brand page) at <a href="https://www.linkedin.com/company/setup/new/" target="_blank" rel="noopener">linkedin.com/company/setup/new &#8599;</a>.</p>
+          </li>
+          <li>
+            <h3>Create a Developer App</h3>
+            <p class="muted">At <a href="https://www.linkedin.com/developers/apps/new" target="_blank" rel="noopener">the LinkedIn developer portal &#8599;</a>,
+              create an app and associate it with your Page.</p>
+          </li>
+          <li>
+            <h3>Add the products you need</h3>
+            <p class="muted">On the app's <b>Products</b> tab, request <b>Share on LinkedIn</b> and
+              <b>Sign In with LinkedIn using OpenID Connect</b>. These grant the
+              <code>w_member_social</code> (post) and <code>openid/profile</code> (identity) scopes.</p>
+          </li>
+          <li>
+            <h3>Run the OAuth flow and get an access token</h3>
+            <p class="muted">From the app's <b>Auth</b> tab, do the 3-legged OAuth flow as yourself and
+              copy the resulting <b>member access token</b>. (For v1 you run this once by hand — Jarvis
+              does not host a redirect. The token lasts about 60 days; re-paste it when it expires.)</p>
+            <p class="muted">You'll also see your <b>Client ID</b> and <b>Client Secret</b> on the
+              <b>Auth</b> tab.</p>
+          </li>
+          <li>
+            <h3>Paste your credentials here to test</h3>
+            <div class="row">
+              <label style="min-width:104px;">Client ID</label>
+              <input id="clientId" type="text" placeholder="your app's Client ID (not a secret)" style="flex:1;min-width:240px;" autocomplete="off">
+            </div>
+            <div class="row">
+              <label style="min-width:104px;">Client Secret</label>
+              <input id="clientSecret" type="password" placeholder="your app's Client Secret" style="flex:1;min-width:240px;" autocomplete="off">
+            </div>
+            <div class="row">
+              <label style="min-width:104px;">Access token</label>
+              <input id="accessToken" type="password" placeholder="your member access token (w_member_social)" style="flex:1;min-width:240px;" autocomplete="off">
+            </div>
+            <p class="muted">For the <b>test</b>, only the access token is sent — to LinkedIn, to confirm it
+              works and resolve your author id (your Client Secret is not sent by the test). When you later
+              click <b>Enable auto-post lane</b>, Jarvis saves the token (and Client Secret, if you entered
+              one) to your local <code>.env</code> for you — you never edit a file by hand. Nothing is ever
+              put in a link or logged.</p>
+          </li>
+          <li>
+            <h3>Test the connection</h3>
+            <div class="row">
+              <button class="primary" id="testBtn">Test connection</button>
+              <span class="status" id="testStatus"></span>
+            </div>
+            <div class="okbox hidden" id="testOk"></div>
+            <div class="errbox hidden" id="testErr"></div>
+          </li>
+        </ol>
+      </details>
+    </div>
+  </section>
+
+  <!-- API-lane payoff: one-click enable (the server writes settings + .env) -->
+  <section id="finishSec" class="hidden">
+    <div class="head">&#10003; Verified — turn on the auto-post lane</div>
+    <div class="body">
+      <p>Your token works and your author id is resolved. One click and Jarvis writes its own settings
+        and saves your token (and client secret, if you entered one) for you — no editing files.</p>
+      <div class="row">
+        <button class="primary" id="enableBtn">Enable auto-post lane</button>
+        <span class="status" id="enableStatus"></span>
+      </div>
+      <div class="errbox hidden" id="enableErr"></div>
+      <div class="warnbox" style="margin-top:10px;">Your Client Secret and access token are saved to your
+local <code>.env</code> only — never shown, linked, or logged. The token expires about every 60 days;
+re-run this when posting starts failing. Posting is still never automatic — every post is an explicit
+action on a draft you already approved.</div>
+      <details class="advanced" style="margin-top:6px;">
+        <summary>Prefer to set it up by hand?</summary>
+        <p class="muted">In <b>settings.json</b> set the linkedin block to:</p>
+        <pre class="snippet" id="settingsSnippet"></pre>
+        <button id="copySettings">Copy settings block</button>
+        <p class="muted" style="margin-top:10px;">Then in <b>.env</b> set <code>LINKEDIN_ACCESS_TOKEN</code>
+          (and <code>LINKEDIN_CLIENT_SECRET</code> if you have one).</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- Enabled: restart + try-it prompt -->
+  <section id="doneSec" class="hidden">
+    <div class="head">&#10003; Auto-post lane enabled</div>
+    <div class="body">
+      <div class="okbox">Saved. Jarvis wrote your settings and your secrets for you.</div>
+      <p><b>One more step:</b> restart Jarvis (close the black "Jarvis Voice Local" window and relaunch)
+        so it loads the new setting.</p>
+      <p class="muted">Then: ask Jarvis to draft a post, approve it, and use the publish action. Posting
+        is never automatic — it's always an explicit action on an approved draft.</p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// Bearer token read from localStorage; sent only in the Authorization header — never
+// in a URL or query string. Same keys as the Operator Console so one sign-in covers both.
+var LS = {
+  get token() { return localStorage.getItem("jarvis_token") || ""; },
+  set token(v) { localStorage.setItem("jarvis_token", v); },
+  clearToken() { localStorage.removeItem("jarvis_token"); },
+  get url() { return (localStorage.getItem("jarvis_url") || location.origin).replace(/\/$/, ""); },
+  set url(v) { localStorage.setItem("jarvis_url", v.replace(/\/$/, "")); }
+};
+
+function $(id) { return document.getElementById(id); }
+function show(el) { el.classList.remove("hidden"); }
+function hide(el) { el.classList.add("hidden"); }
+
+function authHeaders(extra) {
+  var h = { "Authorization": "Bearer " + LS.token };
+  if (extra) for (var k in extra) h[k] = extra[k];
+  return h;
+}
+
+// --- gate ---
+function enterWizard() { hide($("gateView")); show($("wizardView")); show($("signOut")); }
+function enterGate() { show($("gateView")); hide($("wizardView")); hide($("signOut")); }
+
+async function signIn() {
+  var t = $("tokenInput").value.trim();
+  var u = $("urlInput").value.trim();
+  if (!t) { $("gateErr").textContent = "Paste your JARVIS_TOKEN."; show($("gateErr")); return; }
+  LS.token = t;
+  if (u) LS.url = u;
+  // Verify the token against a cheap token-gated route before entering.
+  try {
+    var r = await fetch(LS.url + "/jobs", { headers: authHeaders() });
+    if (r.status === 403) { $("gateErr").textContent = "That token was rejected."; show($("gateErr")); LS.clearToken(); return; }
+  } catch (e) {
+    $("gateErr").textContent = "Could not reach the server at " + LS.url + "."; show($("gateErr")); return;
+  }
+  hide($("gateErr"));
+  enterWizard();
+}
+
+function signOut() { LS.clearToken(); $("tokenInput").value = ""; enterGate(); }
+
+// --- lane 1: copy draft settings ---
+async function copyDraft() {
+  try { await navigator.clipboard.writeText($("draftSnippet").textContent); } catch (e) {}
+}
+
+// --- lane 2: test connection (sends ONLY the access token) ---
+async function testConnection() {
+  var token = $("accessToken").value.trim();
+  var clientId = $("clientId").value.trim();
+  hide($("testOk")); hide($("testErr")); hide($("finishSec")); hide($("doneSec"));
+  $("testStatus").textContent = "Testing…";
+  if (!token) { $("testStatus").textContent = ""; $("testErr").textContent = "Paste your member access token."; show($("testErr")); return; }
+  try {
+    var r = await fetch(LS.url + "/integrations/linkedin/test", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ access_token: token, client_id: clientId || null })
+    });
+    $("testStatus").textContent = "";
+    if (r.status === 403) { $("testErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("testErr")); return; }
+    var data = await r.json();
+    if (data.ok) {
+      $("testOk").textContent = "✓ Connected" + (data.name ? " as " + data.name : "") + ". Author id resolved.";
+      show($("testOk"));
+      renderFinish(clientId, data.author_urn || "");
+    } else {
+      $("testErr").textContent = "LinkedIn rejected the test: " + (data.error || "unknown error") + ". Re-check the token (it may have expired).";
+      show($("testErr"));
+    }
+  } catch (e) {
+    $("testStatus").textContent = "";
+    $("testErr").textContent = "Could not reach your Jarvis server to run the test.";
+    show($("testErr"));
+  }
+}
+
+// --- finish guidance (built client-side; client_id + author URN are not secrets;
+// the access token and client secret are NOT echoed here) ---
+function renderFinish(clientId, authorUrn) {
+  var block =
+    '"integrations": {\n' +
+    '  "linkedin": {\n' +
+    '    "enabled": true,\n' +
+    '    "api_enabled": true,\n' +
+    '    "client_id": ' + JSON.stringify(clientId || "") + ',\n' +
+    '    "author_urn": ' + JSON.stringify(authorUrn || "") + ',\n' +
+    '    "timeout_seconds": 20\n' +
+    '  }\n' +
+    '}';
+  $("settingsSnippet").textContent = block;   // textContent — never innerHTML
+  show($("finishSec"));
+}
+
+async function copySettings() {
+  try { await navigator.clipboard.writeText($("settingsSnippet").textContent); } catch (e) {}
+}
+
+// --- lane 1 one-click enable: server writes settings.json (no secrets) ---
+async function enableDraft() {
+  hide($("enableDraftErr")); hide($("draftDoneBox"));
+  $("enableDraftStatus").textContent = "Saving…";
+  $("enableDraftBtn").disabled = true;
+  try {
+    var r = await fetch(LS.url + "/integrations/linkedin/enable", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ api_enabled: false })
+    });
+    $("enableDraftStatus").textContent = "";
+    if (r.status === 403) { $("enableDraftErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("enableDraftErr")); $("enableDraftBtn").disabled = false; return; }
+    var data = await r.json();
+    if (data.ok) { show($("draftDoneBox")); }
+    else { $("enableDraftErr").textContent = "Couldn't save: " + (data.error || "unknown error") + "."; show($("enableDraftErr")); $("enableDraftBtn").disabled = false; }
+  } catch (e) {
+    $("enableDraftStatus").textContent = "";
+    $("enableDraftErr").textContent = "Could not reach your Jarvis server to save the setting.";
+    show($("enableDraftErr")); $("enableDraftBtn").disabled = false;
+  }
+}
+
+// --- lane 2 one-click enable: server writes settings.json + .env (token + secret) ---
+async function enableApi() {
+  var token = $("accessToken").value.trim();
+  var clientId = $("clientId").value.trim();
+  var clientSecret = $("clientSecret").value.trim();
+  hide($("enableErr"));
+  if (!token) { $("enableErr").textContent = "Re-paste your member access token above first."; show($("enableErr")); return; }
+  $("enableStatus").textContent = "Saving…";
+  $("enableBtn").disabled = true;
+  try {
+    var r = await fetch(LS.url + "/integrations/linkedin/enable", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ api_enabled: true, access_token: token, client_id: clientId, client_secret: clientSecret })
+    });
+    $("enableStatus").textContent = "";
+    if (r.status === 403) { $("enableErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
+    var data = await r.json();
+    if (data.ok) { hide($("finishSec")); show($("doneSec")); }
+    else { $("enableErr").textContent = "Couldn't save: " + (data.error || "unknown error") + ". You can use the by-hand steps instead."; show($("enableErr")); $("enableBtn").disabled = false; }
+  } catch (e) {
+    $("enableStatus").textContent = "";
+    $("enableErr").textContent = "Could not reach your Jarvis server to save the setting.";
+    show($("enableErr")); $("enableBtn").disabled = false;
+  }
+}
+
+// --- wire up ---
+$("signIn").addEventListener("click", signIn);
+$("tokenInput").addEventListener("keydown", function (e) { if (e.key === "Enter") signIn(); });
+$("signOut").addEventListener("click", signOut);
+$("copyDraft").addEventListener("click", copyDraft);
+$("enableDraftBtn").addEventListener("click", enableDraft);
+$("testBtn").addEventListener("click", testConnection);
+$("enableBtn").addEventListener("click", enableApi);
+$("copySettings").addEventListener("click", copySettings);
+
+// Prefill the server field; auto-enter if a token is already stored on this device.
+$("urlInput").value = LS.url;
+if (LS.token) enterWizard(); else enterGate();
+</script>
+</body>
+</html>

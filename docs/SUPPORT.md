@@ -1,0 +1,68 @@
+# Support & Scope (v0.9 friends-&-family beta)
+
+What this beta supports, what it requires, and what it deliberately does **not** do
+yet. Jarvis Voice Local is **local-first**: you run the backend on your own machine,
+with your own Claude Code credentials, against your own files. There is no hosted
+service and nothing is routed through anyone else's account.
+
+## Audience
+
+v0.9 is a **prosumer + friends/family** beta. The long-term goal is a non-technical
+consumer experience (v1.0), but v0.9 assumes you're comfortable installing software and
+following a setup guide.
+
+## Requirements
+
+- **Windows 10 or 11.** (macOS and Linux are not supported yet.)
+- **Claude Code already installed** and working on the machine.
+- **Python** installed (not bundled yet). Install dependencies with
+  `python -m pip install -r requirements.txt`.
+- A **single user** per backend instance.
+
+## What works
+
+- **Desktop / local by default.** On the PC, `http://localhost:8010` is a secure
+  context, so the full app — including voice — works with zero networking setup.
+- **Mobile (phone) access** via **Tailscale + Tailscale Serve HTTPS** — the supported
+  path. See [`CONNECT_YOUR_PHONE.md`](./CONNECT_YOUR_PHONE.md). iPhone voice/mic/PWA
+  require HTTPS; Tailscale Serve provides it privately.
+- **Operator console** at `/console` (status, jobs, proposed changes, approvals, audit,
+  and safe action controls).
+
+## Limited / advanced
+
+- **Public remote access** (cloudflared named tunnel + your domain) is **advanced and
+  limited-support**, and **requires Cloudflare Access**. See
+  [`ADVANCED_REMOTE.md`](./ADVANCED_REMOTE.md). A public URL guarded by only the bearer
+  token is not acceptable.
+
+## Not supported / not yet
+
+- **Android** — not validated. It may work, but it isn't tested or supported in v0.9.
+- **Smart glasses** — not advertised or supported until the hardware path is tested.
+- **macOS / Linux** — not supported yet.
+- **Hosted SaaS** — there is none, by design. You run it yourself.
+- **Shared / maintainer Claude account** — never; you use your own Claude Code
+  credentials.
+- **Multi-user / accounts / per-device tokens / device pairing** — not yet (single
+  static bearer token in v0.9).
+- **Installer / system tray / auto-start / auto-updater** — not yet. v0.9 is a ZIP +
+  `scripts/setup.py` + `scripts/doctor.py`; updates are manual (see
+  [`RELEASE.md`](./RELEASE.md)).
+
+## Safety model (unchanged in every access mode)
+
+- `agent_safety.mode = draft_only` is the default and stays on.
+- The **server is the sole writer**; Claude proposes changes, it does not write your
+  files directly.
+- File changes go through **review → approval → apply**, with permission checks,
+  staleness/conflict detection, backups, and an audit log.
+- Your token, keys, and files never leave your machine; nothing is routed through a
+  third party.
+
+## Getting unstuck
+
+Run `python scripts/doctor.py` first — it gives plain-language PASS/WARN/FAIL guidance
+(including mobile-access and HTTPS advice). For phone-specific issues, the troubleshooting
+section of [`CONNECT_YOUR_PHONE.md`](./CONNECT_YOUR_PHONE.md) covers the common cases
+(insecure-context banner, 403, can't-reach, mic).

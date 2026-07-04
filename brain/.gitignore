@@ -1,0 +1,47 @@
+# === Secrets — never commit ===
+.env
+*.env
+!.env.example
+config/jarvis.config.json
+*.pem
+*_keys.json
+config/*.local.json
+**/push_sub.json
+**/last_result.json
+**/vapid_*.pem
+
+# === User runtime data (accumulates after install; not part of the kit) ===
+# These ship as empty templates only. A user's real data should never be pushed.
+# (Listed for safety if someone ever git-tracks their own install.)
+03_daily_logs/*.md
+!03_daily_logs/_TEMPLATE.md
+03_daily_logs/_archive/
+12_night_watch/packets/
+12_night_watch/run_logs/
+12_night_watch/backups/
+06_calendar/packet_archive/
+05_tasks/_archive/
+90_private_summaries/
+
+# === Heavy artifacts — distributed via download, not the repo ===
+*.onnx
+voices-*.bin
+cloudflared.exe
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.m4a
+
+# === Update backups (created by scripts/update.ps1) ===
+_update_backup/
+
+# === Build / env junk ===
+.venv/
+venv/
+__pycache__/
+*.pyc
+node_modules/
+.obsidian/workspace.json
+.DS_Store
+Thumbs.db

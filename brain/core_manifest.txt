@@ -1,0 +1,76 @@
+# JARVIS Kit — Core Manifest
+#
+# This is the contract that makes updates safe. An update may overwrite ONLY the
+# files listed below (the framework). Every file NOT listed here is YOUR DATA
+# (profile, memory, logs, tasks, dashboard state, calendar state, your graph
+# vocabulary) and an update must NEVER touch it.
+#
+# "Update JARVIS" reads this file and copies only these paths from the new
+# release over your install. Lines starting with # are comments. Paths are
+# relative to the kit root, forward slashes.
+#
+# When adding a new framework file to the kit, add it here too, or updates won't
+# deliver it.
+
+# --- Top-level framework ---
+CLAUDE.md
+README.md
+SETUP.md
+BOOTSTRAP.md
+LICENSE
+VERSION
+.gitignore
+.env.example
+core_manifest.txt
+MIGRATIONS.md
+setup_dashboard.md
+setup_calendar.md
+
+# --- Config (examples + loader only; your real config/.env are never listed) ---
+config/jarvis.config.example.json
+config/jarvis_config.ps1
+
+# --- Scripts ---
+scripts/graph_linker.py
+scripts/performance_analysis.py
+scripts/update.ps1
+
+# --- Identity / persona (framework) ---
+01_identity/assistant_identity.md
+01_identity/jarvis_voice.md
+01_identity/operating_rules.md
+
+# --- Inbox rules ---
+00_inbox/inbox_processing_rules.md
+
+# --- Calendar workflows & rules ---
+06_calendar/calendar_commit_workflow.md
+06_calendar/calendar_rules.md
+06_calendar/daily_planning_workflow.md
+06_calendar/gap_fill_protocol.md
+
+# --- Review workflows ---
+07_reviews/daily_shutdown_workflow.md
+07_reviews/weekly_review_workflow.md
+
+# --- Graph schema rules (NOT canonical_nodes.md / aliases.md — those are yours) ---
+10_graph_schema/linking_rules.md
+10_graph_schema/link_maintenance_workflow.md
+10_graph_schema/node_types.md
+10_graph_schema/relationship_types.md
+10_graph_schema/wiki_rules.md
+
+# --- Hunter dashboard rules & definitions (NOT state/csv — those are yours) ---
+11_dashboard/dashboard_update_workflow.md
+11_dashboard/hunter_rules.md
+11_dashboard/rank_rules.md
+11_dashboard/stat_definitions.md
+11_dashboard/xp_rules.md
+11_dashboard/performance_experiments.md
+
+# --- Night Watch workflow ---
+12_night_watch/night_watch_workflow.md
+
+# --- Templates that ship but are safe to refresh (structure only, no user data) ---
+03_daily_logs/_TEMPLATE.md
+04_projects/README.md

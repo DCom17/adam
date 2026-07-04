@@ -1,0 +1,141 @@
+===========================================================
+  JARVIS VOICE LOCAL  -  START HERE
+===========================================================
+
+Welcome! Setting this up is easy. You do not need to be technical.
+
+
+FIRST - GET IT ONTO YOUR COMPUTER
+---------------------------------
+
+  You were sent a link to a download page. Here is how to get
+  Jarvis from it and open it up:
+
+  1. DOWNLOAD it. On the page you were sent, find the section
+     called  Assets  (click it if it's collapsed). Click the file
+     named  jarvis-voice-local-... .zip  to download it. Your
+     browser saves it to your  Downloads  folder.
+
+     IMPORTANT: download the  jarvis-voice-local-....zip  file -
+     NOT the one labeled "Source code (zip)". Only the first one
+     is the actual app.
+
+  2. FIND it. Open File Explorer (the folder icon on your
+     taskbar) and click  Downloads  on the left. The ZIP file
+     you just downloaded is there.
+
+  3. UNZIP it. Click the ZIP file once to select it, then
+     right-click it and choose  Extract All...  -> Extract.
+     This makes a normal folder you can open.
+
+  4. OPEN the new folder. Scroll down the list until you find
+     the file named  SETUP  (it may show as SETUP.cmd) - it sits
+     near the bottom. That's your starting point; the next
+     section picks up from there.
+
+  (Already see SETUP next to this file? Then you've done the
+  steps above - just continue below.)
+
+
+HOW TO SET IT UP
+----------------
+
+  1. Double-click the file named:   SETUP   (SETUP.cmd)
+
+  2. Follow the steps on the screen. The wizard does almost
+     everything for you.
+
+  3. When it asks, sign in to your Claude account. The first
+     time, a few quick prompts appear in the black window:
+       - Pick a color theme (light or dark) if it asks.
+       - When it says to log in, press the  c  key to copy the
+         link, paste it into your web browser, and sign in.
+       - Copy the code the website gives you and paste it back
+         into the black window, then press Enter.
+       - If it asks whether you trust the files in this folder,
+         choose YES - it's your own copy of Jarvis.
+     (This is the one part only you can do - it's your own
+     account. No Claude account yet? You can create one here.)
+
+  4. When it finishes, Windows may ask whether to allow Jarvis
+     (or "Python") to make changes or access the network - click
+     Allow / Yes. Then Jarvis opens in your web browser, already
+     signed in.
+
+  5. KEEP THE JARVIS WINDOW OPEN. Jarvis runs inside a separate
+     window that opened during setup. You can MINIMIZE it, but
+     DON'T CLOSE it - closing that window turns Jarvis off.
+     (To stop Jarvis on purpose, just close that window.)
+
+
+OPENING IT AGAIN LATER
+----------------------
+
+  Setup added a "Jarvis Voice Local" icon to your Desktop and
+  Start Menu - open it from there, like any app. (Double-clicking
+  START in this folder still works too.)
+
+  Tip: while Jarvis is open in your browser, click the Install
+  icon in the address bar (or the browser menu -> "Install
+  Jarvis") to give it its own app window you can pin to the
+  taskbar.
+
+
+THE REAL JARVIS VOICE (OPTIONAL)
+--------------------------------
+
+  Jarvis starts out using your browser's built-in (robotic) voice.
+  For the real, natural Jarvis voice, double-click  INSTALL-VOICE
+  - a one-time ~340 MB download that runs on your PC. Restart
+  Jarvis afterward to hear it. Setup also offers this at the end.
+
+
+KEEPING IT UPDATED
+------------------
+
+  Jarvis updates itself - you do NOT re-download or reinstall.
+
+  When a newer version is available, Jarvis shows a green
+  "Update available" bar at the top with an  Update now  button.
+  Click it; Jarvis downloads the update and keeps your token,
+  settings, files, AND any customizations you've made.
+
+  IMPORTANT to finish: you must restart the SERVER. Fully close
+  the BLACK window titled "Jarvis Voice Local" (that's the server)
+  - closing the Jarvis browser app is NOT enough - then reopen
+  Jarvis from your desktop icon. The new version isn't active
+  until you do.
+
+  (Prefer to do it by hand? Double-clicking  UPDATE  in this
+  folder does the same thing. Either way, nothing of yours is
+  lost - your own changes are kept and everything is backed up.)
+
+
+WHAT YOU NEED
+-------------
+
+  - A Windows computer with an internet connection.
+  - A Claude account on a PAID plan (about $20/month for Claude
+    Pro) or with pay-as-you-go API credits. This is what actually
+    runs the assistant - a free Claude account by itself won't.
+    You'll sign in during setup.
+
+  The wizard will offer to install everything else for you
+  (Python and Claude Code). You can say yes and let it work.
+
+
+IF SOMETHING GOES WRONG
+-----------------------
+
+  - Run SETUP again - it's safe to run more than once and
+    will pick up where it left off.
+  - Open the "docs" folder and read SUPPORT.md.
+  - The wizard prints a short health check near the end; if a
+    line says FAIL, it usually means the Claude sign-in didn't
+    finish - open a terminal, type  claude  , sign in, and run
+    SETUP again.
+
+
+Your data stays on YOUR computer. Jarvis runs locally and uses
+your own Claude account. Nothing is shared or sent to anyone else.
+===========================================================

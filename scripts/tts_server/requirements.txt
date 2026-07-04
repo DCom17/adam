@@ -1,0 +1,9 @@
+# Jarvis Kokoro voice service — installed into scripts/tts_server/.venv by INSTALL-VOICE.cmd.
+# Kept separate from the main app so the heavy ONNX runtime never touches the core install.
+kokoro-onnx==0.4.7
+onnxruntime
+soundfile
+numpy
+fastapi
+uvicorn
+pydantic

@@ -1,0 +1,2005 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<base target="_top">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#030712">
+<meta name="robots" content="noindex, nofollow">
+<title>Operating System — Jarvis</title>
+<!-- In-app Hunter dashboard. Identical to the Apps Script ?view=mobile screen,
+     but rendered here from the live board (GET /integrations/hunter/board) instead
+     of being served by Google. Read-only. The bearer token is read from
+     localStorage (same keys as the main app) and sent only in the Authorization
+     header — never in a URL. All sheet values are escaped before render. -->
+<style>
+    :root {
+      --bg:#030712;
+      --panel:rgba(15,23,42,.96);
+      --panel2:rgba(17,24,39,.98);
+      --cyan:#38bdf8;
+      --cyan2:#67e8f9;
+      --purple:#818cf8;
+      --violet:#a78bfa;
+      --green:#22c55e;
+      --amber:#f59e0b;
+      --red:#ef4444;
+      --text:#f8fafc;
+      --dim:#cbd5e1;
+      --muted:#94a3b8;
+      --line:rgba(56,189,248,.42);
+      --line2:rgba(129,140,248,.38);
+    }
+
+    * {
+      box-sizing:border-box;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    html {
+      width:100%;
+      min-height:100%;
+      margin:0;
+      padding:0;
+      background:#030712;
+      font-size:15px;
+      -webkit-text-size-adjust:100%;
+      text-size-adjust:100%;
+    }
+
+    body {
+      width:100%;
+      min-height:100svh;
+      margin:0;
+      padding:6.8px 5.4px calc(23.1px + env(safe-area-inset-bottom));
+      background:
+        radial-gradient(circle at 10% 0%, rgba(56,189,248,.24), transparent 32%),
+        radial-gradient(circle at 92% 0%, rgba(129,140,248,.26), transparent 34%),
+        linear-gradient(180deg,#020617 0%,#030712 42%,#050816 100%);
+      color:var(--text);
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+      overflow-x:hidden;
+      line-height:1.45;
+    }
+
+    .app {
+      width:100%;
+      max-width:none;
+      margin:0 auto;
+      /* Scale the whole board down a touch on the phone — the native px sizes are
+         large for a status window, so this gives breathing room without pushing the
+         screen. Tune this one number to taste (1 = native, lower = more zoomed out). */
+      /* intrinsic compact sizing — no zoom (iOS/webview-safe) */
+    }
+
+    .title {
+      text-align:center;
+      padding:15px 9.5px 12.9px;
+      border:1px solid var(--line);
+      background:rgba(2,6,23,.97);
+      border-radius:15px;
+      margin-bottom:10.9px;
+      box-shadow:0 0 16.3px rgba(56,189,248,.22);
+    }
+
+    .title h1 {
+      margin:0;
+      color:var(--cyan2);
+      font-size:21.8px;
+      line-height:1.05;
+      letter-spacing:1.4px;
+      text-shadow:0 0 10.9px rgba(56,189,248,.55);
+    }
+
+    .title .sub {
+      margin-top:6.8px;
+      color:var(--muted);
+      font-size:8.8px;
+      line-height:1.4;
+      letter-spacing:1px;
+    }
+
+    .frame,
+    .expand-card,
+    .alert,
+    .status-card {
+      border:1px solid var(--line);
+      background:rgba(11,18,40,.95);
+      border-radius:15px;
+      box-shadow:
+        0 0 15px rgba(56,189,248,.12),
+        inset 0 0 16.3px rgba(15,23,42,.45);
+    }
+
+    .frame {
+      padding:12.2px 9.5px;
+      margin-bottom:10.9px;
+    }
+
+    .profile {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:9.5px;
+    }
+
+    .profile-label {
+      color:var(--cyan);
+      font-size:9.5px;
+      letter-spacing:1.4px;
+      text-transform:uppercase;
+      margin-bottom:5.4px;
+    }
+
+    .profile-level {
+      font-size:32.6px;
+      line-height:1;
+      font-weight:950;
+      color:#fff;
+    }
+
+    .profile-rank {
+      margin-top:5.4px;
+      color:var(--violet);
+      font-size:16.3px;
+      font-weight:900;
+    }
+
+    .mode-badge {
+      flex:0 0 auto;
+      padding:6.8px 8.2px;
+      border-radius:679.3px;
+      border:1px solid var(--line);
+      color:var(--cyan2);
+      font-size:8.8px;
+      font-weight:900;
+      text-transform:uppercase;
+      text-align:center;
+      max-width:108.8px;
+    }
+
+    .mode-badge.good {
+      border-color:rgba(34,197,94,.5);
+      color:#bbf7d0;
+      background:rgba(6,78,59,.35);
+    }
+
+    .mode-badge.warning {
+      border-color:rgba(245,158,11,.55);
+      color:#fde68a;
+      background:rgba(120,53,15,.35);
+    }
+
+    .mode-badge.danger {
+      border-color:rgba(239,68,68,.55);
+      color:#fecaca;
+      background:rgba(127,29,29,.35);
+    }
+
+    .status-grid {
+      display:grid;
+      grid-template-columns:1fr;
+      gap:8.2px;
+      margin-bottom:10.9px;
+    }
+
+    .status-card {
+      padding:12.2px 10.9px;
+      min-height:74.8px;
+    }
+
+    .status-label {
+      color:var(--cyan);
+      font-size:10.9px;
+      letter-spacing:1.3px;
+      text-transform:uppercase;
+      margin-bottom:6.8px;
+    }
+
+    .status-value {
+      color:#fff;
+      font-size:21.8px;
+      line-height:1.1;
+      font-weight:900;
+    }
+
+    .alert {
+      padding:13.6px 10.9px;
+      margin-bottom:12.2px;
+      transition:transform .22s ease, box-shadow .22s ease;
+    }
+
+    .alert.warning {
+      border-color:rgba(245,158,11,.65);
+      box-shadow:0 0 16.3px rgba(245,158,11,.12);
+    }
+
+    .alert.danger {
+      border-color:rgba(239,68,68,.65);
+      box-shadow:0 0 16.3px rgba(239,68,68,.12);
+    }
+
+    .alert-label {
+      color:var(--cyan2);
+      font-size:10.9px;
+      letter-spacing:1.3px;
+      text-transform:uppercase;
+      margin-bottom:8.2px;
+    }
+
+    .alert.warning .alert-label {
+      color:#fde68a;
+    }
+
+    .alert.danger .alert-label {
+      color:#fecaca;
+    }
+
+    .alert-text {
+      color:#fff;
+      font-size:16.3px;
+      line-height:1.45;
+      font-weight:900;
+    }
+
+    .section {
+      margin:17.7px 0 8.8px;
+      color:var(--cyan2);
+      font-size:13.6px;
+      line-height:1.2;
+      letter-spacing:1.45px;
+      text-transform:uppercase;
+      display:flex;
+      align-items:center;
+      gap:6.8px;
+      text-shadow:0 0 8.2px rgba(56,189,248,.35);
+    }
+
+    .section::before {
+      content:"◇";
+      color:var(--purple);
+      font-size:13.6px;
+    }
+
+    .expand-card {
+      padding:14.3px 12.2px;
+      margin-bottom:10.9px;
+      cursor:pointer;
+      transition:
+        transform .22s ease,
+        box-shadow .22s ease,
+        border-color .22s ease,
+        background .22s ease;
+      overflow:hidden;
+    }
+
+    .expand-card:active {
+      transform:scale(.985);
+    }
+
+    .expand-card.open {
+      border-color:rgba(103,232,249,.75);
+      box-shadow:
+        0 0 19px rgba(56,189,248,.24),
+        inset 0 0 19px rgba(15,23,42,.55);
+    }
+
+    .boss-card {
+      border-color:rgba(129,140,248,.55);
+      animation:bossPulseV4 3.2s ease-in-out infinite;
+    }
+
+    @keyframes bossPulseV4 {
+      0%, 100% {
+        box-shadow:
+          0 0 13.6px rgba(129,140,248,.13),
+          inset 0 0 16.3px rgba(17,24,39,.45);
+      }
+      50% {
+        box-shadow:
+          0 0 23.1px rgba(129,140,248,.28),
+          inset 0 0 19px rgba(17,24,39,.55);
+      }
+    }
+
+    .card-main,
+    .stat-head {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:9.5px;
+    }
+
+    .card-title {
+      color:#fff;
+      font-size:16.3px;
+      line-height:1.42;
+      font-weight:950;
+    }
+
+    .card-sub,
+    .detail-line {
+      color:var(--dim);
+      font-size:12.2px;
+      line-height:1.5;
+      margin-top:5.4px;
+    }
+
+    .detail-line strong {
+      color:var(--cyan2);
+    }
+
+    .right-stat {
+      color:var(--cyan2);
+      font-size:15.6px;
+      font-weight:950;
+      white-space:nowrap;
+    }
+
+    .expand-body {
+      max-height:0;
+      opacity:0;
+      overflow:hidden;
+      transform:translateY(-4.1px);
+      transition:
+        max-height .34s ease,
+        opacity .24s ease,
+        transform .24s ease;
+    }
+
+    .expand-card.open .expand-body {
+      max-height:353.6px;
+      opacity:1;
+      transform:translateY(0);
+      margin-top:9.5px;
+    }
+
+    .boss-kicker,
+    .quest-label {
+      color:var(--cyan);
+      font-size:10.2px;
+      letter-spacing:1.3px;
+      text-transform:uppercase;
+      margin-bottom:6.8px;
+    }
+
+    .boss-title {
+      color:var(--violet);
+      font-size:19px;
+      line-height:1.33;
+      font-weight:950;
+      text-shadow:0 0 9.5px rgba(167,139,250,.32);
+      margin-bottom:8.2px;
+    }
+
+    .boss-meta,
+    .quest-meta,
+    .debuff-meta {
+      color:var(--dim);
+      font-size:12.2px;
+      line-height:1.5;
+      margin-top:8.2px;
+    }
+
+    .boss-row {
+      margin-top:8.2px;
+      color:var(--dim);
+      font-size:12.2px;
+      line-height:1.5;
+    }
+
+    .boss-row strong {
+      color:var(--cyan2);
+    }
+
+    .bar {
+      width:100%;
+      height:13.6px;
+      border-radius:679.3px;
+      background:rgba(30,41,59,.95);
+      overflow:hidden;
+      border:1px solid rgba(148,163,184,.2);
+      margin:10.9px 0;
+    }
+
+    .bar-fill {
+      height:100%;
+      border-radius:679.3px;
+      min-width:2px;
+      box-shadow:0 0 10.9px currentColor;
+      transition:width .8s ease;
+    }
+
+    .bar-fill.cyan {
+      background:linear-gradient(90deg,var(--cyan),var(--cyan2));
+      color:var(--cyan);
+    }
+
+    .bar-fill.purple {
+      background:linear-gradient(90deg,var(--purple),var(--violet));
+      color:var(--purple);
+    }
+
+    .quest-meta {
+      display:flex;
+      flex-direction:column;
+      gap:3.4px;
+    }
+
+    .evidence,
+    .debuff-counter {
+      color:var(--muted);
+      font-size:11.6px;
+      line-height:1.45;
+      margin-top:8.2px;
+    }
+
+    .pill {
+      display:inline-block;
+      margin-top:10.2px;
+      border-radius:679.3px;
+      padding:5.4px 8.8px;
+      border:1px solid rgba(255,255,255,.16);
+      font-weight:950;
+      font-size:10.2px;
+      line-height:1;
+      text-transform:uppercase;
+    }
+
+    .complete {
+      color:#bbf7d0;
+      background:rgba(6,78,59,.82);
+      border-color:rgba(34,197,94,.45);
+    }
+
+    .planned {
+      color:#dbeafe;
+      background:rgba(30,58,138,.82);
+      border-color:rgba(59,130,246,.45);
+    }
+
+    .blocked {
+      color:#fecaca;
+      background:rgba(127,29,29,.82);
+      border-color:rgba(239,68,68,.45);
+    }
+
+    .pending {
+      color:#fde68a;
+      background:rgba(120,53,15,.78);
+      border-color:rgba(245,158,11,.45);
+    }
+
+    .rank-card.ready {
+      border-color:rgba(34,197,94,.75);
+      animation:rankReadyPulseV4 2.4s ease-in-out infinite;
+    }
+
+    @keyframes rankReadyPulseV4 {
+      0%, 100% { box-shadow:0 0 13.6px rgba(34,197,94,.16); }
+      50% { box-shadow:0 0 23.1px rgba(34,197,94,.32); }
+    }
+
+    .rank-title {
+      color:var(--violet);
+      font-size:16.3px;
+      font-weight:950;
+      line-height:1.35;
+      margin-bottom:6.8px;
+    }
+
+    .rank-status {
+      color:var(--cyan2);
+      font-size:13.6px;
+      font-weight:900;
+      margin-bottom:8.2px;
+    }
+
+    .rank-card ul {
+      margin:6.8px 0 0;
+      padding-left:15px;
+      color:var(--dim);
+      font-size:12.2px;
+      line-height:1.55;
+    }
+
+    .tap-hint {
+      color:var(--muted);
+      font-size:9.5px;
+      margin-top:6.8px;
+      text-transform:uppercase;
+      letter-spacing:1px;
+    }
+
+    .reload {
+      width:100%;
+      margin-top:15px;
+      padding:13.6px 9.5px;
+      border-radius:13.6px;
+      border:1px solid var(--line);
+      background:rgba(2,6,23,.96);
+      color:var(--cyan2);
+      font-weight:950;
+      font-size:13.6px;
+      letter-spacing:1.3px;
+      font-family:inherit;
+      box-shadow:0 0 12.2px rgba(56,189,248,.14);
+    }
+
+    .footer {
+      margin-top:15px;
+      color:var(--muted);
+      font-size:10.2px;
+      text-align:center;
+      line-height:1.7;
+      padding-bottom:4.1px;
+    }
+
+    @media (max-width:430px) {
+      .title h1 {
+        font-size:20.4px;
+      }
+
+      .profile-level {
+        font-size:31.3px;
+      }
+
+      .alert-text {
+        font-size:15.6px;
+      }
+
+      .boss-title {
+        font-size:17.7px;
+      }
+
+      .card-title {
+        font-size:15.6px;
+      }
+
+      .mode-badge {
+        font-size:8.2px;
+        max-width:98.6px;
+      }
+    }
+
+/* ─── DESIGN MODE UPGRADE: COLOR ICONS + SYSTEM DIRECTIVE ───────────── */
+
+.attr-main {
+  align-items: center;
+}
+
+.attr-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 9.5px;
+}
+
+.attr-icon {
+  display: inline-flex;
+  width: 31.3px;
+  height: 31.3px;
+  min-width: 31.3px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10.2px;
+  font-size: 19px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 0 10.9px rgba(56,189,248,.10);
+}
+
+.attr-discipline {
+  border-color: rgba(96,165,250,.45);
+}
+
+.attr-knowledge {
+  border-color: rgba(56,189,248,.55);
+}
+
+.attr-health {
+  border-color: rgba(248,113,113,.55);
+}
+
+.attr-finance {
+  border-color: rgba(52,211,153,.55);
+}
+
+.attr-career {
+  border-color: rgba(251,191,36,.50);
+}
+
+.attr-spiritual {
+  border-color: rgba(167,139,250,.60);
+}
+
+.attr-social {
+  border-color: rgba(45,212,191,.55);
+}
+
+.attr-execution {
+  border-color: rgba(250,204,21,.60);
+}
+
+.attr-discipline .attr-icon {
+  box-shadow: 0 0 12.2px rgba(96,165,250,.25);
+}
+
+.attr-knowledge .attr-icon {
+  box-shadow: 0 0 12.2px rgba(56,189,248,.28);
+}
+
+.attr-health .attr-icon {
+  box-shadow: 0 0 12.2px rgba(248,113,113,.28);
+}
+
+.attr-finance .attr-icon {
+  box-shadow: 0 0 12.2px rgba(52,211,153,.28);
+}
+
+.attr-career .attr-icon {
+  box-shadow: 0 0 12.2px rgba(251,191,36,.24);
+}
+
+.attr-spiritual .attr-icon {
+  box-shadow: 0 0 12.2px rgba(167,139,250,.30);
+}
+
+.attr-social .attr-icon {
+  box-shadow: 0 0 12.2px rgba(45,212,191,.28);
+}
+
+.attr-execution .attr-icon {
+  box-shadow: 0 0 13.6px rgba(250,204,21,.34);
+}
+
+/* Make status cards feel clickable */
+
+.metric-card {
+  position: relative;
+}
+
+.metric-card::after {
+  content: "TAP FOR DETAILS";
+  display: block;
+  margin-top: 9.5px;
+  color: var(--muted);
+  font-size: 8.8px;
+  letter-spacing: 1px;
+}
+
+.metric-card.open::after {
+  content: "TAP TO COLLAPSE";
+}
+
+/* System Directive: separated important message */
+
+.system-directive-wrap {
+  margin: 20.4px 0 19px;
+  padding: 8.2px 0;
+}
+
+.system-directive {
+  position: relative;
+  border: 1px solid rgba(103,232,249,.72);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(56,189,248,.18), transparent 42%),
+    linear-gradient(180deg, rgba(2,6,23,.98), rgba(15,23,42,.96));
+  border-radius: 16.3px;
+  padding: 16.3px 12.2px 15px;
+  box-shadow:
+    0 0 23.1px rgba(56,189,248,.22),
+    inset 0 0 19px rgba(56,189,248,.06);
+  animation: systemDirectivePulseV4 3.6s ease-in-out infinite;
+}
+
+@keyframes systemDirectivePulseV4 {
+  0%, 100% {
+    box-shadow:
+      0 0 19px rgba(56,189,248,.18),
+      inset 0 0 19px rgba(56,189,248,.05);
+  }
+  50% {
+    box-shadow:
+      0 0 29.9px rgba(56,189,248,.32),
+      inset 0 0 23.1px rgba(56,189,248,.09);
+  }
+}
+
+.system-label {
+  color: var(--cyan2);
+  font-size: 12.9px;
+  font-weight: 950;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 12.2px;
+  text-shadow: 0 0 13.6px rgba(103,232,249,.58);
+}
+
+.system-priority {
+  color: var(--violet);
+  font-size: 10.9px;
+  font-weight: 900;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 12.2px;
+}
+
+.system-text {
+  color: #e5f6ff;
+  font-size: 14.3px;
+  line-height: 1.55;
+  font-weight: 400;
+  text-align: left;
+  letter-spacing: 0.3px;
+  font-family: "Courier New", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-shadow: 0 0 6.8px rgba(103, 232, 249, 0.18);
+}
+
+.system-text::before {
+  content: "> ";
+  color: var(--cyan2);
+  font-weight: 700;
+  text-shadow: 0 0 8.2px rgba(103, 232, 249, 0.5);
+}
+
+.system-sub {
+  color: var(--muted);
+  margin-top: 12.2px;
+  font-size: 10.9px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.system-corner {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border-color: var(--cyan2);
+  opacity: .85;
+}
+
+.system-corner.top-left {
+  top: 6.8px;
+  left: 6.8px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+.system-corner.top-right {
+  top: 6.8px;
+  right: 6.8px;
+  border-top: 2px solid;
+  border-right: 2px solid;
+}
+
+.system-corner.bottom-left {
+  bottom: 6.8px;
+  left: 6.8px;
+  border-bottom: 2px solid;
+  border-left: 2px solid;
+}
+
+.system-corner.bottom-right {
+  bottom: 6.8px;
+  right: 6.8px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+
+.system-directive.warning {
+  border-color: rgba(245,158,11,.72);
+  box-shadow: 0 0 23.1px rgba(245,158,11,.20);
+}
+
+.system-directive.danger {
+  border-color: rgba(239,68,68,.72);
+  box-shadow: 0 0 23.1px rgba(239,68,68,.22);
+}
+
+.system-directive.warning .system-label {
+  color: #fde68a;
+}
+
+.system-directive.danger .system-label {
+  color: #fecaca;
+}
+
+@media (max-width: 430px) {
+  .attr-icon {
+    width: 29.9px;
+    height: 29.9px;
+    min-width: 29.9px;
+    font-size: 17.7px;
+  }
+
+  .system-text {
+    font-size: 17px;
+  }
+
+  .system-label {
+    font-size: 12.2px;
+  }
+
+  .system-sub {
+    font-size: 10.2px;
+  }
+}
+
+/* ─── SYSTEM NOTIFICATION PANEL ───────────────────────────── */
+
+.system-notification-wrap {
+  margin: 24.5px 0 23.1px;
+  padding: 5.4px 0;
+}
+
+.system-notification-frame {
+  position: relative;
+  padding: 12.2px 6.8px;
+  border-radius: 13.6px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(56,189,248,.16), transparent 48%),
+    linear-gradient(180deg, rgba(2,6,23,.20), rgba(15,23,42,.06));
+}
+
+.notification-rail {
+  position: relative;
+  height: 6.8px;
+  margin: 0 auto;
+  width: 92%;
+  border-radius: 679.3px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(56,189,248,.35) 8%,
+    rgba(103,232,249,1) 22%,
+    rgba(96,165,250,1) 50%,
+    rgba(103,232,249,1) 78%,
+    rgba(56,189,248,.35) 92%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 12.2px rgba(56,189,248,.75),
+    0 0 23.1px rgba(59,130,246,.45);
+  animation: notificationRailPulseV4 3.2s ease-in-out infinite;
+}
+
+.rail-top {
+  margin-bottom: -2px;
+}
+
+.rail-bottom {
+  margin-top: -2px;
+}
+
+.notification-rail::before,
+.notification-rail::after {
+  content: "";
+  position: absolute;
+  top: -2.7px;
+  width: 23.1px;
+  height: 12.2px;
+  border-top: 2px solid rgba(103,232,249,.85);
+  border-bottom: 2px solid rgba(103,232,249,.45);
+  opacity: .85;
+}
+
+.notification-rail::before {
+  left: -2.7px;
+  transform: skewX(-28deg);
+}
+
+.notification-rail::after {
+  right: -2.7px;
+  transform: skewX(28deg);
+}
+
+@keyframes notificationRailPulseV4 {
+  0%, 100% {
+    opacity: .88;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.35);
+  }
+}
+
+.notification-panel {
+  position: relative;
+  margin: 0 auto;
+  width: 88%;
+  min-height: 125.8px;
+  padding: 19px 15px 20.4px;
+  border: 1px solid rgba(190,242,255,.62);
+  background:
+    linear-gradient(rgba(103,232,249,.025) 50%, rgba(2,6,23,.025) 50%),
+    radial-gradient(circle at 50% 0%, rgba(56,189,248,.10), transparent 46%),
+    linear-gradient(180deg, rgba(8,18,38,.70), rgba(2,6,23,.78));
+  background-size: 100% 2.7px, auto, auto;
+  box-shadow:
+    0 0 15px rgba(56,189,248,.22),
+    inset 0 0 19px rgba(103,232,249,.05);
+  backdrop-filter: blur(2px);
+}
+
+.notification-panel::before,
+.notification-panel::after {
+  content: "";
+  position: absolute;
+  width: 16.3px;
+  height: 16.3px;
+  opacity: .85;
+}
+
+.notification-panel::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid rgba(226,250,255,.9);
+  border-left: 2px solid rgba(226,250,255,.9);
+}
+
+.notification-panel::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid rgba(226,250,255,.9);
+  border-right: 2px solid rgba(226,250,255,.9);
+}
+
+.notification-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8.2px;
+  margin-bottom: 23.1px;
+}
+
+.notification-icon {
+  width: 28.6px;
+  height: 28.6px;
+  border: 1px solid rgba(190,242,255,.85);
+  color: rgba(226,250,255,.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17.7px;
+  font-weight: 800;
+  border-radius: 2.7px;
+  box-shadow:
+    0 0 9.5px rgba(103,232,249,.38),
+    inset 0 0 8.2px rgba(103,232,249,.08);
+}
+
+.notification-title {
+  border: 1px solid rgba(190,242,255,.65);
+  padding: 5.4px 13.6px;
+  color: rgba(226,250,255,.96);
+  font-size: 12.2px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow: 0 0 9.5px rgba(103,232,249,.55);
+  box-shadow:
+    0 0 8.2px rgba(103,232,249,.22),
+    inset 0 0 8.2px rgba(103,232,249,.05);
+}
+
+.notification-message {
+  color: rgba(235,248,255,.92);
+  font-family: "Courier New", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.2px;
+  font-weight: 400;
+  line-height: 1.65;
+  letter-spacing: .2px;
+  text-align: center;
+  text-shadow: 0 0 6.8px rgba(103,232,249,.18);
+}
+
+/* Mobile tuning */
+@media (max-width: 430px) {
+  .system-notification-wrap {
+    margin: 21.8px 0 20.4px;
+  }
+
+  .system-notification-frame {
+    padding: 10.9px 2.7px;
+  }
+
+  .notification-rail {
+    width: 96%;
+    height: 6.1px;
+  }
+
+  .notification-panel {
+    width: 91%;
+    min-height: 115.6px;
+    padding: 17.7px 10.9px 19px;
+  }
+
+  .notification-header {
+    gap: 6.1px;
+    margin-bottom: 19px;
+  }
+
+  .notification-icon {
+    width: 24.5px;
+    height: 24.5px;
+    font-size: 15px;
+  }
+
+  .notification-title {
+    font-size: 10.2px;
+    letter-spacing: 1.6px;
+    padding: 5.4px 9.5px;
+  }
+
+  .notification-message {
+    font-size: 10.9px;
+    line-height: 1.65;
+  }
+}
+
+/* ─── NOTIFICATION TEXT TUNING ───────────────────────────── */
+
+.notification-message {
+  max-width: 92% !important;
+  margin: 0 auto !important;
+
+  color: rgba(232, 250, 255, 0.94) !important;
+
+  font-family: "Avenir Next", "Trebuchet MS", "Helvetica Neue", Arial, sans-serif !important;
+  font-size: 12.6px !important;
+  font-weight: 600 !important;
+  line-height: 1.7 !important;
+  letter-spacing: 0.45px !important;
+  text-align: center !important;
+
+  text-shadow:
+    0 0 2.7px rgba(255, 255, 255, 0.45),
+    0 0 6.8px rgba(103, 232, 249, 0.42),
+    0 0 13.6px rgba(56, 189, 248, 0.22) !important;
+}
+
+.notification-message strong {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-style: italic !important;
+  text-shadow:
+    0 0 4.1px rgba(255,255,255,.65),
+    0 0 9.5px rgba(103,232,249,.55) !important;
+}
+
+.notification-title {
+  font-family: "Avenir Next", "Trebuchet MS", "Helvetica Neue", Arial, sans-serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 2.7px !important;
+  color: rgba(232, 250, 255, 0.98) !important;
+  text-shadow:
+    0 0 4.1px rgba(255,255,255,.45),
+    0 0 9.5px rgba(103,232,249,.70),
+    0 0 17.7px rgba(56,189,248,.35) !important;
+}
+
+@media (max-width: 430px) {
+  .notification-message {
+    font-size: 11.9px !important;
+    line-height: 1.68 !important;
+    letter-spacing: 0.35px !important;
+  }
+
+  .notification-title {
+    letter-spacing: 2.3px !important;
+  }
+}
+
+/* ─── NOTIFICATION HEADER + SPACING TUNING ───────────────────────────── */
+
+.system-notification-wrap {
+  margin-bottom: 53px !important;
+}
+
+.notification-icon {
+  font-weight: 950 !important;
+  font-size: 17px !important;
+  color: rgba(245, 253, 255, 1) !important;
+  text-shadow:
+    0 0 4.1px rgba(255,255,255,.70),
+    0 0 9.5px rgba(103,232,249,.75),
+    0 0 17.7px rgba(56,189,248,.42) !important;
+}
+
+.notification-title {
+  font-weight: 850 !important;
+  color: rgba(245, 253, 255, 1) !important;
+  text-shadow:
+    0 0 4.1px rgba(255,255,255,.65),
+    0 0 10.9px rgba(103,232,249,.80),
+    0 0 20.4px rgba(56,189,248,.44) !important;
+}
+
+.notification-icon {
+  width: 31.3px !important;
+  height: 31.3px !important;
+  font-size: 20.4px !important;
+  font-weight: 950 !important;
+}
+
+.notification-title {
+  font-size: 13.6px !important;
+  font-weight: 900 !important;
+  letter-spacing: 2.9px !important;
+  padding: 6.8px 16.3px !important;
+}
+
+@media (max-width: 430px) {
+  .notification-icon {
+    width: 28.6px !important;
+    height: 28.6px !important;
+    font-size: 18.4px !important;
+  }
+
+  .notification-title {
+    font-size: 11.6px !important;
+    letter-spacing: 2.4px !important;
+    padding: 6.1px 12.2px !important;
+  }
+}
+
+.system-notification-wrap {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.system-notification-frame {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.system-notification-frame::before {
+  display: none !important;
+}
+
+/* ─── TOP HEADER SIZE TUNING ───────────────────────────── */
+
+.title {
+  display: block !important;
+  min-height: 80.2px !important;
+  padding: 20.4px 10.9px 17.7px !important;
+  border-radius: 16.3px !important;
+  margin-bottom: 13.6px !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(56,189,248,.16), transparent 48%),
+    linear-gradient(180deg, rgba(2,6,23,.98), rgba(15,23,42,.96)) !important;
+  border: 1px solid rgba(56,189,248,.46) !important;
+  box-shadow:
+    0 0 19px rgba(56,189,248,.22),
+    inset 0 0 17.7px rgba(56,189,248,.06) !important;
+}
+
+.title h1 {
+  font-size: 25.8px !important;
+  line-height: 1.05 !important;
+  letter-spacing: 2.9px !important;
+  font-weight: 900 !important;
+  color: var(--cyan2) !important;
+  text-shadow:
+    0 0 5.4px rgba(255,255,255,.35),
+    0 0 12.2px rgba(103,232,249,.78),
+    0 0 23.1px rgba(56,189,248,.38) !important;
+}
+
+.title .sub {
+  margin-top: 9.5px !important;
+  font-size: 8.5px !important;
+  letter-spacing: 1.6px !important;
+  color: rgba(203,213,225,.78) !important;
+}
+
+.system-header {
+  display: none !important;
+}
+
+@media (max-width: 430px) {
+  .title {
+    min-height: 74.8px !important;
+    padding: 19px 9.5px 16.3px !important;
+    margin-bottom: 12.2px !important;
+  }
+
+  .title h1 {
+    font-size: 23.1px !important;
+    letter-spacing: 2.4px !important;
+  }
+
+  .title .sub {
+    font-size: 7.8px !important;
+    letter-spacing: 2px !important;
+  }
+}
+
+/* ─── HEADER DARK BOX RESTORE ───────────────────────────── */
+
+.title {
+  background: rgba(2, 6, 23, 0.97) !important;
+  border: 1px solid rgba(56,189,248,.46) !important;
+  box-shadow:
+    0 0 16.3px rgba(56,189,248,.20),
+    inset 0 0 16.3px rgba(15,23,42,.55) !important;
+}
+
+.title {
+  min-height: 89.8px !important;
+  padding-top: 24.5px !important;
+  padding-bottom: 20.4px !important;
+}
+
+/* ─── in-app state messages (loading / not-connected) ─── */
+.state-msg {
+  max-width: 353.6px;
+  margin: 18vh auto 0;
+  padding: 15px 12.2px;
+  text-align: center;
+  color: var(--dim);
+  border: 1px solid var(--line);
+  background: rgba(11,18,40,.95);
+  border-radius: 15px;
+  box-shadow: 0 0 15px rgba(56,189,248,.12);
+}
+.state-msg b { color: var(--cyan2); }
+.state-msg .setup-cta { display: inline-block; margin-top: 12.2px; padding: 8.2px 13.6px;
+  border: 1px solid var(--cyan); border-radius: 8.2px; color: var(--cyan2);
+  text-decoration: none; font-weight: 700; letter-spacing: 1px;
+  box-shadow: 0 0 12.2px rgba(56,189,248,.14); }
+.state-msg .setup-cta:hover { background: rgba(56,189,248,.1); }
+
+/* ─── PROFILE ROW: never let the mode badge overflow the viewport ─── */
+.profile { flex-wrap: nowrap; }
+.profile-main { min-width: 0; }
+.mode-badge {
+  flex: 0 0 auto;
+  white-space: normal;
+  line-height: 1.16;
+  max-width: 96px;
+  padding: 6px 9px;
+}
+@media (max-width: 430px) {
+  .mode-badge { max-width: 88px; font-size: 10px; padding: 6px 8px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   HUNTER BOOT LOADER  —  "SYSTEM INITIALIZING" skeleton assembly
+   The dashboard draws itself out of the dark field: box outlines trace
+   from a centre slit, blurred glitch-text snaps into the header/number
+   slots, then the card fills bleed in with colour. Real data cross-fades
+   over the instant the board lands (see loadBoard / finishBoot below).
+   ══════════════════════════════════════════════════════════════════ */
+.boot {
+  position: relative;
+  width: 100%;
+  min-height: 100svh;
+  animation: bootFade .35s ease;
+}
+@keyframes bootFade { from { opacity: 0; } to { opacity: 1; } }
+.boot.sk-out { animation: skOut .26s ease forwards; }
+@keyframes skOut { to { opacity: 0; transform: scale(1.012); filter: blur(2px); } }
+
+.sk-app { width: 100%; }
+
+/* --- a box: draws itself out of a centre slit, then the fill bleeds in --- */
+.sk-box {
+  position: relative;
+  border: 1px solid rgba(103,232,249,.55);
+  border-radius: 15px;
+  margin-bottom: 10.9px;
+  overflow: hidden;
+  opacity: 0;
+  clip-path: inset(48% 45% 48% 45% round 15px);
+  box-shadow: 0 0 15px rgba(56,189,248,.14);
+  animation: skDraw .62s cubic-bezier(.55,0,.3,1) forwards;
+  animation-delay: calc(var(--i,0) * .13s);
+}
+@keyframes skDraw {
+  0%   { opacity: 0; clip-path: inset(48% 45% 48% 45% round 15px); }
+  16%  { opacity: 1; clip-path: inset(46% 1.5% 46% 1.5% round 15px); }
+  52%  { opacity: 1; clip-path: inset(46% 0 46% 0 round 15px); }
+  100% { opacity: 1; clip-path: inset(0 0 0 0 round 15px); }
+}
+/* the coloured card fill — arrives a beat after the outline is drawn */
+.sk-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(56,189,248,.10), transparent 62%),
+    linear-gradient(180deg, rgba(11,18,40,.55), rgba(11,18,40,.95));
+  animation: skFill .6s ease forwards;
+  animation-delay: calc(var(--i,0) * .13s + .5s);
+}
+/* a single sweep of light as each panel powers up */
+.sk-box::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, rgba(103,232,249,.22) 50%, transparent 60%);
+  transform: translateX(-120%);
+  animation: skSweep .7s ease forwards;
+  animation-delay: calc(var(--i,0) * .13s + .18s);
+}
+@keyframes skFill  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes skSweep { to { transform: translateX(120%); } }
+
+/* --- placeholder text/number bars: blurred, glitch into place --- */
+.sk-line, .sk-blob, .sk-badge {
+  position: relative;
+  z-index: 1;
+  border-radius: 5px;
+  background: linear-gradient(90deg, rgba(103,232,249,.14), rgba(129,140,248,.30), rgba(103,232,249,.14));
+  background-size: 220% 100%;
+  opacity: 0;
+  filter: blur(7px);
+  animation:
+    skGlitch .55s linear forwards,
+    skShimmer 2.4s linear infinite;
+  animation-delay:
+    calc(var(--i,0) * .13s + .55s + var(--t,0) * .09s),
+    calc(var(--i,0) * .13s + 1s);
+}
+@keyframes skGlitch {
+  0%   { opacity: 0;   filter: blur(7px);   transform: translateX(-7px) skewX(6deg); }
+  18%  { opacity: .45; filter: blur(6px);   transform: translateX(6px)  skewX(-4deg); }
+  34%  { opacity: .12; filter: blur(7px);   transform: translateX(-4px) skewX(3deg); }
+  52%  { opacity: .8;  filter: blur(3px);   transform: translateX(3px)  skewX(-2deg); }
+  68%  { opacity: .3;  filter: blur(4px);   transform: translateX(-1px) skewX(1deg); }
+  100% { opacity: .92; filter: blur(1.3px); transform: translateX(0)    skewX(0); }
+}
+@keyframes skShimmer {
+  0%   { background-position: -60% 0; }
+  100% { background-position: 160% 0; }
+}
+
+/* --- geometry that mirrors the real board's above-the-fold --- */
+.sk-title { padding: 24px 11px 20px; min-height: 89px; text-align: center; }
+.sk-title .sk-line { margin-left: auto; margin-right: auto; }
+.sk-frame { padding: 12px 9.5px; }
+.sk-card  { padding: 12px 11px; min-height: 74px; }
+.sk-note  { padding: 18px 14px 20px; min-height: 118px; text-align: center; }
+.sk-note .sk-line { margin-left: auto; margin-right: auto; }
+
+.sk-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 9.5px; }
+.sk-col { flex: 1; min-width: 0; }
+
+.sk-h1    { height: 22px; width: 62%; margin-bottom: 9px; }
+.sk-sub   { height: 8px;  width: 46%; }
+.sk-label { height: 9px;  width: 40%; margin-bottom: 10px; }
+.sk-lv    { height: 30px; width: 46%; margin-bottom: 8px; }
+.sk-rank  { height: 14px; width: 30%; }
+.sk-badge { height: 30px; width: 92px; border-radius: 999px; flex: 0 0 auto; }
+.sk-num   { height: 22px; width: 42%; }
+.sk-noteh { height: 14px; width: 52%; margin-bottom: 16px; }
+.sk-note .sk-line.w1 { width: 82%; height: 11px; margin-bottom: 8px; }
+.sk-note .sk-line.w2 { width: 68%; height: 11px; }
+
+/* --- appended sections: notification panel + current boss --- */
+.sk-notif { padding: 18px 14px 20px; min-height: 132px; text-align: center; }
+.sk-notif-head { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 18px; }
+.sk-icon { width: 28px; height: 28px; border-radius: 4px; flex: 0 0 auto; }
+.sk-pill { width: 150px; height: 24px; border-radius: 4px; flex: 0 0 auto; }
+.sk-notif .sk-line { margin-left: auto; margin-right: auto; }
+.sk-notif .nw1 { width: 78%; height: 11px; margin-bottom: 8px; }
+.sk-notif .nw2 { width: 84%; height: 11px; margin-bottom: 8px; }
+.sk-notif .nw3 { width: 52%; height: 11px; }
+
+.sk-seclabel { height: 12px; width: 46%; margin: 16px 0 9px; }
+.sk-boss { padding: 12px 11px 14px; min-height: 96px; }
+.sk-bosstitle { width: 46%; height: 22px; margin-bottom: 2px; }
+.sk-progress { width: 100%; height: 13px; border-radius: 999px; margin: 10px 0 12px; }
+.sk-bossmeta { width: 72%; height: 11px; }
+
+/* --- global "scanning" pass + status readout --- */
+.sk-scanline {
+  position: fixed;
+  left: 0; right: 0; top: -140px;
+  height: 140px;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(103,232,249,.08) 46%, rgba(103,232,249,.16) 50%, rgba(103,232,249,.08) 54%, transparent);
+  animation: skScan 2.8s ease-in-out .25s infinite;
+}
+@keyframes skScan {
+  0%   { transform: translateY(0);      opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: translateY(calc(100svh + 140px)); opacity: 0; }
+}
+.sk-status {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 6;
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 2.6px;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(56,189,248,.25);
+}
+.sk-status .dot { color: var(--cyan2); animation: bootDots 1.4s steps(1) infinite; }
+.sk-status .dot.d2 { animation-delay: .18s; }
+.sk-status .dot.d3 { animation-delay: .36s; }
+@keyframes bootDots { 0%,60% { opacity: .18; } 30% { opacity: 1; } }
+
+/* --- real content eases in once the skeleton clears --- */
+.app, .state-msg { animation: contentIn .45s ease both; }
+@keyframes contentIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* --- reduced-motion: show the frame, skip the theatrics --- */
+@media (prefers-reduced-motion: reduce) {
+  .sk-box, .sk-box::before, .sk-box::after,
+  .sk-line, .sk-blob, .sk-badge {
+    animation: none !important;
+    opacity: 1 !important;
+    clip-path: none !important;
+    filter: none !important;
+    transform: none !important;
+  }
+  .sk-box::after { display: none; }
+  .sk-scanline { display: none; }
+}
+</style>
+</head>
+<body>
+  <div id="root">
+    <div class="boot" id="boot" aria-hidden="true">
+      <div class="sk-app">
+        <div class="sk-box sk-title" style="--i:0">
+          <div class="sk-line sk-h1" style="--t:0"></div>
+          <div class="sk-line sk-sub" style="--t:1"></div>
+        </div>
+        <div class="sk-box sk-frame" style="--i:1">
+          <div class="sk-row">
+            <div class="sk-col">
+              <div class="sk-line sk-label" style="--t:0"></div>
+              <div class="sk-blob sk-lv" style="--t:1"></div>
+              <div class="sk-line sk-rank" style="--t:2"></div>
+            </div>
+            <div class="sk-badge" style="--t:1"></div>
+          </div>
+        </div>
+        <div class="sk-box sk-card" style="--i:2">
+          <div class="sk-line sk-label" style="--t:0"></div>
+          <div class="sk-blob sk-num" style="--t:1"></div>
+        </div>
+        <div class="sk-box sk-card" style="--i:3">
+          <div class="sk-line sk-label" style="--t:0"></div>
+          <div class="sk-blob sk-num" style="--t:1"></div>
+        </div>
+        <div class="sk-box sk-card" style="--i:4">
+          <div class="sk-line sk-label" style="--t:0"></div>
+          <div class="sk-blob sk-num" style="--t:1"></div>
+        </div>
+        <div class="sk-box sk-note" style="--i:5">
+          <div class="sk-line sk-noteh" style="--t:0"></div>
+          <div class="sk-line w1" style="--t:1"></div>
+          <div class="sk-line w2" style="--t:2"></div>
+        </div>
+        <div class="sk-box sk-notif" style="--i:6">
+          <div class="sk-notif-head">
+            <div class="sk-blob sk-icon" style="--t:0"></div>
+            <div class="sk-blob sk-pill" style="--t:1"></div>
+          </div>
+          <div class="sk-line nw1" style="--t:2"></div>
+          <div class="sk-line nw2" style="--t:3"></div>
+          <div class="sk-line nw3" style="--t:4"></div>
+        </div>
+        <div class="sk-line sk-seclabel" style="--i:7;--t:0"></div>
+        <div class="sk-box sk-boss" style="--i:7">
+          <div class="sk-line sk-label" style="--t:1"></div>
+          <div class="sk-blob sk-bosstitle" style="--t:2"></div>
+          <div class="sk-blob sk-progress" style="--t:3"></div>
+          <div class="sk-line sk-bossmeta" style="--t:4"></div>
+        </div>
+      </div>
+      <div class="sk-scanline"></div>
+      <div class="sk-status">INITIALIZING STATUS WINDOW<span class="dot d1">.</span><span class="dot d2">.</span><span class="dot d3">.</span></div>
+    </div>
+  </div>
+
+<script>
+// --- transport: bearer token from localStorage (same keys as the main app),
+// sent only in the Authorization header. Never in a URL. ---------------------
+var LS = {
+  get token() { return localStorage.getItem("jarvis_token") || ""; },
+  get url() { return (localStorage.getItem("jarvis_url") || location.origin).replace(/\/$/, ""); }
+};
+
+function stateMsg(html) {
+  document.getElementById("root").innerHTML = '<div class="state-msg">' + html + '</div>';
+}
+
+// --- boot loader timing ------------------------------------------------------
+// MIN_BOOT_MS is how long the "system initializing" assembly is guaranteed to
+// show even if the board returns instantly (local fetches are fast). Past this
+// floor the skeleton is cross-faded out the moment data lands — so it never
+// blocks a slow load, it just keeps a fast one from flashing. Tune to taste.
+var MIN_BOOT_MS = 1900;   // success path — let the sequence read (through the boss box)
+var ERR_BOOT_MS = 500;    // error / not-signed-in — surface quickly
+
+function nowMs_() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
+var BOOT_T0 = nowMs_();
+
+// Hold until the floor, cross-fade the skeleton out, then swap in the real view.
+function finishBoot(floorMs, cb) {
+  var wait = Math.max(0, floorMs - (nowMs_() - BOOT_T0));
+  setTimeout(function () {
+    var boot = document.getElementById("boot");
+    if (boot) { boot.classList.add("sk-out"); setTimeout(cb, 250); }
+    else { cb(); }
+  }, wait);
+}
+
+async function loadBoard() {
+  if (!LS.token) { finishBoot(ERR_BOOT_MS, function () { stateMsg("Sign in to Jarvis first."); }); return; }
+  try {
+    var r = await fetch(LS.url + "/integrations/hunter/board", {
+      headers: { "Authorization": "Bearer " + LS.token }
+    });
+    if (r.status === 403) { finishBoot(ERR_BOOT_MS, function () { stateMsg("Your Jarvis session was rejected — sign in again."); }); return; }
+    var data = await r.json();
+    if (!data.ok) {
+      finishBoot(ERR_BOOT_MS, function () {
+        stateMsg("<b>Your Operating System isn't set up yet.</b><br><br>Connect your own dashboard to see your" +
+          " level, stats, and quests here.<br>" +
+          '<a class="setup-cta" href="' + LS.url + '/setup-hunter" target="_top">Open Operating System setup →</a>');
+      });
+      return;
+    }
+    finishBoot(MIN_BOOT_MS, function () { render(shape(data.board || {})); });
+  } catch (e) {
+    finishBoot(ERR_BOOT_MS, function () { stateMsg("Could not reach your Jarvis server."); });
+  }
+}
+
+// --- escaping + numeric helpers (ported verbatim) ---------------------------
+function safeV4_(value) {
+  return String(value === null || value === undefined ? "" : value)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function numV4_(value) {
+  var n = Number(String(value || "0").replace("%", "").trim());
+  return isNaN(n) ? 0 : n;
+}
+function extractBossIdV4_(value) {
+  var text = String(value || "").trim();
+  var match = text.match(/BOSS-\d+|B-\d+/i);
+  return match ? match[0].toUpperCase() : text.toUpperCase();
+}
+function statusClassV4_(status) {
+  var s = String(status || "").toLowerCase();
+  if (s.includes("complete")) return "complete";
+  if (s.includes("blocked")) return "blocked";
+  if (s.includes("planned")) return "planned";
+  if (s.includes("skip")) return "pending";
+  return "pending";
+}
+function parseBossProgressV4_(value) {
+  if (value === null || value === undefined || value === "") return 0;
+  var cleaned = String(value).replace("%", "").replace(/[^\d.-]/g, "").trim();
+  var num = Number(cleaned);
+  if (isNaN(num)) return 0;
+  return Math.max(0, Math.min(100, Math.round(num)));
+}
+function hasStatValueV4_(v) { return v !== undefined && v !== null && v !== ""; }
+function toStatNumberV4_(value, fallback) {
+  if (fallback === undefined) fallback = 0;
+  if (value === null || value === undefined || value === "") return fallback;
+  var cleaned = String(value).replace("%", "").replace(/[^\d.-]/g, "").trim();
+  var num = Number(cleaned);
+  return isNaN(num) ? fallback : num;
+}
+function clampStatPercentV4_(value) {
+  var num = toStatNumberV4_(value, 0);
+  return Math.max(0, Math.min(100, Math.round(num)));
+}
+function pctNormalizeV4_(v) {
+  // The board returns progress_pct as a raw 0..1 ratio (Stats!progress_pct =
+  // xp_into_level/xp_to_next). Display-formatted sources send "62%". Handle both:
+  // a value in (0,1] is a fraction → scale to percent; anything larger is already
+  // a percent.
+  var n = toStatNumberV4_(v, 0);
+  if (n > 0 && n <= 1) n = n * 100;
+  return clampStatPercentV4_(n);
+}
+function getStatProgressPercentV4_(stat) {
+  // 0 is a valid value — do not use || fallback here.
+  if (hasStatValueV4_(stat.progress_pct)) return pctNormalizeV4_(stat.progress_pct);
+  if (hasStatValueV4_(stat.progress_percent)) return pctNormalizeV4_(stat.progress_percent);
+  var xpIntoLevel = toStatNumberV4_(stat.xp_into_level, 0);
+  var xpToNext = toStatNumberV4_(stat.xp_to_next, 0);
+  var span = xpIntoLevel + xpToNext;
+  if (span > 0) return clampStatPercentV4_((xpIntoLevel / span) * 100);
+  return 0;
+}
+
+// --- attribute meta (icons identical; copy de-personalized for shipping) ----
+function attributeMetaV4_(statName) {
+  var s = String(statName || "").toLowerCase();
+  if (s.includes("discipline")) return { icon: "🛡️", className: "attr-discipline",
+    meaning: "Discipline grows when you follow through on planned actions, keep commitments, and do the hard thing without needing perfect motivation.",
+    value: "Higher Discipline makes your whole system more reliable. It keeps plans from becoming decorative fiction." };
+  if (s.includes("knowledge")) return { icon: "📘", className: "attr-knowledge",
+    meaning: "Knowledge grows through focused study, reading, note-making, and proving you understand what you learned.",
+    value: "Higher Knowledge supports school, career growth, better decisions, and long-term leverage." };
+  if (s.includes("health")) return { icon: "❤️", className: "attr-health",
+    meaning: "Health grows through workouts, sleep, better food choices, hydration, and recovery.",
+    value: "Higher Health gives you more energy, better mood, stronger focus, and less fatigue drag." };
+  if (s.includes("finance")) return { icon: "💰", className: "attr-finance",
+    meaning: "Finance grows when you track money, reduce waste, build savings, pay obligations, and improve income.",
+    value: "Higher Finance means more freedom, less stress, and more room to make strategic moves." };
+  if (s.includes("career")) return { icon: "🧭", className: "attr-career",
+    meaning: "Career grows through skill-building, real work, portfolio building, networking, and professional evidence.",
+    value: "Higher Career increases your earning power, credibility, and long-term options." };
+  if (s.includes("spiritual")) return { icon: "✨", className: "attr-spiritual",
+    meaning: "Spiritual grows through reflection, gratitude, humility, moral alignment, and choosing purpose over comfort.",
+    value: "Higher Spiritual keeps the system grounded in meaning instead of empty productivity." };
+  if (s.includes("social")) return { icon: "🗣️", className: "attr-social",
+    meaning: "Social grows through communication, leadership, follow-ups, conflict handling, and getting better with people on purpose.",
+    value: "Higher Social improves relationships, influence, and your ability to lead." };
+  if (s.includes("execution")) return { icon: "⚡", className: "attr-execution",
+    meaning: "Execution grows when you convert plans into finished actions and reduce the gap between intention and reality.",
+    value: "Higher Execution means you get more done with less delay. This is the action stat." };
+  return { icon: "◇", className: "attr-default",
+    meaning: "This attribute grows when related actions are completed and confirmed with evidence.",
+    value: "Higher levels represent stronger real-world ability in this area." };
+}
+
+function fatigueMeaningV4_(fatigueValue) {
+  var f = numV4_(fatigueValue || 0);
+  if (f >= 81) return { label: "Recovery Mode",
+    meaning: "81–100 fatigue means capacity is heavily reduced. The system should stop stacking optional tasks.",
+    advice: "Protect sleep, essentials, and recovery. Complete only critical quests." };
+  if (f >= 61) return { label: "Conservation Mode",
+    meaning: "61–80 fatigue means you can still move, but your plan needs to be lighter and more controlled.",
+    advice: "Prioritize one or two meaningful wins. Do not build a fantasy schedule." };
+  if (f >= 31) return { label: "Balanced Mode",
+    meaning: "31–60 fatigue means you have usable capacity, but you need buffers and realistic pacing.",
+    advice: "Push important tasks, but avoid unnecessary chaos." };
+  return { label: "Push Mode",
+    meaning: "0–30 fatigue means energy is available. This is the best range for attacking important quests.",
+    advice: "Spend the energy on high-value work, not random scrolling." };
+}
+
+function momentumMeaningV4_(momentumValue) {
+  var s = String(momentumValue || "Stable").toLowerCase();
+  if (s.includes("rising") || s === "2" || s === "3") return { label: "Momentum rising",
+    meaning: "Momentum rising means recent actions are stacking — completed quests, better follow-through, or streak progress are creating forward pressure.",
+    advice: "Keep pressure on the current boss. Do not overcomplicate the next move." };
+  if (s.includes("declining") || s.includes("falling") || s === "-1") return { label: "Momentum declining",
+    meaning: "Momentum declining means follow-through has weakened, important blocks were missed, or planned actions are being deferred.",
+    advice: "Shrink the next task until it is small enough to execute immediately." };
+  if (s.includes("recovery")) return { label: "Recovery momentum",
+    meaning: "Recovery means the system is intentionally protecting capacity instead of pushing full force.",
+    advice: "Complete essentials, reduce overload, and rebuild momentum." };
+  if (s.includes("overloaded")) return { label: "Overloaded",
+    meaning: "Overloaded means there are too many active demands for the current energy, time, or attention available.",
+    advice: "Cut, defer, or simplify. Hero mode is how plans go to die." };
+  return { label: "Momentum stable",
+    meaning: "Momentum stable means the system is holding position. You are not collapsing, but you are not accelerating either.",
+    advice: "Choose one clear quest and create movement." };
+}
+
+function getFatigueModeV4_(fatigueValue) {
+  var fatigue = numV4_(fatigueValue || 0);
+  if (fatigue >= 81) return { label: "RECOVERY MODE", className: "danger", note: "Protect essentials. Cut optional quests." };
+  if (fatigue >= 61) return { label: "CONSERVATION MODE", className: "warning", note: "Keep the plan realistic. No heroic nonsense." };
+  if (fatigue >= 31) return { label: "BALANCED MODE", className: "normal", note: "Push important tasks, keep buffers." };
+  return { label: "PUSH MODE", className: "good", note: "Energy is available. Spend it wisely." };
+}
+
+function getRankGateV4_(state, stats, rankRules) {
+  var currentRank = String(state.rank || "E Rank").trim();
+  var characterLevel = numV4_(state.character_level || state.level || 0);
+  var statLevels = stats.map(function(s){ return numV4_(s.level || 0); }).filter(function(n){ return !isNaN(n); });
+  var avgStat = statLevels.length ? Math.round((statLevels.reduce(function(a,b){return a+b;},0) / statLevels.length) * 10) / 10 : 0;
+  var lowestStat = statLevels.length ? Math.min.apply(null, statLevels) : 0;
+
+  if (!rankRules || rankRules.length === 0) {
+    return { current: currentRank, next: "D Rank", status: "LOCKED", missing: ["Rank rules not loaded."], avgStat: avgStat, lowestStat: lowestStat };
+  }
+  var idx = -1;
+  for (var i = 0; i < rankRules.length; i++) {
+    if (String(rankRules[i].rank || "").trim() === currentRank) { idx = i; break; }
+  }
+  if (idx === -1 || idx >= rankRules.length - 1) {
+    return { current: currentRank, next: "MAX", status: "CLEARED", missing: [], avgStat: avgStat, lowestStat: lowestStat };
+  }
+  var next = rankRules[idx + 1];
+  var minLevel = numV4_(next.min_character_level || 0);
+  var minAvg = numV4_(next.min_average_stat || 0);
+  var minLow = numV4_(next.min_lowest_stat || 0);
+  var missing = [];
+  if (characterLevel < minLevel) missing.push("Reach character level " + minLevel);
+  if (avgStat < minAvg) missing.push("Average stat level " + minAvg);
+  if (lowestStat < minLow) missing.push("Lowest stat level " + minLow);
+  if (next.boss_requirement) missing.push(String(next.boss_requirement));
+  var ready = missing.length === 0;
+  return { current: currentRank, next: next.rank || "Next Rank", status: ready ? "READY REVIEW" : "LOCKED", missing: missing.slice(0, 4), avgStat: avgStat, lowestStat: lowestStat };
+}
+
+function getSystemAlertV4_(state, dailyQuests, weaknesses, fatigueMode) {
+  var fatigue = numV4_(state.fatigue || 0);
+  var directive = state.system_directive || state.directive || state.next_best_action || state.system_message || "";
+  var className = "normal";
+  if (fatigue >= 81) className = "danger";
+  else if (fatigue >= 61) className = "warning";
+  else if (fatigueMode && fatigueMode.className) className = fatigueMode.className;
+
+  if (directive) return { label: "SYSTEM DIRECTIVE", priority: "CURRENT ORDER", text: directive, className: className };
+
+  var pendingQuest = dailyQuests.find(function(q){
+    var status = String(q.status || "").toLowerCase();
+    return status.includes("pending") || status.includes("planned");
+  });
+  if (pendingQuest) return { label: "SYSTEM DIRECTIVE", priority: "QUEST TARGET", text: "Complete: " + (pendingQuest.quest || pendingQuest.title || "the next pending quest."), className: "normal" };
+
+  return { label: "SYSTEM DIRECTIVE", priority: "NO ORDER LOADED", text: "Run daily planning and select the next tactical priority.", className: "normal" };
+}
+
+// --- shape the raw board into the view-model (getHunterMobileDataV4_) --------
+function shape(board) {
+  var state = board.state || {};
+  var stats = (board.stats || []).slice(0, 8);
+  var dailyQuests = (board.daily_quests || []).filter(function(q){ return q.quest || q.title; }).slice(0, 8);
+  var bosses = (board.bosses || []).filter(function(b){ return b.name; }).slice(0, 8);
+  var weaknesses = (board.weaknesses || []).filter(function(w){ return w.pattern; }).slice(0, 5);
+  var rankRules = board.rank_rules || [];
+
+  var activeBossRaw = state.active_boss || state.Active_Boss || "";
+  var activeBossId = extractBossIdV4_(activeBossRaw);
+  var activeBoss = bosses.find(function(b){
+    var bossId = b.boss_id || b.id || b.Boss_ID || b.ID || "";
+    return String(bossId).trim().toUpperCase() === String(activeBossId).trim().toUpperCase();
+  });
+  if (!activeBoss) activeBoss = bosses.find(function(b){ return String(b.name || "").trim() === String(activeBossRaw).trim(); });
+  if (!activeBoss) activeBoss = bosses.find(function(b){
+    var bossId = b.boss_id || b.id || b.Boss_ID || b.ID || "";
+    return String(bossId).trim().toUpperCase().indexOf("BOSS-") === 0;
+  });
+  if (!activeBoss && bosses.length > 0) activeBoss = bosses[0];
+
+  var fatigueMode = getFatigueModeV4_(state.fatigue);
+  return {
+    generated_at: new Date().toISOString(),
+    state: state, stats: stats, dailyQuests: dailyQuests, bosses: bosses,
+    activeBoss: activeBoss || {}, weaknesses: weaknesses,
+    rankGate: getRankGateV4_(state, stats, rankRules),
+    fatigueMode: fatigueMode,
+    systemAlert: getSystemAlertV4_(state, dailyQuests, weaknesses, fatigueMode)
+  };
+}
+
+// --- build the dashboard markup (ported from buildHunterMobileHtmlV4_) -------
+function render(data) {
+  var state = data.state || {};
+  var activeBoss = data.activeBoss || {};
+  var rankGate = data.rankGate || {};
+  var fatigueMode = data.fatigueMode || {};
+  var systemAlert = data.systemAlert || {};
+
+  var level = safeV4_(state.character_level || state.level || "0");
+  var rank = safeV4_(state.rank || "E Rank");
+  var totalXp = safeV4_(state.total_xp || "0");
+  var xpToNext = safeV4_(state.xp_to_next || "");
+  var nextLevel = safeV4_(Number(state.character_level || state.level || 0) + 1 || "");
+  var fatigue = safeV4_(state.fatigue || "0");
+  var momentum = safeV4_(state.momentum || "Stable");
+  var mainQuest = safeV4_(state.main_quest || "Use the system.");
+  var activeBossName = safeV4_(state.active_boss || activeBoss.name || "No active boss");
+
+  var bossProgress = parseBossProgressV4_(activeBoss.progress_pct || activeBoss.progress_percent || activeBoss.progress || activeBoss.Progress || "0");
+  var bossRank = safeV4_(activeBoss.difficulty_label || activeBoss.difficulty || "Unknown");
+  var bossPhase = safeV4_(activeBoss.current_phase || "No phase set.");
+  var bossNextMove = safeV4_(activeBoss.next_move || "No next move set.");
+  var bossBlocker = safeV4_(activeBoss.main_blocker || "No blocker recorded.");
+  var bossReward = safeV4_(activeBoss.reward_xp || "0");
+  var fatigueInfo = fatigueMeaningV4_(state.fatigue);
+  var momentumInfo = momentumMeaningV4_(state.momentum);
+
+  var statsHtml = data.stats.map(function(stat){
+    var rawName = stat.stat || stat.Stat || stat.attribute || stat.Attribute || "";
+    var name = safeV4_(rawName);
+    var lvl = safeV4_(stat.level || stat.Level || "1");
+    var xp = safeV4_(stat.xp_total || stat.total_xp || stat.xp || "0");
+    var trend = safeV4_(stat.trend_7d || stat.Trend_7d || "Stable");
+    var pct = getStatProgressPercentV4_(stat);
+    var meta = attributeMetaV4_(rawName);
+    return '' +
+      '<div class="expand-card stat-card attr-card ' + safeV4_(meta.className) + '" onclick="toggleCardV4(this)">' +
+        '<div class="card-main attr-main">' +
+          '<div class="attr-title-wrap">' +
+            '<span class="attr-icon">' + safeV4_(meta.icon) + '</span>' +
+            '<div><div class="card-title">' + name + '</div><div class="card-sub">Trend: ' + trend + '</div></div>' +
+          '</div>' +
+          '<div class="right-stat">LV ' + lvl + '</div>' +
+        '</div>' +
+        '<div class="bar"><div class="bar-fill cyan" style="width:' + pct + '%"></div></div>' +
+        '<div class="expand-body">' +
+          '<div class="detail-line"><strong>Total XP:</strong> ' + xp + '</div>' +
+          '<div class="detail-line"><strong>Progress:</strong> ' + pct + '% to next level</div>' +
+          '<div class="detail-line"><strong>Meaning:</strong> ' + safeV4_(meta.meaning) + '</div>' +
+          '<div class="detail-line"><strong>Value:</strong> ' + safeV4_(meta.value) + '</div>' +
+        '</div>' +
+      '</div>';
+  }).join("");
+
+  var questsHtml = data.dailyQuests.map(function(q){
+    var quest = safeV4_(q.quest || "");
+    var stat = safeV4_(q.linked_stat || "");
+    var boss = safeV4_(q.linked_boss || "");
+    var xp = safeV4_(q.xp_value || "0");
+    var status = safeV4_(q.status || "Pending");
+    var type = safeV4_(q.type || "standard");
+    var notes = safeV4_(q.notes || "");
+    var statusClass = statusClassV4_(status);
+    return '' +
+      '<div class="expand-card quest-card ' + statusClass + '" onclick="toggleCardV4(this)">' +
+        '<div class="quest-label">DAILY QUEST</div>' +
+        '<div class="card-title">' + (quest || "Unnamed quest") + '</div>' +
+        '<div class="quest-meta"><span>+' + xp + ' XP</span><span>' + (stat || "No stat") + '</span><span class="pill ' + statusClass + '">' + status + '</span></div>' +
+        '<div class="expand-body">' +
+          '<div class="detail-line"><strong>Linked Boss:</strong> ' + (boss || "None") + '</div>' +
+          '<div class="detail-line"><strong>Type:</strong> ' + type + '</div>' +
+          '<div class="detail-line"><strong>Notes:</strong> ' + (notes || "No notes.") + '</div>' +
+        '</div>' +
+      '</div>';
+  }).join("");
+
+  var weaknessesHtml = data.weaknesses.map(function(w){
+    var pattern = safeV4_(w.pattern || "");
+    var stat = safeV4_(w.stat || "");
+    var severity = safeV4_(w.severity || "");
+    var status = safeV4_(w.status || "");
+    var countermeasure = safeV4_(w.countermeasure || "");
+    var evidenceCount = safeV4_(w.evidence_count_30d || "");
+    return '' +
+      '<div class="expand-card debuff-card" onclick="toggleCardV4(this)">' +
+        '<div class="card-title">⚠ ' + (pattern || "Unnamed weakness") + '</div>' +
+        '<div class="card-sub">' + stat + ' // Severity ' + severity + ' // ' + status + '</div>' +
+        '<div class="expand-body">' +
+          '<div class="detail-line"><strong>Countermeasure:</strong> ' + (countermeasure || "No countermeasure set.") + '</div>' +
+          '<div class="detail-line"><strong>Evidence Count:</strong> ' + (evidenceCount || "Not tracked.") + '</div>' +
+        '</div>' +
+      '</div>';
+  }).join("");
+
+  var missingRankHtml = (rankGate.missing || []).map(function(item){ return "<li>" + safeV4_(item) + "</li>"; }).join("");
+  var rankClass = String(rankGate.status || "").toLowerCase().indexOf("ready") !== -1 ? "ready" : "locked";
+
+  var html = '' +
+    '<div class="app">' +
+      '<div class="title"><h1>OPERATING SYSTEM</h1><div class="sub">SYSTEM ONLINE // MOBILE STATUS WINDOW</div></div>' +
+
+      '<div class="frame">' +
+        '<div class="profile">' +
+          '<div class="profile-main">' +
+            '<div class="profile-label">Profile</div>' +
+            '<div class="profile-level">LV ' + level + '</div>' +
+            '<div class="profile-rank">' + rank + '</div>' +
+          '</div>' +
+          '<div class="mode-badge ' + safeV4_(fatigueMode.className || "normal") + '">' + safeV4_(fatigueMode.label || "ACTIVE") + '</div>' +
+        '</div>' +
+        '<div class="boss-row">' + safeV4_(fatigueMode.note || "") + '</div>' +
+      '</div>' +
+
+      '<div class="status-grid">' +
+        '<div class="expand-card status-card metric-card" onclick="toggleCardV4(this)">' +
+          '<div class="status-label">Total XP</div><div class="status-value">' + totalXp + '</div>' +
+          '<div class="expand-body">' +
+            '<div class="detail-line"><strong>What it means:</strong> Total XP is the accumulated evidence of completed quests, milestones, boss progress, and confirmed actions.</div>' +
+            '<div class="detail-line"><strong>Next Level:</strong> ' + (xpToNext || "Unknown") + ' XP needed to reach Level ' + (nextLevel || "?") + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="expand-card status-card metric-card fatigue-card" onclick="toggleCardV4(this)">' +
+          '<div class="status-label">Fatigue</div><div class="status-value">' + fatigue + '/100</div>' +
+          '<div class="expand-body">' +
+            '<div class="detail-line"><strong>' + safeV4_(fatigueInfo.label) + ':</strong> ' + safeV4_(fatigueInfo.meaning) + '</div>' +
+            '<div class="detail-line"><strong>Planning advice:</strong> ' + safeV4_(fatigueInfo.advice) + '</div>' +
+            '<div class="detail-line"><strong>Scale:</strong> 0–30 Push, 31–60 Balanced, 61–80 Conservation, 81–100 Recovery.</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="expand-card status-card metric-card momentum-card" onclick="toggleCardV4(this)">' +
+          '<div class="status-label">Momentum</div><div class="status-value">' + momentum + '</div>' +
+          '<div class="expand-body">' +
+            '<div class="detail-line"><strong>' + safeV4_(momentumInfo.label) + ':</strong> ' + safeV4_(momentumInfo.meaning) + '</div>' +
+            '<div class="detail-line"><strong>Planning advice:</strong> ' + safeV4_(momentumInfo.advice) + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="system-notification-wrap"><div class="system-notification-frame">' +
+        '<div class="notification-rail rail-top"></div>' +
+        '<div class="notification-panel">' +
+          '<div class="notification-header"><div class="notification-icon">!</div><div class="notification-title">NOTIFICATION</div></div>' +
+          '<div class="notification-message">' + safeV4_(systemAlert.text || "Run daily planning and select the next tactical priority.") + '</div>' +
+        '</div>' +
+        '<div class="notification-rail rail-bottom"></div>' +
+      '</div></div>' +
+
+      '<div class="section">Current Boss</div>' +
+      '<div class="expand-card boss-card open" onclick="toggleCardV4(this)">' +
+        '<div class="boss-kicker">Boss Arena</div>' +
+        '<div class="boss-title">' + activeBossName + '</div>' +
+        '<div class="bar"><div class="bar-fill purple" style="width:' + bossProgress + '%"></div></div>' +
+        '<div class="boss-meta">Progress: ' + bossProgress + '% // Difficulty: ' + bossRank + ' // Reward: ' + bossReward + ' XP</div>' +
+        '<div class="expand-body">' +
+          '<div class="boss-row"><strong>Phase:</strong> ' + bossPhase + '</div>' +
+          '<div class="boss-row"><strong>Next Move:</strong> ' + bossNextMove + '</div>' +
+          '<div class="boss-row"><strong>Blocker:</strong> ' + bossBlocker + '</div>' +
+        '</div>' +
+        '<div class="tap-hint">Tap to expand/collapse</div>' +
+      '</div>' +
+
+      '<div class="section">Daily Quests</div>' +
+      (questsHtml || '<div class="expand-card quest-card"><div class="card-title">No daily quests loaded.</div></div>') +
+
+      '<div class="section">Attributes</div>' +
+      (statsHtml || '<div class="expand-card stat-card"><div class="card-title">No stats found.</div></div>') +
+
+      '<div class="section">Rank</div>' +
+      '<div class="expand-card rank-card ' + rankClass + '" onclick="toggleCardV4(this)">' +
+        '<div class="rank-title">' + safeV4_(rankGate.current || rank) + ' → ' + safeV4_(rankGate.next || "Next Rank") + '</div>' +
+        '<div class="rank-status">' + safeV4_(rankGate.status || "LOCKED") + '</div>' +
+        '<div class="card-sub">Average Stat: ' + safeV4_(rankGate.avgStat || "0") + ' // Lowest Stat: ' + safeV4_(rankGate.lowestStat || "0") + '</div>' +
+        '<div class="expand-body">' +
+          (missingRankHtml ? ('<ul>' + missingRankHtml + '</ul>') : '<div class="boss-row">No missing requirements detected. Review required before promotion.</div>') +
+        '</div>' +
+        '<div class="tap-hint">Tap to expand/collapse</div>' +
+      '</div>' +
+
+      '<div class="section">Weakness / Debuffs</div>' +
+      (weaknessesHtml || '<div class="expand-card debuff-card"><div class="card-title">No active debuffs loaded.</div></div>') +
+
+      '<button class="reload" onclick="location.reload()">REFRESH STATUS</button>' +
+
+      '<div class="section">How To Use This</div>' +
+      '<div class="expand-card help-card" onclick="toggleCardV4(this)">' +
+        '<div class="card-title">📖 Commands &amp; daily flow</div>' +
+        '<div class="card-sub">New here? Tap to see what to SAY to Jarvis to run your system. ' +
+          'The board only fills in when you use these.</div>' +
+        '<div class="expand-body">' +
+          '<div class="detail-line"><strong>☀ Morning:</strong> say <strong>"Good morning"</strong> for your ' +
+            'briefing, then <strong>"Start my day"</strong> (a.k.a. <strong>"Run daily planning"</strong>) — ' +
+            'that\'s what builds your Daily Quests above.</div>' +
+          '<div class="detail-line"><strong>⚡ During the day:</strong> work your quests. Say ' +
+            '<strong>"Give me credit"</strong> when you finish something to earn XP.</div>' +
+          '<div class="detail-line"><strong>🌙 End of day:</strong> say <strong>"How\'d we do"</strong> or ' +
+            '<strong>"See you tomorrow"</strong> to score the day, log it, and prep tomorrow.</div>' +
+          '<div class="detail-line"><strong>📅 Weekly:</strong> say <strong>"Big picture me"</strong> for a ' +
+            'review of wins, misses, and bosses.</div>' +
+          '<div class="detail-line"><strong>Good to know:</strong> XP needs evidence and ranks need review — ' +
+            'there\'s no fake leveling. If the board looks empty, run <strong>daily planning</strong> first.</div>' +
+        '</div>' +
+        '<div class="tap-hint">Tap to expand/collapse</div>' +
+      '</div>' +
+
+      '<div class="footer">Main Quest: ' + mainQuest + '<br>Generated: ' + safeV4_(data.generated_at) + '<br>XP requires evidence. Rank requires review. No fake leveling.</div>' +
+    '</div>';
+
+  document.getElementById("root").innerHTML = html;
+}
+
+function toggleCardV4(card) {
+  if (!card || !card.classList) return;
+  card.classList.toggle("open");
+}
+
+loadBoard();
+</script>
+</body>
+</html>

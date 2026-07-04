@@ -1,0 +1,21 @@
+# Jarvis Voice Local — Phase 1 pinned dependencies (Python 3.14, Windows 11).
+# Install:  python -m pip install -r requirements.txt
+
+fastapi==0.136.3
+uvicorn[standard]==0.49.0
+python-dotenv==1.2.2
+slowapi==0.1.9
+
+# Web Push (PWA notifications)
+pywebpush==2.3.0
+
+# HEIC/HEIF -> JPEG conversion for iPhone photo uploads
+Pillow==12.2.0
+pillow-heif==1.4.0
+
+# Multipart form parsing for file uploads (FastAPI UploadFile)
+python-multipart==0.0.32
+
+# Test-only: FastAPI's TestClient (used by test_console.py) requires httpx.
+# Not needed to run the server, only to run the headless smoke tests.
+httpx==0.28.1

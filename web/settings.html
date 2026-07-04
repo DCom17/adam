@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Auth bootstrap: if opened with #token=... (desktop launcher or phone Connect-QR),
+     store the token to localStorage and strip it from the URL/history. The fragment
+     never reaches the server. No-op on normal navigation. -->
+<script>
+(function(){try{var h=(location.hash||"").replace(/^#/,"");if(h){var t=new URLSearchParams(h).get("token");if(t&&t.trim()){localStorage.setItem("jarvis_token",t.trim());localStorage.setItem("jarvis_url",location.origin);}}}catch(e){}try{if(location.hash){history.replaceState(null,document.title,location.pathname+location.search);}}catch(e){try{location.hash="";}catch(e2){}}})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Jarvis Voice Local — Add-ons</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 ui-monospace, "Cascadia Code", Consolas, monospace;
+         background: #0e1116; color: #d7dde5; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+           padding: 12px 18px; background: #151a22; border-bottom: 1px solid #232a35; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .3px; }
+  header .spacer { flex: 1; }
+  main { max-width: 760px; margin: 0 auto; padding: 18px; }
+  section { background: #141922; border: 1px solid #232a35; border-radius: 8px; margin: 0 0 14px; }
+  section > .head { padding: 10px 14px; border-bottom: 1px solid #232a35; font-weight: 600;
+                   display: flex; align-items: center; gap: 10px; }
+  section > .body { padding: 12px 14px; }
+  button, input { font: inherit; background: #1c232e; color: #d7dde5;
+                  border: 1px solid #2c3542; border-radius: 6px; padding: 6px 10px; }
+  button { cursor: pointer; } button:hover { background: #232c39; }
+  button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  a { color: #58a6ff; }
+  a.btn { display: inline-block; text-decoration: none; background: #1c232e; color: #d7dde5;
+          border: 1px solid #2c3542; border-radius: 6px; padding: 6px 10px; }
+  a.btn:hover { background: #232c39; }
+  a.btn.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  label { color: #9aa6b3; margin-right: 4px; }
+  .muted { color: #7c8794; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+  .hidden { display: none !important; }
+  .errbox  { color: #e74c3c; border: 1px solid #5c2222; border-radius: 6px; padding: 8px 11px; margin: 8px 0; white-space: pre-wrap; }
+  .gate { max-width: 460px; margin: 12vh auto; }
+  .spacer-h { flex: 1; }
+  /* status pills */
+  .pill { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid; }
+  .pill.enabled    { color: #2ecc71; border-color: #1e5631; }
+  .pill.needs_setup{ color: #e0a020; border-color: #5c4410; }
+  .pill.available  { color: #7c8794; border-color: #2c3542; }
+  .desc { margin: 0 0 8px; }
+  .req { font-size: 12px; color: #7c8794; margin: 6px 0 10px; }
+  .cardftr { display: flex; align-items: center; gap: 10px; }
+  .tag { font-size: 11px; color: #7c8794; border: 1px solid #2c3542; border-radius: 4px; padding: 1px 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Add-ons <span class="muted">— Jarvis Voice Local</span></h1>
+  <span class="spacer"></span>
+  <a href="/console" onclick="if(window.parent&&window.parent!==window){event.preventDefault();window.parent.postMessage({jvl:'open-console',hash:''},'*');}">Operator Console</a>
+  <button id="refresh" class="hidden">Refresh</button>
+  <button id="signOut" class="hidden">Sign out</button>
+</header>
+
+<!-- Token gate (carries no secret; token is pasted client-side, stored on this device only) -->
+<main id="gateView">
+  <section class="gate">
+    <div class="head">Sign in</div>
+    <div class="body">
+      <p class="muted">This page talks to your local server with your bearer token (the same
+        JARVIS_TOKEN the Operator Console uses). It is stored on this device only.</p>
+      <div class="row">
+        <input id="tokenInput" type="password" placeholder="Paste JARVIS_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
+        <button class="primary" id="signIn">Sign in</button>
+      </div>
+      <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
+      <div class="errbox hidden" id="gateErr"></div>
+    </div>
+  </section>
+</main>
+
+<!-- Add-on cards -->
+<main id="cardsView" class="hidden">
+  <p class="muted">Optional capabilities. All are off by default and the core assistant never needs
+    them. Each one is set up with your own account — Jarvis holds no maintainer credentials.</p>
+  <section id="phoneCard">
+    <div class="head">
+      <span>Connect a phone</span>
+      <span class="pill available">phone access</span>
+    </div>
+    <div class="body">
+      <p class="desc">Use Jarvis from your phone over your own private Tailscale network. Opens the
+        Connect-phone tool — scan one code to sign your phone in.</p>
+      <div class="cardftr">
+        <a class="btn primary" href="/console#connectPhoneSec"
+           onclick="if(window.parent&&window.parent!==window){event.preventDefault();window.parent.postMessage({jvl:'open-console',hash:'connectPhoneSec'},'*');}">Connect phone</a>
+      </div>
+    </div>
+  </section>
+  <div id="cards"></div>
+  <div class="errbox hidden" id="loadErr"></div>
+</main>
+
+<script>
+// Bearer token read from localStorage; sent only in the Authorization header — never
+// in a URL or query string. Same keys as the Operator Console so one sign-in covers all.
+var LS = {
+  get token() { return localStorage.getItem("jarvis_token") || ""; },
+  set token(v) { localStorage.setItem("jarvis_token", v); },
+  clearToken() { localStorage.removeItem("jarvis_token"); },
+  get url() { return (localStorage.getItem("jarvis_url") || location.origin).replace(/\/$/, ""); },
+  set url(v) { localStorage.setItem("jarvis_url", v.replace(/\/$/, "")); }
+};
+
+function $(id) { return document.getElementById(id); }
+function show(el) { el.classList.remove("hidden"); }
+function hide(el) { el.classList.add("hidden"); }
+function authHeaders(extra) {
+  var h = { "Authorization": "Bearer " + LS.token };
+  if (extra) for (var k in extra) h[k] = extra[k];
+  return h;
+}
+
+var PILL_LABEL = { enabled: "Enabled", needs_setup: "Needs setup", available: "Not added" };
+var BTN_LABEL  = { enabled: "Manage", needs_setup: "Finish setup", available: "Add" };
+
+// --- gate ---
+function enterCards() { hide($("gateView")); show($("cardsView")); show($("signOut")); show($("refresh")); loadAddons(); }
+function enterGate() { show($("gateView")); hide($("cardsView")); hide($("signOut")); hide($("refresh")); }
+
+async function signIn() {
+  var t = $("tokenInput").value.trim();
+  var u = $("urlInput").value.trim();
+  if (!t) { $("gateErr").textContent = "Paste your JARVIS_TOKEN."; show($("gateErr")); return; }
+  LS.token = t;
+  if (u) LS.url = u;
+  try {
+    var r = await fetch(LS.url + "/jobs", { headers: authHeaders() });
+    if (r.status === 403) { $("gateErr").textContent = "That token was rejected."; show($("gateErr")); LS.clearToken(); return; }
+  } catch (e) {
+    $("gateErr").textContent = "Could not reach the server at " + LS.url + "."; show($("gateErr")); return;
+  }
+  hide($("gateErr"));
+  enterCards();
+}
+function signOut() { LS.clearToken(); $("tokenInput").value = ""; enterGate(); }
+
+// --- render add-on cards from /integrations/status (booleans/strings only, no secret) ---
+function makeEl(tag, cls, text) {
+  var el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text != null) el.textContent = text;   // textContent — never innerHTML of server data
+  return el;
+}
+
+function renderCard(a) {
+  var sec = makeEl("section");
+
+  var head = makeEl("div", "head");
+  head.appendChild(makeEl("span", null, a.name));
+  var status = (a.status in PILL_LABEL) ? a.status : "available";
+  head.appendChild(makeEl("span", "pill " + status, PILL_LABEL[status]));
+  head.appendChild(makeEl("span", "spacer-h"));
+  if (a.write_capable) head.appendChild(makeEl("span", "tag", "writes need approval"));
+  sec.appendChild(head);
+
+  var body = makeEl("div", "body");
+  body.appendChild(makeEl("p", "desc", a.short_description || ""));
+  if (a.requires && a.requires.length) {
+    body.appendChild(makeEl("p", "req", "Needs: " + a.requires.join(", ")));
+  }
+  // Where to set it up (PC vs phone) — only shown until it's enabled.
+  if (a.setup_hint && a.status !== "enabled") {
+    body.appendChild(makeEl("p", "req", "💻 " + a.setup_hint));
+  }
+  var ftr = makeEl("div", "cardftr");
+  if (a.setup_path) {
+    var btn = makeEl("a", "btn primary", (a.status in BTN_LABEL) ? BTN_LABEL[a.status] : "Set up");
+    btn.setAttribute("href", a.setup_path);   // same-origin relative path from the server
+    ftr.appendChild(btn);
+  }
+  body.appendChild(ftr);
+  sec.appendChild(body);
+  return sec;
+}
+
+async function loadAddons() {
+  hide($("loadErr"));
+  var box = $("cards");
+  box.textContent = "Loading…";
+  try {
+    var r = await fetch(LS.url + "/integrations/status", { headers: authHeaders() });
+    if (r.status === 403) { box.textContent = ""; $("loadErr").textContent = "Your session was rejected — sign in again."; show($("loadErr")); return; }
+    if (!r.ok) { box.textContent = ""; $("loadErr").textContent = "Could not load add-ons (HTTP " + r.status + ")."; show($("loadErr")); return; }
+    var data = await r.json();
+    var list = (data && data.integrations) || [];
+    box.textContent = "";
+    if (!list.length) { box.appendChild(makeEl("p", "muted", "No add-ons available.")); return; }
+    list.forEach(function (a) { box.appendChild(renderCard(a)); });
+  } catch (e) {
+    box.textContent = "";
+    $("loadErr").textContent = "Could not reach your Jarvis server.";
+    show($("loadErr"));
+  }
+}
+
+// --- wire up ---
+$("signIn").addEventListener("click", signIn);
+$("tokenInput").addEventListener("keydown", function (e) { if (e.key === "Enter") signIn(); });
+$("signOut").addEventListener("click", signOut);
+$("refresh").addEventListener("click", loadAddons);
+
+$("urlInput").value = LS.url;
+if (LS.token) enterCards();
+</script>
+</body>
+</html>

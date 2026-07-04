@@ -1,0 +1,44 @@
+# Secrets & machine config
+# release_guard.local holds the owner-identifying release-guard terms —
+# never track it and never ship it.
+*.local
+.env
+# Ignore every .env.* variant (incl. setup's timestamped .env.bak.* backups, which
+# can contain a real token) — but keep the shippable template.
+.env.*
+!.env.example
+*.env.bak
+settings.json
+# settings.json backups setup writes when recording claude_exe / vault_path.
+settings.json.bak.*
+*.pem
+
+# Runtime data (user files, never ship). data/* (not data/) so the
+# !data/.gitkeep negation can actually re-include the keep file.
+data/*
+!data/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Rollback backups (never track these; the release builder also excludes them).
+# .env.example / settings.example.json / data/.gitkeep are kept by the rules above.
+*.bak
+*.pre-*
+
+# Release build output
+dist/
+
+# Heavy TTS model artifacts — distributed via download, never the repo
+*.onnx
+voices-*.bin
+cloudflared.exe

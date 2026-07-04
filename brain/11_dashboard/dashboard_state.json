@@ -1,0 +1,41 @@
+{
+  "_comment": "Fresh level-1 starting state. 'Bootstrap JARVIS' personalizes the bosses, main_quest, and directive by interviewing you. The 8 stats are the default life-stat set (see stat_definitions.md).",
+  "date": "",
+  "character_level": 1,
+  "rank": "E",
+  "total_xp": 0,
+  "xp_to_next": 100,
+  "consistency_bonus": 0,
+  "fatigue": 20,
+  "momentum": "Stable",
+  "system_directive": "Welcome. Run 'Bootstrap JARVIS' to set up your profile, then 'Start my day' to plan.",
+  "next_best_action": "Run Bootstrap JARVIS.",
+  "last_updated": "",
+  "active_boss": "",
+  "main_quest": "",
+
+  "stats": {
+    "Discipline":  { "level": 1, "xp": 0, "xp_to_next": 100 },
+    "Knowledge":   { "level": 1, "xp": 0, "xp_to_next": 100 },
+    "Health":      { "level": 1, "xp": 0, "xp_to_next": 100 },
+    "Finance":     { "level": 1, "xp": 0, "xp_to_next": 100 },
+    "Career":      { "level": 1, "xp": 0, "xp_to_next": 100 },
+    "Spiritual":   { "level": 1, "xp": 0, "xp_to_next": 100 },
+    "Social":      { "level": 1, "xp": 0, "xp_to_next": 100 },
+    "Execution":   { "level": 1, "xp": 0, "xp_to_next": 100 }
+  },
+
+  "bosses": [],
+
+  "daily_quests": [],
+
+  "weaknesses": [],
+
+  "notifications": [
+    {
+      "type": "info",
+      "message": "Fresh install. Run 'Bootstrap JARVIS' to personalize your system.",
+      "date": ""
+    }
+  ]
+}

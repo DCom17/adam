@@ -1,0 +1,49 @@
+{
+  "_comment": "Copy this file to jarvis.config.json and fill in your values. The onboarding flow (BOOTSTRAP.md) fills most of this for you. Secrets do NOT go here — they go in .env (see .env.example).",
+
+  "owner": {
+    "name": "",
+    "timezone": "America/Phoenix"
+  },
+
+  "update": {
+    "_comment": "'Update JARVIS' git-fetches this remote/branch and refreshes only core_manifest.txt files. Defaults are fine for a normal clone; override only if your remote/branch differ.",
+    "remote": "origin",
+    "branch": "main"
+  },
+
+  "paths": {
+    "_comment": "Absolute path to this installed kit folder, and your Claude Code executable.",
+    "vault_path": "",
+    "claude_exe": ""
+  },
+
+  "modules": {
+    "_comment": "Toggle optional modules. Core (planning/memory/tasks/reviews) is always on.",
+    "dashboard": false,
+    "calendar": false,
+    "voice": false,
+    "sms": false,
+    "night_watch": false
+  },
+
+  "dashboard": {
+    "_comment": "Set after you deploy your own Apps Script (see setup_dashboard.md). URL only; the token lives in .env as DASHBOARD_TOKEN.",
+    "apps_script_url": ""
+  },
+
+  "calendar": {
+    "_comment": "Set apps_script_url after you deploy your own Calendar Bridge Apps Script (see setup_calendar.md). Token lives in .env as CALENDAR_TOKEN.",
+    "apps_script_url": "",
+    "calendar_id": "primary",
+    "default_reminder_minutes": 30
+  },
+
+  "voice": {
+    "_comment": "v1.1 advanced module. Public hostname for your tunnel and local ports.",
+    "public_host": "",
+    "server_port": 8000,
+    "tts_port": 8001,
+    "voice_model": "claude-opus-4-8"
+  }
+}

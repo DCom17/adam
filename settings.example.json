@@ -1,0 +1,110 @@
+{
+  "_comment": "Copy to settings.json and customize. Non-secret app settings only. Secrets live in .env. Paths may be absolute or relative to the project root.",
+
+  "claude_exe": "",
+
+  "_ai_plan_comment": "How Claude usage is paid for. auth_mode 'subscription' (default) = your Claude Pro/Max login covers usage at the plan's flat rate; recommended model: Opus. auth_mode 'api_key' = pay-as-you-go on your own Anthropic API key (stored in .env as ANTHROPIC_API_KEY, reaches only the spawned claude.exe); recommended model: Sonnet. api_budget_monthly_usd is the pay-as-you-go monthly ceiling — Jarvis pauses (never overspends) when the month's metered cost reaches it; 0 disables the ceiling. Change all of this from Settings -> AI plan in the app.",
+  "auth_mode": "subscription",
+  "voice_model": "claude-opus-4-8",
+  "api_budget_monthly_usd": 10,
+
+  "_capability_tier_comment": "How much Jarvis may do on its own. 'safe' (default) = proposes changes, you approve. 'powerful' = auto-applies non-destructive changes across your vault (destructive still confirmed), connectors on. 'unrestricted' = full power: self-edit, shell, write across vault+app, auto-approve everything. Backup-before-write, the audit log, and secret-file protection stay ON at EVERY tier (full power stays recoverable). Leave blank to hand-tune the granular agent_safety/permissions blocks instead.",
+  "capability_tier": "safe",
+
+  "_vault_path_comment": "Default = the bundled Jarvis brain (de-personalized OS that ships with the app). Point elsewhere only to run Jarvis against a different folder of your own files.",
+  "vault_path": "brain",
+  "work_extra_dirs": [],
+
+  "host": "0.0.0.0",
+  "port": 8000,
+  "public_base_url": "",
+  "cors_allowed_origins": ["*"],
+
+  "_session_sync_comment": "Cross-device chat continuity: the server keeps one copy of your chats + transcripts so every signed-in device shows the same list. Set false to keep chats only on each device.",
+  "session_sync_enabled": true,
+
+  "tts_url": "http://127.0.0.1:8001/tts",
+  "tts_timeout_seconds": 30,
+
+  "claude_timeout_seconds": 120,
+  "async_claude_timeout_seconds": 600,
+  "job_ttl_seconds": 600,
+
+  "data_dir": "data",
+  "upload_dir": "data/uploads",
+  "log_dir": "data/logs",
+  "state_dir": "data/state",
+  "backup_dir": "data/backups",
+  "agent_workspace": "data/agent_workspace",
+  "drafts_dir": "data/drafts",
+  "outputs_dir": "data/outputs",
+  "upload_max_mb": 25,
+  "upload_ttl_days": 7,
+
+  "_agent_safety_comment": "Phase 3 - controls how Claude Code itself may act. draft_only (default, safe) = Claude gets no file-write/shell tools and runs in a throwaway workspace, not your files; it proposes changes the server applies after approval. legacy_direct = old full-agent behavior, PERSONAL USE ONLY, unsafe for a product. allow_code_mode (default false) = opt-in Claude Code mode chats: long-pressing the Operator Mode button escalates THAT ONE chat to raw Claude Code - full tools, direct edits and shell, no approval gate - while every other chat keeps the posture above. Owner-grade power; leave false unless this is your own machine and you explicitly want it.",
+  "agent_safety": {
+    "mode": "draft_only",
+    "allow_direct_claude_writes": false,
+    "allow_code_mode": false,
+    "code_mode_dirs": [],
+    "force_outputs_to_drafts": true,
+    "require_server_applied_writes": true,
+    "brain_write": true,
+    "denied_tools": ["Write", "Edit", "NotebookEdit", "Bash"]
+  },
+
+  "_code_mode_comment": "code_mode_dirs: extra folders a Claude Code mode chat can reach with file tools, on top of the vault (e.g. a repo you code on). code_claude_timeout_seconds: how long one code-mode turn may run before it is killed (default 3600 = 60 min; normal chats keep async_claude_timeout_seconds). Both only matter when allow_code_mode is true.",
+  "code_claude_timeout_seconds": 3600,
+
+  "_integrations_comment": "Optional add-ons, all OFF by default; the core product never needs them. google_calendar talks to YOUR own Apps Script bridge (calendar_bridge.gs) running in YOUR Google account. The bridge token is a secret and lives in .env as GOOGLE_CALENDAR_TOKEN, never here. Reads are direct; create/edit go through approval; delete is unsupported.",
+  "integrations": {
+    "google_calendar": {
+      "enabled": false,
+      "bridge_url": "",
+      "calendar_id": "primary",
+      "timeout_seconds": 20
+    },
+    "gmail": { "enabled": false, "bridge_url": "", "allow_send": false, "timeout_seconds": 20 },
+    "linkedin": {
+      "enabled": false,
+      "api_enabled": false,
+      "client_id": "",
+      "author_urn": "",
+      "timeout_seconds": 20
+    },
+    "sms": {
+      "enabled": false,
+      "poll_interval_seconds": 15,
+      "poll_timeout_seconds": 15
+    },
+    "voicemail": {
+      "enabled": false,
+      "poll_interval_seconds": 20,
+      "poll_timeout_seconds": 20,
+      "transcribe_mode": "twilio",
+      "greeting_text": "",
+      "owner_name": ""
+    },
+    "hunter": {
+      "enabled": false,
+      "bridge_url": "",
+      "timeout_seconds": 20
+    }
+  },
+
+  "_permissions_comment": "Level 3 controlled-action policy. Safe defaults: read the vault, write only to data/outputs + data/drafts, shell off, destructive off, writes need approval, back up before overwrite, audit everything. Widen deliberately.",
+  "permissions": {
+    "read_dirs": [],
+    "write_dirs": ["data/outputs", "data/drafts"],
+    "allowed_commands": [],
+    "require_approval_for_writes": true,
+    "require_approval_for_destructive": true,
+    "backup_before_write": true,
+    "audit_log_enabled": true,
+    "allow_shell": false,
+    "allow_network_tools": false,
+    "max_file_size_mb": 25,
+    "blocked_paths": [],
+    "protected_file_patterns": [".env", ".env.*", "*.pem", "*.key", "*.secret", "id_rsa*", "settings.json"]
+  }
+}

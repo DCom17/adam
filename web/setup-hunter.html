@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Auth bootstrap: if opened with #token=... (desktop launcher or phone Connect-QR),
+     store the token to localStorage and strip it from the URL/history. The fragment
+     never reaches the server. No-op on normal navigation. -->
+<script>
+(function(){try{var h=(location.hash||"").replace(/^#/,"");if(h){var t=new URLSearchParams(h).get("token");if(t&&t.trim()){localStorage.setItem("jarvis_token",t.trim());localStorage.setItem("jarvis_url",location.origin);}}}catch(e){}try{if(location.hash){history.replaceState(null,document.title,location.pathname+location.search);}}catch(e){try{location.hash="";}catch(e2){}}})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Jarvis Voice Local — Operating System Setup</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 ui-monospace, "Cascadia Code", Consolas, monospace;
+         background: #0e1116; color: #d7dde5; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+           padding: 12px 18px; background: #151a22; border-bottom: 1px solid #232a35; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .3px; }
+  header .spacer { flex: 1; }
+  main { max-width: 760px; margin: 0 auto; padding: 18px; }
+  section { background: #141922; border: 1px solid #232a35; border-radius: 8px; margin: 0 0 16px; }
+  section > .head { padding: 10px 14px; border-bottom: 1px solid #232a35; font-weight: 600; }
+  section > .body { padding: 12px 14px; }
+  button, input { font: inherit; background: #1c232e; color: #d7dde5;
+                  border: 1px solid #2c3542; border-radius: 6px; padding: 6px 10px; }
+  button { cursor: pointer; } button:hover { background: #232c39; }
+  button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+  a { color: #58a6ff; }
+  label { color: #9aa6b3; margin-right: 4px; }
+  ol.steps { margin: 0; padding-left: 0; list-style: none; counter-reset: step; }
+  ol.steps > li { position: relative; padding: 0 0 14px 38px; margin: 0; }
+  ol.steps > li::before { counter-increment: step; content: counter(step);
+    position: absolute; left: 0; top: -2px; width: 26px; height: 26px; border-radius: 50%;
+    background: #1c232e; border: 1px solid #2c3542; color: #9aa6b3;
+    display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  ol.steps > li h3 { margin: 2px 0 6px; font-size: 14px; font-weight: 600; }
+  .muted { color: #7c8794; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+  .hidden { display: none !important; }
+  pre.snippet { margin: 6px 0; padding: 8px 10px; background: #0c0f14; border: 1px solid #232a35;
+                border-radius: 6px; overflow: auto; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+  .warnbox { color: #e0a020; border: 1px solid #5c4410; border-radius: 6px; padding: 8px 11px; margin: 8px 0; white-space: pre-wrap; }
+  .errbox  { color: #e74c3c; border: 1px solid #5c2222; border-radius: 6px; padding: 8px 11px; margin: 8px 0; white-space: pre-wrap; }
+  .okbox   { color: #2ecc71; border: 1px solid #1e5631; border-radius: 6px; padding: 8px 11px; margin: 8px 0; white-space: pre-wrap; }
+  .status  { font-size: 13px; color: #9aa6b3; margin-left: 6px; }
+  .gate { max-width: 460px; margin: 12vh auto; }
+  ul.fine { margin: 6px 0; padding-left: 18px; color: #9aa6b3; }
+  ul.fine li { margin: 3px 0; }
+  .ui { display: inline-block; padding: 0 6px; border: 1px solid #2c3542; border-radius: 4px;
+        background: #1c232e; color: #d7dde5; font-size: 12px; white-space: nowrap; }
+  details.manual { margin: 6px 0 0; }
+  details.manual > summary { cursor: pointer; color: #58a6ff; font-size: 13px; }
+  details.manual[open] > summary { margin-bottom: 8px; }
+  .example { border: 1px solid #1e5631; border-radius: 6px; padding: 8px 11px; margin: 8px 0;
+             color: #cfe9d6; background: #0f1a13; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Operating System Setup <span class="muted">— Jarvis Voice Local</span></h1>
+  <span class="spacer"></span>
+  <a href="/console">Operator Console</a>
+  <button id="signOut" class="hidden">Sign out</button>
+</header>
+
+<!-- Token gate (carries no secret; token is pasted client-side, stored on this device only) -->
+<main id="gateView">
+  <section class="gate">
+    <div class="head">Sign in</div>
+    <div class="body">
+      <p class="muted">This page talks to your local server with your bearer token (the same
+        JARVIS_TOKEN the Operator Console uses). It is stored on this device only.</p>
+      <p class="muted">Easiest way in: on your computer, start Jarvis with the <b>Start Jarvis</b>
+        launcher (<code>scripts\start-jarvis.ps1</code>) — it opens you already signed in, so you
+        won't see this box. On a phone, open the Operator Console's <b>Connect phone</b> and scan the
+        sign-in QR. To copy the token by hand, run <code>scripts\copy-token.ps1</code> and paste it above.</p>
+      <div class="row">
+        <input id="tokenInput" type="password" placeholder="Paste JARVIS_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
+        <button class="primary" id="signIn">Sign in</button>
+      </div>
+      <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
+      <div class="errbox hidden" id="gateErr"></div>
+    </div>
+  </section>
+</main>
+
+<!-- Wizard -->
+<main id="wizardView" class="hidden">
+
+  <section>
+    <div class="body">
+      <div class="warnbox">The Operating System is <b>opt-in</b> and stays <b>disabled</b> until you
+finish setup. It runs entirely in <b>your own</b> Google account, in a Google Sheet <b>you</b> create.
+Jarvis never holds your Google password. It can read your board, and write the XP, quests, and stats you
+approve. It <b>cannot delete</b> rows or tabs through the bridge.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">Set up your Operating System</div>
+    <div class="body">
+      <ol class="steps">
+        <li>
+          <h3>Create a blank Google Sheet</h3>
+          <p class="muted">Make a new, empty spreadsheet in your own Google Drive — name it anything (e.g. "Operating System").</p>
+          <div class="row">
+            <a id="openSheets" href="https://sheets.new" target="_blank" rel="noopener">Create a blank Sheet &#8599;</a>
+          </div>
+        </li>
+        <li>
+          <h3>Open Apps Script and copy the Operating System script</h3>
+          <p class="muted">In your new Sheet: <b>Extensions &#8594; Apps Script</b>. Click anywhere in the big
+            code area (the file is <code>Code.gs</code>), press <span class="ui">Ctrl</span>+<span class="ui">A</span>
+            to select everything, <span class="ui">Delete</span>, then come back here and copy the script:</p>
+          <div class="row">
+            <button class="primary" id="copyCode">Copy the Operating System script</button>
+            <span class="status" id="copyStatus"></span>
+          </div>
+          <p class="muted">Back in the editor, press <span class="ui">Ctrl</span>+<span class="ui">V</span> to
+            paste it. Nothing secret is in it.</p>
+        </li>
+        <li>
+          <h3>Save the project — this is what makes the functions appear</h3>
+          <p class="muted">Nothing runs until you save. In the <b>toolbar just above the code</b>, click the
+            <b>floppy-disk Save icon</b> (<span class="ui">&#128190; Save project</span>) or press
+            <span class="ui">Ctrl</span>+<span class="ui">S</span>.</p>
+          <ul class="fine">
+            <li>If it asks you to name the project, type anything (e.g. <i>Operating System</i>) and save.</li>
+            <li>The function names only show up in the picker (next step) <b>after</b> you save.</li>
+          </ul>
+        </li>
+        <li>
+          <h3>Run <code>setupHunterDashboard</code> to build the board</h3>
+          <p class="muted">In the <b>toolbar above the code</b> there's a <b>function picker</b> — a dropdown
+            showing a function name. Click it and choose <code>setupHunterDashboard</code>, then click the
+            <b><span class="ui">&#9654; Run</span></b> button next to it. It builds every tab and formula.</p>
+          <p class="muted">The <b>first</b> run asks you to authorize <i>your own</i> script. Follow these
+            exact clicks:</p>
+          <ul class="fine">
+            <li>A box says <b>"Authorization required"</b> &#8594; click <b>Review permissions</b>.</li>
+            <li>Pick your Google account.</li>
+            <li>On the <b>"Google hasn't verified this app"</b> screen, click the small grey <b>Advanced</b>
+              link at the <b>bottom-left</b>.</li>
+            <li>Click <b>Go to (your project name) (unsafe)</b> — it's your own script, so it's safe.</li>
+            <li>Scroll down and click <b>Continue</b> / <b>Allow</b> at the <b>bottom-right</b>.</li>
+          </ul>
+        </li>
+        <li>
+          <h3>Run <code>setHunterToken</code> to generate your token</h3>
+          <p class="muted">Open the <b>function picker</b> again and this time choose a <b>different</b>
+            function — <code>setHunterToken</code> — then click <b><span class="ui">&#9654; Run</span></b>.</p>
+          <p class="muted">The <b>Execution log</b> opens at the bottom and prints a line like
+            <code>HUNTER_TOKEN=abc123…</code>. <b>Copy everything after the <code>=</code> sign</b> — that long
+            value is your bridge token. (Jarvis saves it for you below — you don't edit any file by hand.)</p>
+        </li>
+        <li>
+          <h3>Deploy as a Web app</h3>
+          <p class="muted">In the <b>top-right</b> corner there's a blue <b><span class="ui">Deploy</span></b>
+            button. Click it &#8594; <b>New deployment</b>.</p>
+          <ul class="fine">
+            <li>Next to <b>"Select type"</b> there's a small <b>gear icon</b> (&#9881;). Click it and choose
+              <b>Web app</b>.</li>
+            <li>Set <b>Execute as: Me</b> and <b>Who has access: Anyone</b>.</li>
+            <li>Click <b>Deploy</b>. If it asks you to <b>authorize access</b> again, go through the same
+              Review permissions &#8594; Advanced &#8594; Go to (unsafe) &#8594; Continue steps once more.</li>
+          </ul>
+        </li>
+        <li>
+          <h3>Copy the Web app URL</h3>
+          <p class="muted">After deploying, Apps Script shows two links. Copy the <b>second one</b> — the
+            <b>Web app URL</b> (it ends in <code>/exec</code>). Use the <b>Copy</b> button next to it.</p>
+        </li>
+        <li>
+          <h3>Paste your bridge URL and token here</h3>
+          <div class="row">
+            <label style="min-width:84px;">Bridge URL</label>
+            <input id="bridgeUrl" type="text" placeholder="https://script.google.com/macros/s/…/exec" style="flex:1;min-width:260px;" autocomplete="off">
+          </div>
+          <div class="row">
+            <label style="min-width:84px;">Bridge token</label>
+            <input id="bridgeToken" type="password" placeholder="the HUNTER_TOKEN you generated" style="flex:1;min-width:260px;" autocomplete="off">
+          </div>
+          <p class="muted">Your token is sent only to your own bridge. When you click <b>Enable Operating System</b>
+            below, Jarvis saves it to your local <code>.env</code> for you — you never edit a file by hand. It is
+            never put in a link and never logged.</p>
+        </li>
+        <li>
+          <h3>Test the connection</h3>
+          <div class="row">
+            <button class="primary" id="testBtn">Test connection</button>
+            <span class="status" id="testStatus"></span>
+          </div>
+          <div class="okbox hidden" id="testOk"></div>
+          <div class="errbox hidden" id="testErr"></div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Verified payoff: one-click enable (the server writes its own config) -->
+  <section id="finishSec" class="hidden">
+    <div class="head">&#10003; Verified — turn it on</div>
+    <div class="body">
+      <p>Your bridge is live and your token works. One click and Jarvis writes its own settings for
+        you — no editing files, no copying JSON.</p>
+      <div class="row">
+        <button class="primary" id="enableBtn">Enable Operating System</button>
+        <span class="status" id="enableStatus"></span>
+      </div>
+      <div class="errbox hidden" id="enableErr"></div>
+      <details class="manual">
+        <summary>Prefer to set it up by hand?</summary>
+        <p class="muted">You don't need to do any of this — the button above does it for you. But if you'd
+          rather edit the files yourself:</p>
+        <p class="muted"><b>1. Add your token to <code>.env</code>:</b></p>
+        <ul class="fine">
+          <li>Open <b>File Explorer</b> and go to your Jarvis folder
+            (<code>C:\Users\you\jarvis-voice-local</code>).</li>
+          <li>Find the file named <code>.env</code> and double-click it. If Windows asks how to open it,
+            choose <b>Notepad</b>.</li>
+          <li>Scroll to the <b>Hunter dashboard bridge</b> line and put your token right after the
+            <code>=</code> so it reads <code>HUNTER_TOKEN=yourtoken</code>.</li>
+          <li>Click <b>File &#8594; Save</b>, then close Notepad.</li>
+        </ul>
+        <p class="muted"><b>2. In <code>settings.json</code></b>, set the <code>hunter</code> block to exactly
+          this (mind the commas):</p>
+        <pre class="snippet" id="settingsSnippet"></pre>
+        <button id="copySettings">Copy settings block</button>
+        <div class="warnbox" style="margin-top:10px;">Either way, the Operating System stays <b>off</b> until you
+          <b>restart Jarvis</b>.</div>
+      </details>
+    </div>
+  </section>
+
+  <!-- Enabled: restart + try-it prompt -->
+  <section id="doneSec" class="hidden">
+    <div class="head">&#10003; Operating System enabled</div>
+    <div class="body">
+      <div class="okbox">Saved. Jarvis wrote your settings and your token for you.</div>
+      <p><b>One more step:</b> restart Jarvis so it loads the new setting.</p>
+      <ul class="fine">
+        <li>Close the <b>black "Jarvis Voice Local" window</b> (closing just the app/browser tab is not
+          enough — the server runs in that black window).</li>
+        <li>Start Jarvis again with your usual launcher.</li>
+      </ul>
+      <p style="margin-top:12px;">Then try saying or typing:</p>
+      <div class="example">"Jarvis, show me my Operating System."</div>
+      <p class="muted">Jarvis reads your board directly; writing XP, quests, or stats always asks you to
+        confirm first. It can't delete rows or tabs.</p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// Bearer token read from localStorage; sent only in the Authorization header — never
+// in a URL or query string. Same keys as the Operator Console so one sign-in covers both.
+var LS = {
+  get token() { return localStorage.getItem("jarvis_token") || ""; },
+  set token(v) { localStorage.setItem("jarvis_token", v); },
+  clearToken() { localStorage.removeItem("jarvis_token"); },
+  get url() { return (localStorage.getItem("jarvis_url") || location.origin).replace(/\/$/, ""); },
+  set url(v) { localStorage.setItem("jarvis_url", v.replace(/\/$/, "")); }
+};
+
+function $(id) { return document.getElementById(id); }
+function show(el) { el.classList.remove("hidden"); }
+function hide(el) { el.classList.add("hidden"); }
+
+function authHeaders(extra) {
+  var h = { "Authorization": "Bearer " + LS.token };
+  if (extra) for (var k in extra) h[k] = extra[k];
+  return h;
+}
+
+// --- gate ---
+function enterWizard() { hide($("gateView")); show($("wizardView")); show($("signOut")); }
+function enterGate() { show($("gateView")); hide($("wizardView")); hide($("signOut")); }
+
+async function signIn() {
+  var t = $("tokenInput").value.trim();
+  var u = $("urlInput").value.trim();
+  if (!t) { $("gateErr").textContent = "Paste your JARVIS_TOKEN."; show($("gateErr")); return; }
+  LS.token = t;
+  if (u) LS.url = u;
+  // Verify the token against a cheap token-gated route before entering.
+  try {
+    var r = await fetch(LS.url + "/jobs", { headers: authHeaders() });
+    if (r.status === 403) { $("gateErr").textContent = "That token was rejected."; show($("gateErr")); LS.clearToken(); return; }
+  } catch (e) {
+    $("gateErr").textContent = "Could not reach the server at " + LS.url + "."; show($("gateErr")); return;
+  }
+  hide($("gateErr"));
+  enterWizard();
+}
+
+function signOut() { LS.clearToken(); $("tokenInput").value = ""; enterGate(); }
+
+// --- step 4: copy verify endpoint code ---
+async function copyCode() {
+  $("copyStatus").textContent = "";
+  try {
+    var r = await fetch(LS.url + "/integrations/hunter/bridge-code", { headers: authHeaders() });
+    if (!r.ok) { $("copyStatus").textContent = "Could not load the code (HTTP " + r.status + ")."; return; }
+    var data = await r.json();
+    await navigator.clipboard.writeText(data.code || "");
+    $("copyStatus").textContent = "Copied " + (data.filename || "the Operating System script") + " to your clipboard.";
+  } catch (e) {
+    $("copyStatus").textContent = "Copy failed — your browser blocked clipboard access. Try again or use HTTPS.";
+  }
+}
+
+// --- step 6: test connection ---
+async function testConnection() {
+  var url = $("bridgeUrl").value.trim();
+  var token = $("bridgeToken").value.trim();
+  hide($("testOk")); hide($("testErr")); hide($("finishSec")); hide($("doneSec"));
+  $("testStatus").textContent = "Testing…";
+  if (!url || !token) { $("testStatus").textContent = ""; $("testErr").textContent = "Enter both your bridge URL and token."; show($("testErr")); return; }
+  try {
+    var r = await fetch(LS.url + "/integrations/hunter/test", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ bridge_url: url, token: token })
+    });
+    $("testStatus").textContent = "";
+    if (r.status === 403) { $("testErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("testErr")); return; }
+    var data = await r.json();
+    if (data.ok) {
+      var q = (typeof data.quest_count === "number") ? data.quest_count : "?";
+      var s = (typeof data.stat_count === "number") ? data.stat_count : "?";
+      $("testOk").textContent = "✓ Connected. Your board has " + q + " quests and " + s + " stats.";
+      show($("testOk"));
+      renderFinish(url);
+    } else {
+      $("testErr").textContent = "Bridge rejected the test: " + (data.error || "unknown error") + ". Re-check the URL and token.";
+      show($("testErr"));
+    }
+  } catch (e) {
+    $("testStatus").textContent = "";
+    $("testErr").textContent = "Could not reach your Jarvis server to run the test.";
+    show($("testErr"));
+  }
+}
+
+// --- finish guidance (built client-side; the bridge URL is not a secret;
+// the token is NOT echoed here) ---
+function renderFinish(url) {
+  var block =
+    '"integrations": {\n' +
+    '  "hunter": {\n' +
+    '    "enabled": true,\n' +
+    '    "bridge_url": ' + JSON.stringify(url) + ',\n' +
+    '    "timeout_seconds": 20\n' +
+    '  }\n' +
+    '}';
+  $("settingsSnippet").textContent = block;   // textContent — never innerHTML
+  show($("finishSec"));
+}
+
+async function copySettings() {
+  try { await navigator.clipboard.writeText($("settingsSnippet").textContent); } catch (e) {}
+}
+
+// --- one-click enable: the server writes its own settings.json + .env ---
+async function enableHunter() {
+  var url = $("bridgeUrl").value.trim();
+  var token = $("bridgeToken").value.trim();
+  hide($("enableErr"));
+  if (!url || !token) { $("enableErr").textContent = "Re-enter your bridge URL and token above first."; show($("enableErr")); return; }
+  $("enableStatus").textContent = "Saving…";
+  $("enableBtn").disabled = true;
+  try {
+    var r = await fetch(LS.url + "/integrations/hunter/enable", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ bridge_url: url, token: token })
+    });
+    $("enableStatus").textContent = "";
+    if (r.status === 403) { $("enableErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
+    var data = await r.json();
+    if (data.ok) {
+      hide($("finishSec"));
+      show($("doneSec"));
+    } else {
+      $("enableErr").textContent = "Couldn't save: " + (data.error || "unknown error") + ". You can use the by-hand steps below instead.";
+      show($("enableErr"));
+      $("enableBtn").disabled = false;
+    }
+  } catch (e) {
+    $("enableStatus").textContent = "";
+    $("enableErr").textContent = "Could not reach your Jarvis server to save the setting.";
+    show($("enableErr"));
+    $("enableBtn").disabled = false;
+  }
+}
+
+// --- wire up ---
+$("signIn").addEventListener("click", signIn);
+$("tokenInput").addEventListener("keydown", function (e) { if (e.key === "Enter") signIn(); });
+$("signOut").addEventListener("click", signOut);
+$("copyCode").addEventListener("click", copyCode);
+$("testBtn").addEventListener("click", testConnection);
+$("enableBtn").addEventListener("click", enableHunter);
+$("copySettings").addEventListener("click", copySettings);
+
+// Prefill the server field; auto-enter if a token is already stored on this device.
+$("urlInput").value = LS.url;
+if (LS.token) enterWizard(); else enterGate();
+</script>
+</body>
+</html>
