@@ -3,6 +3,41 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.39 - Adam looks like Adam (and updates can undo themselves)
+
+The release where the last traces of the old name disappear and the update
+system finishes its safety story. Also the first release with a Windows
+installer alongside the ZIP.
+
+- **New icon.** Adam's mark is now a bold cyan "A" (the old glowing-orb DNA,
+  unmistakably Adam) — app window, browser tab, desktop shortcut, phone home
+  screen. Android launchers get a properly padded icon so nothing is cropped.
+  (On iPhone, remove and re-add the home-screen shortcut to see it.)
+- **The home screen says ADAM.** The header above the orb still read JARVIS —
+  the very last visible piece of the old name. Gone.
+- **Updates now verify themselves and undo on failure.** After applying an
+  update, Adam boot-checks the updated code; if anything is wrong it puts
+  every file back exactly as it was and tells you — you stay on your current
+  version. (Backups existed before; now they actually restore themselves.)
+- **Friendlier "out of AI" messages.** Pay-as-you-go credit running out now
+  says so plainly (with where to top up) instead of quoting a raw billing
+  error — in every mode, including code chat. Same for plan usage limits.
+- **You can't get trapped inside the ZIP anymore.** Double-clicking SETUP,
+  START, or UPDATE from Explorer's ZIP preview now explains how to Extract
+  All first, instead of dying with a red PowerShell error.
+- **Windows installer (beta).** adam-setup-v0.9.39.exe installs Adam like a
+  normal app: Start Menu + desktop shortcuts, Add/Remove Programs entry, and
+  a clean uninstall that keeps your notes, token, and data. It refuses to run
+  while Adam is open, backs up program files when installing over an existing
+  copy, and never touches your brain\ folder. (Unsigned for now — Windows
+  SmartScreen will warn until code signing lands; the ZIP flow is unchanged.)
+- **Clear AI disclosure.** Setup, the docs, and the privacy page now say
+  plainly: Adam is an AI assistant powered by Claude, processed under your
+  own account.
+- Polish: version-proof docs examples, "the real Adam voice" heading, no more
+  developer-speak in launcher fallbacks, phone-guide cleanups, and the wizard
+  no longer promises a desktop icon if Windows refused to make one.
+
 ## 0.9.38 - The pre-tester hardening release
 
 The output of a full four-way product audit (cold-user UX, code production-readiness,
