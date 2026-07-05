@@ -585,7 +585,7 @@ learns nothing about your setup):
 curl http://localhost:8000/health
 ```
 ```json
-{ "status": "ok", "app": "adam-local", "version": "0.9.37" }
+{ "status": "ok", "app": "adam-local", "version": "0.9.x" }
 ```
 
 With your token, `/health` returns the full config summary:
@@ -597,7 +597,7 @@ curl -H "Authorization: Bearer <your ADAM_TOKEN>" http://localhost:8000/health
 {
   "status": "ok",
   "app": "adam-local",
-  "version": "0.9.37",
+  "version": "0.9.x",
   "claude_configured": true,
   "vault_configured": true,
   "permissions": { "write_dirs": ["...\\data\\outputs", "...\\data\\drafts"], "...": "..." },
@@ -683,7 +683,7 @@ there via `/clientlog`, since the phone has no dev console.
 - Single-user assumptions (one push-subscription list, one "last result", one
   job DB).
 - Windows-only for now.
-- No tray app or auto-start yet — the server runs in a visible window you keep open.
+- No tray app or auto-start — the server runs in a visible window you keep open, on purpose: you can always see what Adam is doing.
 - **Safe-agent enforcement = `--disallowedTools` + sandbox `cwd`.** This blocks
   Claude's file-write/shell tools at the CLI (verified). It is not a kernel-level
   sandbox: a future Claude Code tool not in `denied_tools`, or a misconfiguration

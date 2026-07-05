@@ -1381,7 +1381,11 @@ async def run_claude(
 
     # config.VOICE_MODEL (not the module-load copy): the AI-plan endpoint changes
     # the model live, and the next turn must pick it up without a restart.
-    cmd = [CLAUDE_EXE, "-p", "--model", config.VOICE_MODEL]
+    cmd = [CLAUDE_EXE, "-p"]
+    # An empty/"default" voice_model means "let the CLI pick" — the hedge against
+    # a configured model ID retiring and silently breaking every fresh install.
+    if config.VOICE_MODEL and config.VOICE_MODEL.lower() != "default":
+        cmd += ["--model", config.VOICE_MODEL]
     if mode == "code":
         # stream-json emits per-tool events while the turn runs — that's the live
         # activity feed on the phone. (--verbose is required with -p+stream-json.)

@@ -193,7 +193,7 @@ if ($ready) {
     Say ""
     if ($openUrl -eq $localUrl) {
         Say "Note: ADAM_TOKEN wasn't found in .env, so the app opened without signing you in." "Yellow"
-        Say "  Run python scripts\setup.py to generate one, then re-launch." "Yellow"
+        Say "  Double-click SETUP in the Adam folder to fix this, then open Adam again." "Yellow"
         Say ""
     }
     Say "Next steps:" "White"

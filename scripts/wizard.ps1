@@ -375,11 +375,19 @@ if ($doctorExit -ne 0) {
 Section 6 "Starting Adam"
 Info "Adding an Adam app shortcut, then starting it up..."
 # Make Adam launchable like an app (Desktop + Start Menu), not just from this folder.
-try { & (Join-Path $root "scripts\add-app-shortcut.ps1") | Out-Host } catch {}
+$shortcutOk = $true
+try { & (Join-Path $root "scripts\add-app-shortcut.ps1") | Out-Host }
+catch { $shortcutOk = $false }
 Write-Host ""
 Good "Setup complete!"
-Info "Open Adam any time from the 'Adam' icon on your Desktop"
-Info "or in the Start Menu. (Double-clicking START in this folder still works too.)"
+if ($shortcutOk) {
+    Info "Open Adam any time from the 'Adam' icon on your Desktop"
+    Info "or in the Start Menu. (Double-clicking START in this folder still works too.)"
+} else {
+    # Never promise an icon that didn't get made — point at the always-true path.
+    Warn "Couldn't add the Desktop icon on this machine."
+    Info "No problem: open Adam any time by double-clicking START in this folder."
+}
 Write-Host ""
 try {
     & (Join-Path $root "scripts\start-adam.ps1")

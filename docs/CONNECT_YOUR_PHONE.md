@@ -40,7 +40,7 @@ Confirm both devices appear in your tailnet (the Tailscale admin console lists t
 ### 2. Start the Adam backend on the PC
 
 ```powershell
-.\scripts\start-adam.ps1   # or: .\scripts\start-dev.ps1
+.\scripts\start-adam.ps1   # or just double-click the Adam desktop icon
 python scripts\doctor.py     # should be all PASS / no FAIL
 ```
 
@@ -156,8 +156,8 @@ which is what makes **voice** work off your home Wi-Fi.
   PC's `.env`; no extra spaces.
 - **Can't reach the server / page won't load** → Tailscale isn't up on one device,
   they're on different tailnets, the backend isn't running, or `tailscale serve` isn't
-  active. Check `tailscale status` and `serve status` on the PC, and that
-  `start-dev.ps1` is running.
+  active. Check `tailscale status` and `serve status` on the PC, and that the
+  black Adam window is open (double-click the Adam desktop icon if not).
 - **Mic does nothing / no voice** → almost always an insecure context (see the banner
   note) or a denied microphone permission. Use the HTTPS URL and allow the mic in
   Safari settings for that site.
