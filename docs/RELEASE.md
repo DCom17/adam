@@ -29,17 +29,21 @@ guard refuses to build. `test_release.py` enforces both halves in the test suite
 
 ### What IS included
 
-- Product modules: `server.py`, `config.py`, `permissions.py`, `proposed_changes.py`,
-  `approvals.py`, `diffs.py`, `job_store.py`, `onboarding.py`, `agent_write_probe.py`
-- `requirements.txt`, `README.md`, `CHANGELOG.md`, `.gitignore`
+The authoritative allow-list lives at the top of `scripts/make_release.py`. In broad
+strokes it ships:
+
+- The product modules and `routers/`, `requirements.txt`, `README.md`, `CHANGELOG.md`,
+  `LICENSE`, `.gitignore`
+- The double-click entry points: `START_HERE.txt`, `SETUP.cmd`, `START.cmd`,
+  `UPDATE.cmd`, `INSTALL-VOICE.cmd`
 - Templates: **`.env.example`**, **`settings.example.json`** (never the real ones)
-- `web/`: `index.html`, `console.html`, `sw.js`, `manifest.json`, `icon.png`
-- `scripts/`: `setup.py`, `doctor.py`, `start-jarvis.ps1` (the one-click launcher),
-  `make_release.py`/`.ps1`, and the start/stop/restart/health/test dev scripts
-- User-facing docs: `CONNECT_YOUR_PHONE.md`, `ADVANCED_REMOTE.md`, `SUPPORT.md`,
-  `RELEASE.md`, `CONSUMER_TEST_CHECKLIST.md`
-- The `test_*.py` suites (so beta users can self-verify) and an empty `data/` tree
-  (`data/.gitkeep`)
+- The `web/` app, the `scripts/` wizard / launcher / updater / doctor / dev scripts,
+  and the optional TTS server (`scripts/tts_server/` — code only, the model downloads
+  on install)
+- The de-personalized **`brain/`** starter kit (walked whole; every file passes the
+  path deny-guard AND a content guard for personal/infra terms)
+- User-facing docs and the `test_*.py` suites (so beta users can self-verify), plus an
+  empty `data/` tree (`data/.gitkeep`)
 
 ### What is NEVER included
 
@@ -66,26 +70,33 @@ python -c "import zipfile; print('\n'.join(zipfile.ZipFile(r'dist\jarvis-voice-l
 Confirm there is **no** `.env`, `settings.json`, `data/` runtime file, or `*.bak` in
 the listing.
 
-## Distributing the beta
+## Publishing a release (this is how updates ship)
 
-- Cut a **private / unlisted** GitHub release and attach the ZIP (the audience is
-  prosumer + friends/family, not the public).
-- Tag it to the `APP_VERSION` in `config.py`.
+Updates are delivered through **GitHub Releases** on the public releases repo — the
+`update_repo` setting, default `DCom17/jarvis-voice-releases`. Every install checks its
+`releases/latest` endpoint, so **publishing a release ships the update**:
 
-## Versioning & the manual update path
+1. Bump `APP_VERSION` in `config.py` and build: `python scripts/make_release.py`.
+2. Publish: `.\scripts\publish-release.ps1` — it creates the release and attaches the
+   ZIP via `gh release create` (or prints the manual web steps if `gh` isn't
+   installed). Tag it to the `APP_VERSION`.
 
-There is **no auto-updater** in v0.9 (by design). To update:
+## How users update
+
+Users don't re-download anything. The app checks on open and shows an
+**"Update available → Update now"** bar; one click downloads and applies it.
+`UPDATE.cmd` is the manual equivalent. Either way the apply path is the smart
+three-way updater (`update_engine.py`): files the user never touched are updated
+(backed up first), files only they changed are kept, real conflicts hold their version
+and surface for review — and `.env`, `settings.json`, and `data/` are never touched.
+The update takes effect after the server restarts (close the black window, reopen).
+
+<details>
+<summary>Fully manual fallback (unzip over the install)</summary>
 
 1. Download the new ZIP and unzip it to a **new** folder (or over the old code).
 2. Your data and secrets are safe — they live in `.env`, `settings.json`, and `data/`,
-   none of which are in the ZIP, so an overwrite never touches them. (If you unzip to a
-   fresh folder, copy your `.env`, `settings.json`, and `data/` across.)
-3. Re-run the doctor and start:
-
-   ```powershell
-   python scripts/doctor.py
-   .\scripts\start-dev.ps1
-   ```
-
-If the doctor reports a new check or a FAIL after an update, follow its plain-language
-guidance before starting.
+   none of which are in the ZIP. (If you unzip to a fresh folder, copy those across.)
+3. Re-run `python scripts/doctor.py`, then start as usual. If the doctor reports a
+   FAIL, follow its plain-language guidance before starting.
+</details>

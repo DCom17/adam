@@ -14,14 +14,15 @@ following a setup guide.
 ## Requirements
 
 - **Windows 10 or 11.** (macOS and Linux are not supported yet.)
-- **Claude Code already installed** and working on the machine.
-- **Python** installed (not bundled yet). Install dependencies with
-  `python -m pip install -r requirements.txt`.
+- A **Claude account on a paid plan**, or an Anthropic API key for pay-as-you-go —
+  chosen during setup.
+- **Python** and **Claude Code** — the `SETUP.cmd` wizard installs both if they're
+  missing (manual setup expects them already on the machine).
 - A **single user** per backend instance.
 
 ## What works
 
-- **Desktop / local by default.** On the PC, `http://localhost:8010` is a secure
+- **Desktop / local by default.** On the PC, `http://localhost:8000` is a secure
   context, so the full app — including voice — works with zero networking setup.
 - **Mobile (phone) access** via **Tailscale + Tailscale Serve HTTPS** — the supported
   path. See [`CONNECT_YOUR_PHONE.md`](./CONNECT_YOUR_PHONE.md). iPhone voice/mic/PWA
@@ -46,9 +47,9 @@ following a setup guide.
   credentials.
 - **Multi-user / accounts / per-device tokens / device pairing** — not yet (single
   static bearer token in v0.9).
-- **Installer / system tray / auto-start / auto-updater** — not yet. v0.9 is a ZIP +
-  `scripts/setup.py` + `scripts/doctor.py`; updates are manual (see
-  [`RELEASE.md`](./RELEASE.md)).
+- **System tray / auto-start** — not yet. The server runs in a visible window you keep
+  open. (Setup **is** a guided wizard — `SETUP.cmd` — and updates **are** one-click via
+  the in-app "Update available" bar or `UPDATE.cmd`; see [`RELEASE.md`](./RELEASE.md).)
 
 ## Safety model (unchanged in every access mode)
 

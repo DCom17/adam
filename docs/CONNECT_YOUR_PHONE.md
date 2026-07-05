@@ -17,7 +17,7 @@ is exactly why we use Tailscale Serve — it provides a valid HTTPS certificate 
 PC on your private network.
 
 > Desktop-only? You don't need any of this. On the PC itself, open
-> `http://localhost:8010` — `localhost` is already a secure context, so voice works.
+> `http://localhost:8000` — `localhost` is already a secure context, so voice works.
 
 ## What you'll do
 
@@ -44,7 +44,7 @@ Confirm both devices appear in your tailnet (the Tailscale admin console lists t
 python scripts\doctor.py     # should be all PASS / no FAIL
 ```
 
-Note the port (default `8010`; check your `settings.json` / `/health`).
+Note the port (default `8000`; check your `settings.json` / `/health`).
 
 ### 3. Enable Tailscale Serve (HTTPS) for the backend port
 
@@ -77,17 +77,17 @@ stops **only** the Jarvis serve on its port and leaves every other serve alone.
 local port, reachable only inside your tailnet — never Funnel, never public):
 
 ```powershell
-# If :443 is free:
-tailscale serve --bg --https=443 http://127.0.0.1:8010
+# If :443 is free (use your install's port — default 8000):
+tailscale serve --bg --https=443 http://127.0.0.1:8000
 # If :443 is already used by another app (e.g. Morrow), use a separate port:
-tailscale serve --bg --https=8443 http://127.0.0.1:8010
+tailscale serve --bg --https=8443 http://127.0.0.1:8000
 
 tailscale serve status
 ```
 
 `serve status` prints your HTTPS URL, e.g. `https://<machine>.<your-tailnet>.ts.net`
 (or `…:8443` if you used 8443). The key outcome is an HTTPS URL that forwards to
-`127.0.0.1:8010`. (Tailscale's docs cover Serve flags and any version differences.)
+your local app port. (Tailscale's docs cover Serve flags and any version differences.)
 
 > ⚠ **Do not run `tailscale serve reset`** if another serve already exists — it removes
 > **all** serve configs (it would drop a Morrow serve on `:443`). To remove only the
@@ -111,7 +111,7 @@ Console** can hand the phone the URL and the token via **two separate local QR c
 hides the token — so the token gets its own QR, which iOS then reads as plain text you
 can copy.)
 
-1. On the PC, open the console: `http://localhost:8010/console` and sign in with your
+1. On the PC, open the console: `http://localhost:8000/console` and sign in with your
    token. (On the PC you can run `.\scripts\copy-token.ps1` to copy the token to your
    clipboard instead of opening `.env`.) Make sure the **Server** URL is your **Tailscale
    HTTPS URL** (e.g.

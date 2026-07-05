@@ -10,10 +10,11 @@ Phone PWA  ->  your desktop backend (this app)  ->  your Claude Code  ->  your f
 ```
 
 > **Status — v0.9.34, friends-&-family / prosumer beta.** Desktop-local works out of the
-> box; phone access is supported via **Tailscale Serve** (HTTPS). It is **not** yet a
-> non-technical consumer product: no installer, no tray app, no auto-update, and a single
-> bearer token for auth (the polished consumer wrapper is the v1.0 goal). Run it on your
-> own trusted Windows machine. New here? Start with the
+> box via the double-click **`SETUP.cmd`** wizard; phone access is supported via
+> **Tailscale Serve** (HTTPS); updates arrive through a one-click in-app updater
+> (GitHub Releases). Not yet done before it's a full consumer product: a tray app /
+> auto-start, per-device auth (it's a single bearer token today), and platforms beyond
+> Windows. Run it on your own trusted Windows machine. New here? Start with the
 > **[Beta handoff](docs/BETA_HANDOFF.md)**.
 
 ---
@@ -55,23 +56,24 @@ Phone PWA  ->  your desktop backend (this app)  ->  your Claude Code  ->  your f
 - **File / photo uploads** — including iPhone HEIC (auto-converted to JPEG).
 - **Web Push** — the installed PWA is notified when a background job finishes.
 - **Inbound SMS** (optional) — text the assistant hands-free via Twilio.
-- **Local TTS proxy** — speaks replies through a local Kokoro service if present, else
-  the browser's built-in voice. **In this beta no voice backend is bundled**, so spoken
-  replies use the browser's default (robotic) voice on both desktop and phone. A
-  high-quality "real Jarvis voice" is a final-product goal — not included here. Running a
-  local TTS service (e.g. Kokoro on `127.0.0.1:8001`) yourself is optional, not required.
+- **The real Jarvis voice (optional)** — out of the box, spoken replies use the
+  browser's built-in (robotic) voice. Double-click **`INSTALL-VOICE.cmd`** (setup also
+  offers it at the end) for the high-quality local voice — a one-time ~340 MB download
+  that runs entirely on your PC and serves both desktop and phone. If the voice service
+  isn't installed or isn't running, the app quietly falls back to the browser voice.
 
 ---
 
 ## Prerequisites
 
 - **Windows 10 or 11**
-- **Python 3** on `PATH` (developed and tested on **3.14**)
-- **Claude Code** installed and logged in with your own credentials
-  (`claude` should run from a terminal)
+- A **Claude account** on a paid plan, or an Anthropic API key for pay-as-you-go
+  (you pick one during setup)
+- **Python 3** and **Claude Code** — `SETUP.cmd` installs both for you if they're
+  missing. (Manual setup expects them on `PATH`; developed and tested on Python 3.14.)
 - *(optional, for phone access)* a **Tailscale** account — see
   [Connect your phone](docs/CONNECT_YOUR_PHONE.md)
-- *(optional)* a local Kokoro TTS service on `http://127.0.0.1:8001/tts`
+- *(optional)* the local high-quality voice — installed by `INSTALL-VOICE.cmd`
 
 ---
 
@@ -535,10 +537,10 @@ browser instead of starting a duplicate. To stop, close that window or run
 
 Then open the app:
 
-- On the desktop: <http://localhost:8010> (the launcher opens this for you). On the PC,
+- On the desktop: <http://localhost:8000> (the launcher opens this for you). On the PC,
   `localhost` is a secure context, so **voice works with no networking setup**.
 - On your phone: use the **Tailscale Serve HTTPS** URL — see
-  [Connect your phone](docs/CONNECT_YOUR_PHONE.md). Plain `http://<your-pc-ip>:8010` is
+  [Connect your phone](docs/CONNECT_YOUR_PHONE.md). Plain `http://<your-pc-ip>:8000` is
   **not** a secure context on a phone, so the mic/voice won't work and the app shows an
   insecure-connection banner.
 - In the app's settings field, set the server URL if it isn't the page origin, and paste
@@ -580,7 +582,7 @@ Expected:
 {
   "status": "ok",
   "app": "jarvis-voice-local",
-  "version": "0.9.0",
+  "version": "0.9.34",
   "claude_configured": true,
   "vault_configured": true,
   "permissions": { "write_dirs": ["...\\data\\outputs", "...\\data\\drafts"], "...": "..." },
@@ -665,8 +667,8 @@ there via `/clientlog`, since the phone has no dev console.
   resume — it's marked `interrupted`, not re-run. Resumable jobs are future work.
 - Single-user assumptions (one push-subscription list, one "last result", one
   job DB).
-- Windows-only for now; remote access (e.g. Cloudflare Tunnel) is not automated.
-- No installer, tray app, updater, or licensing yet.
+- Windows-only for now.
+- No tray app or auto-start yet — the server runs in a visible window you keep open.
 - **Safe-agent enforcement = `--disallowedTools` + sandbox `cwd`.** This blocks
   Claude's file-write/shell tools at the CLI (verified). It is not a kernel-level
   sandbox: a future Claude Code tool not in `denied_tools`, or a misconfiguration
@@ -692,9 +694,7 @@ included in a release ZIP.
 
 ## What's next
 
-The 0.9.x line delivered mobile access & packaging. The next milestone is **beta
-hardening → the v1.0 consumer wrapper** (installer, a connect-phone wizard over the
-proven Tailscale path, tray/auto-start) — **after** the one pending item, the manual
-PC + iPhone Tailscale round-trip, is closed. See
-[`docs/ROADMAP.md`](docs/ROADMAP.md) and [`docs/NEXT_PHASE_PROMPT.md`](docs/NEXT_PHASE_PROMPT.md)
-for the plan, and `CHANGELOG.md` for full history.
+The 0.9.x line delivered mobile access, packaging, the setup wizard, one-click in-app
+updates, and the optional high-quality voice. The remaining road to **v1.0** is beta
+hardening: tray/auto-start, per-device auth, and cold-install validation with outside
+testers. See `CHANGELOG.md` for the full history.
