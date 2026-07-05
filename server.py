@@ -995,6 +995,16 @@ async def _start_voicemail_poller():
 
 
 @app.on_event("startup")
+async def _ensure_adam_voice():
+    """If the real Adam voice (Kokoro) is installed but its service isn't up —
+    the server was started without start-adam.ps1, or Kokoro died — bring it
+    back so replies don't silently degrade to the browser voice. Self-gating
+    (local tts_url + fully installed only), cooldown-gated, never raises."""
+    import tts_supervisor
+    await asyncio.to_thread(tts_supervisor.recover, "server startup", log)
+
+
+@app.on_event("startup")
 async def _seed_update_baseline():
     """Phase 2: ensure a pristine update baseline exists. The smart updater 3-ways
     against the exact bytes this install last shipped (data/baseline/); on a fresh

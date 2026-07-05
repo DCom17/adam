@@ -3,6 +3,26 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.37 - The real Adam voice heals itself (and yes, it works on your phone)
+
+- **The server now keeps the real Adam voice alive.** If the voice service
+  (Kokoro) isn't running — it crashed, or Adam was started some way other than
+  the launcher — the server notices and restarts it by itself: checked at
+  startup and again whenever a spoken reply fails. Replies no longer silently
+  degrade to the robotic browser voice until someone restarts things by hand.
+  (The first reply or two after a crash may still use the fallback voice while
+  the voice model reloads.) Self-heal only manages a locally configured voice
+  service, refuses partial installs, and is rate-limited so a broken install
+  can never spawn-loop.
+- **Docs corrected: the real Adam voice already works on the phone.** The
+  phone guide claimed spoken replies on the phone were always the robotic
+  built-in voice. Wrong — the voice is generated on the PC and delivered over
+  the same private HTTPS connection, so with `INSTALL-VOICE.cmd` on the PC the
+  phone speaks with the same natural Adam voice as the desktop. The guide now
+  says so, and gained a "replies sound robotic" troubleshooting entry.
+- New `tts_supervisor.py` module (shipped in the release ZIP) with its own
+  test file; full suite green.
+
 ## 0.9.36 - Critical packaging fix: the 0.9.35 ZIP could not start
 
 - **If you installed or updated to 0.9.35, take this update.** The 0.9.35 release

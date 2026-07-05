@@ -37,7 +37,7 @@ CONFIG_ROOT = Path(os.environ.get("ADAM_CONFIG_ROOT", "").strip()
 load_dotenv(CONFIG_ROOT / ".env")  # secrets + machine values
 
 APP_NAME = "adam-local"
-APP_VERSION = "0.9.36"
+APP_VERSION = "0.9.37"
 
 
 # --- Settings file ----------------------------------------------------------

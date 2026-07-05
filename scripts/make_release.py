@@ -30,7 +30,7 @@ _ROOT_FILES = [
     # product modules
     "server.py", "config.py", "permissions.py", "proposed_changes.py",
     "self_edit_guard.py", "security.py", "models.py", "rate_limit.py",
-    "usage_store.py",
+    "usage_store.py", "tts_supervisor.py",
     "approvals.py", "diffs.py", "job_store.py", "session_store.py", "onboarding.py", "agent_write_probe.py",
     "google_calendar.py", "integration_registry.py", "twilio_sms.py",
     "twilio_voicemail.py", "voicemail_provision.py", "voicemail_store.py",

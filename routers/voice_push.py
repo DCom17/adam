@@ -12,6 +12,7 @@ import urllib.request
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 import config
+import tts_supervisor
 from models import ClientLog, PushSubscribe, SpeakRequest
 from rate_limit import limiter
 from security import require_token
@@ -19,6 +20,9 @@ from security import require_token
 import server
 
 router = APIRouter()
+
+# Fire-and-forget self-heal tasks: keep a reference so they aren't GC'd mid-run.
+_recover_tasks: set = set()
 
 
 # Characters Kokoro would otherwise read aloud literally ("asterisk", "number
@@ -60,7 +64,15 @@ async def speak(request: Request, body: SpeakRequest):
     try:
         wav = await asyncio.to_thread(_fetch_tts, payload)
     except Exception as e:
-        # TTS down or slow — tell the frontend so it can fall back to browser TTS.
+        # TTS down or slow — tell the frontend so it can fall back to browser
+        # TTS, and (in the background, so this 502 isn't delayed) check whether
+        # Kokoro died and restart it for the next turn. recover() pings first,
+        # so a merely-slow sentence never triggers a spawn.
+        task = asyncio.create_task(
+            asyncio.to_thread(tts_supervisor.recover, "speak failed", server.log)
+        )
+        _recover_tasks.add(task)
+        task.add_done_callback(_recover_tasks.discard)
         raise HTTPException(status_code=502, detail=f"TTS unavailable: {e}")
     return Response(content=wav, media_type="audio/wav")
 

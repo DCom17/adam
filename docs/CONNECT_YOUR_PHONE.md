@@ -139,11 +139,12 @@ which is what makes **voice** work off your home Wi-Fi.
 - Open the app, tap **Activate**, and grant the **microphone** permission when asked.
 - Speak; you should see a transcript and hear a spoken reply.
 
-> **About the spoken voice:** in this beta the reply is spoken with your phone's
-> **built-in (default/robotic) text-to-speech** — that's expected, not a bug. No
-> high-quality voice backend ships with this release; the polished "real Adam voice" is
-> a final-product goal. What you're verifying here is that the mic → transcript → spoken
-> reply **loop** works over HTTPS, not the voice quality. (See
+> **About the spoken voice:** which voice you hear depends on the **PC**, not the
+> phone. If the real Adam voice is installed there (**`INSTALL-VOICE.cmd`**, one-time
+> ~340 MB download), the phone speaks with the **same natural Adam voice as the
+> desktop** — the audio is generated on your PC and delivered over this same private
+> HTTPS connection. If it isn't installed, or its service isn't running, replies fall
+> back to your phone's built-in (robotic) text-to-speech. (See
 > [Beta handoff → About the voice](BETA_HANDOFF.md#about-the-voice-please-read-set-your-expectations).)
 
 ## Troubleshooting
@@ -162,6 +163,10 @@ which is what makes **voice** work off your home Wi-Fi.
   Safari settings for that site.
 - **Reaching it over `http://<pc-ip>` works for text but not voice** → expected. Text
   posts fine over http; voice needs the HTTPS (Tailscale Serve) origin.
+- **Replies sound robotic on the phone** → the real Adam voice isn't installed on the
+  PC (run `INSTALL-VOICE.cmd` there), or its service was down for that reply. The
+  server restarts the voice service automatically when it notices it's down, so the
+  next reply usually comes back in the real voice; if it never does, restart Adam.
 
 For a public-internet option (advanced, not the supported path), see
 [`ADVANCED_REMOTE.md`](./ADVANCED_REMOTE.md). For what's supported overall, see
