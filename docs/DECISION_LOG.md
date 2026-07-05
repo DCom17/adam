@@ -44,3 +44,38 @@ can't-reach-server error should say "the Adam window on your PC may be closed �
 it from the desktop icon," plus possibly a close-confirmation on the console window —
 NOT a tray app. A tray app is only on the table if testers prove the window is a real
 adoption blocker even after those fixes.
+
+## D21 — The name stays "Adam", with four standing guardrails — 2026-07-05
+
+**Decision (owner's, after a USPTO knockout search run live with the assistant):**
+the product keeps the name **Adam**. Evidence file: `docs/NAME_DECISION_EVIDENCE.md`
+(internal, never ships — full search results + the adam.ai Office-action findings).
+
+**The situation:** ADAM.AI INC. (funded meeting-AI SaaS) has "ADAM.AI" REGISTERED
+(IC 042, since ~2019) and filed for standalone **"ADAM"** (IC 009+042) on 2026-02-04
+(serial 99633783). Its first Office action (2026-06-02) refused on a FORMALITY only
+("iPad" wording in the goods ID) and stated **"no conflicting marks found"** — i.e.
+the USPTO itself treats the dozen coexisting live ADAM marks in class 9 as
+non-conflicting because each one's goods differ. Their goods, even as amended, stay
+scoped to "governance and business management solutions, namely organizing and
+managing workplace meetings." A personal, local-first voice assistant is a different
+product for a different buyer, in the crowded-field environment where narrow ADAMs
+demonstrably coexist.
+
+**The four guardrails (standing constraints — violating any one reopens this
+decision):**
+1. **Never touch their lane.** Adam is always described as a "personal, local-first
+   voice assistant for your own files" — never meeting, governance, or
+   business-management software, in any doc, listing, or marketing surface.
+2. **Compound distribution identity.** "Adam" is the assistant's name; **"Adam
+   Local" / `adam-local`** is the product identity anywhere registrable or public
+   (ZIP name, app id, winget ID, domains) — already true internally.
+3. **Monitor serial 99633783.** Calendar checks set for 2026-09-03 and 2026-12-03
+   (owner's Google Calendar): response filed? goods still meeting-scoped? published?
+   Broadening toward personal assistants = reassess.
+4. **Attorney clearance (~$500–1.5k) before monetizing or a major marketing push.**
+   Take the evidence file. Not doing this before charging money reopens the decision.
+
+**Accepted residual risk:** their standalone-ADAM will likely register; a
+cease-and-desist is never impossible from a funded company. The evidence file is the
+day-one defense record. This entry is not legal advice.

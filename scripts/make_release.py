@@ -111,6 +111,7 @@ _DENY_GLOBS = [
     "docs/DECISION_LOG.md", "docs/ROADMAP.md", "docs/PHASE_HISTORY.md",
     "docs/NEXT_PHASE_PROMPT.md", "docs/PARKING_LOT.md",
     "docs/PERSONAL_FIX_PORTING_LOG.md", "docs/DEVICE_ACCEPTANCE_RUN_*.md",
+    "docs/NAME_DECISION_EVIDENCE.md",
 ]
 _DENY_CONTAINS = ["__pycache__/", ".git/"]   # any path inside these dirs
 # Paths that match a deny glob but are deliberately shippable.
