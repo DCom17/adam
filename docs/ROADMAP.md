@@ -291,3 +291,106 @@ Cut v1.0 when ALL of:
   (extend content scan tree-wide per P0-3)
 - localStorage keys stay `jarvis_*` on purpose (migration cost > benefit)
 - Supported phone path is Tailscale Serve HTTPS; plain LAN http is never the voice path
+
+---
+
+# Master Plan 3 — second four-way deep audit, 2026-07-05 (afternoon)
+
+Sources: four parallel agents — (A2) cold-user UX audit, (B2) production-readiness
+code audit (incl. fresh eyes on the new installer), (C2) live verification, (D2)
+launch-requirements research. Run AFTER icon/installer/site landed.
+
+**Verified state (C2, all PASS):** suite 49/49, release tests 131/131, doctor 24
+checks 0 FAIL (2 WARNs are owner-config, not product), live /health + all icon
+routes + "A D A M" brand header correct, fresh ZIP builds green (218 files, no
+leaks), v0.9.38 published with correct asset, /update/check correct. (B2) spot-
+verified 13/14 claimed P2 fixes with line evidence — the P2 work was real.
+
+## MP3-P0 — before tester invites (tiny; ship in v0.9.39)
+
+1. **Inside-the-ZIP guard (BLOCKER, 3 lines × 3 files).** SETUP.cmd / START.cmd /
+   UPDATE.cmd: if `%~dp0scripts\wizard.ps1` (etc.) missing → "You're running this
+   from inside the ZIP — right-click the ZIP → Extract All first" + pause. The #1
+   cold-user move currently yields a raw red PowerShell error.
+2. **Version bump discipline:** repo is ahead of the published v0.9.38 asset —
+   any republish would silently differ. Next publish = v0.9.39 (icon + brand fix +
+   installer + these fixes).
+
+## MP3-P1 — the installer work package (BLOCKER-1.0; installer is winget's
+default upgrade path, so these become mainline before v1.0)
+
+1. **Upgrade-over-existing poisons the 3-way updater (B2-A).** setup.exe over an
+   existing install blindly overwrites program files (user customizations lost, no
+   backup) AND leaves data/baseline stale → next in-app update mass-misclassifies.
+   Fix: [Code] section — detect existing install; back up; refresh baseline
+   post-install (or route upgrades to the in-app updater).
+2. **Collision with existing ZIP installs (B2-B).** Desktop shortcut overwrite +
+   second empty install at %LOCALAPPDATA% = "my data vanished" + port-8000 fight.
+   Fix: InitializeSetup pings /ping + checks known paths → warn/offer migration.
+3. **Running-instance guard (B2-F):** AppMutex or ping check ("close Adam first")
+   on install AND uninstall.
+4. **build-installer.ps1 defects:** `$env:ProgramFiles(x86)` expands wrong — the
+   default Inno install path never matches (B2-D; fix `${env:ProgramFiles(x86)}`);
+   `-Zip` reuse stamps current config.py version onto possibly-stale ZIP contents
+   (B2-E; assert staged config.py version == stamp).
+5. **Uninstall leftovers (B2-J):** INSTALL-VOICE's ~1GB venv+model under {app} and
+   updater-added files survive uninstall silently. Fix: UninstallDelete/prompt for
+   the voice package + `*.removed`/`*.jvltmp` stragglers.
+
+## MP3-P2 — product fixes before 1.0
+
+1. **Post-apply verify + auto-restore (B2-C — the one unbuilt P2a item).** After
+   apply: run the existing self_edit_guard subprocess probe; on failure restore
+   from result.backup_root BEFORE snapshot_baseline. Backups currently exist but
+   nothing ever restores them.
+2. **Out-of-credit sentinel for API-key door (A2-2):** exhausted prepaid credit
+   speaks raw Anthropic error; add sentinel mirroring _usage_limit_message. Also
+   mirror the usage-limit sentinel in the code-mode stream path (B2-I,
+   server.py:1254-1259).
+3. **Baseline snapshot crash-safety (B2-G):** build baseline.tmp then swap.
+4. **AI-disclosure line (D2 flag 4, satisfies FTC/Utah/Maine cheaply):** one line
+   in onboarding + privacy page: "Adam is an AI assistant powered by Claude; your
+   messages are processed by Anthropic under your own account." Keep utilitarian
+   framing (never "companion") — aligns with D21 guardrail 1.
+5. **Site download link (D2 flag 3):** replace api.github.com fetch with the
+   rate-limit-free `releases/latest/download/<asset>` redirect. Needs version-free
+   asset name (e.g. adam-local-setup.exe) or bake version at deploy.
+6. **LICENSE finalization from EULA draft (standing P4 gate).**
+7. **Polish sweep (A2-4..11, one commit):** README /health examples → "0.9.x"
+   placeholder (drifts every release); wizard hardcoded model IDs (fall back to CLI
+   default / doctor check); START_HERE "THE REAL ADAM VOICE" heading; token-missing
+   fallback says "Run SETUP again"; CONNECT_YOUR_PHONE drops start-dev.ps1 refs;
+   tester invite: how-to-open-terminal + Tailscale-account notes; README:686 drop
+   "yet" (D20 contradiction); wizard shortcut-failure prints fallback instead of
+   silent catch.
+
+## MP3-P3 — distribution mechanics (from D2 research)
+
+1. **winget:** signing NOT required but sign first anyway (unsigned = manual-review
+   purgatory); silent install already satisfied by Inno defaults; InstallerUrl must
+   be the TAGGED asset URL (never /latest); include PrivacyUrl (policy 1.5.1);
+   wizard's runtime downloads are policy-compliant if disclosed in Description.
+   First submission = human queue, days to 1-2 weeks.
+2. **Azure Artifact Signing (current name; individual = self-employed OK, 3-yr
+   history requirement dropped):** $9.99/mo Basic; validation 1-20 business days,
+   non-expeditable, 7-day email-verify window, billing account type must be
+   "Individual". Inno integration: SignTool= in [Setup] signs installer AND
+   uninstaller; needs .NET 8 + Azure.CodeSigning.Dlib + timestamp.acs.microsoft.com.
+3. **Anthropic posture (D2 flag 5, watch-item):** June 15 2026 metering of
+   headless/`claude -p` was PAUSED, not cancelled — subscription orchestration
+   currently fine, expect a reworked proposal with notice. Keep API-key mode
+   first-class + documented as the guaranteed path; never touch OAuth tokens.
+4. **Legal:** EULA + privacy page sufficient for free beta; LLC before wide
+   distribution recommended, required before monetizing (D21 guardrail 4 already
+   covers attorney).
+
+## MP3 — the updated v1.0 gate (supersedes P4 list where they overlap)
+
+- [ ] MP3-P0 shipped as v0.9.39 → tester invites out
+- [ ] Phone-half acceptance PASS (owner, runbook in dist/)
+- [ ] 2-3 cold testers complete ZIP→talking-phone unaided; punch list resolved
+- [ ] Signing live → installer + assets signed → MP3-P1 done → winget submitted
+- [ ] MP3-P2 items 1-6 done; LICENSE final
+- [ ] Site published (owner go-ahead) with corrected download link
+- Deferred to post-1.0 unless testers hit them: update-channel SHA256 (B2-H),
+  per-device tokens, B2-J beyond the voice package.
