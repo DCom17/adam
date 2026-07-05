@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — FastAPI backend.
+Adam — FastAPI backend.
 
 Bridges a phone voice web app to Claude Code running on the user's own machine,
 against the user's own files, using the user's own Claude Code credentials. Flow:
@@ -87,7 +87,7 @@ config.validate()
 HERE = Path(__file__).resolve().parent
 FRONTEND = HERE / "web" / "index.html"
 
-JARVIS_TOKEN = config.JARVIS_TOKEN
+ADAM_TOKEN = config.ADAM_TOKEN
 CLAUDE_EXE = config.CLAUDE_EXE
 VAULT_PATH = config.VAULT_PATH
 VOICE_MODEL = config.VOICE_MODEL
@@ -268,7 +268,7 @@ FOREGROUND_SEEN_WINDOW = 8.0  # seconds
 _last_seen = 0.0
 
 # --- Twilio inbound SMS -----------------------------------------------------
-# "Hey Meta, text JARVIS: ..." → Twilio POSTs the SMS here. Auth is Twilio's
+# "Hey Meta, text Adam: ..." → Twilio POSTs the SMS here. Auth is Twilio's
 # request signature (Twilio can't send our bearer token), plus a sender allowlist.
 TWILIO_AUTH_TOKEN = config.TWILIO_AUTH_TOKEN
 TWILIO_WEBHOOK_URL = config.TWILIO_WEBHOOK_URL
@@ -288,12 +288,12 @@ ASYNC_CLAUDE_TIMEOUT_SECONDS = config.ASYNC_CLAUDE_TIMEOUT_SECONDS
 JOB_TTL_SECONDS = config.JOB_TTL_SECONDS
 
 VOICE_SYSTEM_PROMPT = (
-    "You are in JARVIS voice mode. Keep responses to 1-3 sentences maximum "
+    "You are in Adam voice mode. Keep responses to 1-3 sentences maximum "
     "unless detail is explicitly requested. No markdown, no bullet points, no "
     "headers, no asterisks, no check marks or emoji, no symbol characters — they "
     "get read aloud. Write plain spoken sentences. Speak conversationally and "
     "directly. Maintain the dry, precise "
-    "JARVIS tone at all times. Sir when appropriate. "
+    "Adam tone at all times. Sir when appropriate. "
     "Never use <<SPEAK>> tags, summary markers, or a separate spoken-summary line — "
     "reply in plain spoken sentences only, even if earlier turns in this conversation "
     "used such markers."
@@ -303,9 +303,9 @@ VOICE_SYSTEM_PROMPT = (
 # they render on-screen; only the trailing <<SPEAK>> summary is read aloud. The
 # tag is mandatory — _extract_spoken() falls back gracefully if a reply omits it.
 WORK_SYSTEM_PROMPT = (
-    "You are JARVIS in work mode — a full Claude Code agent on the user's machine. "
+    "You are Adam in work mode — a full Claude Code agent on the user's machine. "
     "Long, thorough replies are fine; use every tool; investigate and make decisions "
-    "rather than asking permission for routine steps. Keep the dry, precise JARVIS "
+    "rather than asking permission for routine steps. Keep the dry, precise Adam "
     "register. Detail may use normal formatting — it is shown on a screen, not only "
     "spoken. End EVERY reply with a one or two sentence spoken summary wrapped exactly "
     "in <<SPEAK>> and <<SPEAK>> — plain text, no markdown, no symbols — for text to "
@@ -320,12 +320,12 @@ WORK_SYSTEM_PROMPT = (
 # so this prompt must be honest about that power, keep the voice loop working
 # (<<SPEAK>> summary), and demand a heads-up before anything irreversible.
 CODE_SYSTEM_PROMPT = (
-    "You are JARVIS in Claude Code mode — raw Claude Code with FULL tools (file "
+    "You are Adam in Claude Code mode — raw Claude Code with FULL tools (file "
     "edits, shell, everything) running directly in the user's files. The safety "
     "wrapper that normally turns your writes into approval-gated proposals is OFF "
     "for this chat: what you do happens immediately, for real. The user escalated "
     "this chat deliberately. Work like Claude Code: investigate, edit, run, verify. "
-    "Keep the dry, precise JARVIS register. Long on-screen replies are fine — they "
+    "Keep the dry, precise Adam register. Long on-screen replies are fine — they "
     "render on a screen. End EVERY reply with a one or two sentence spoken summary "
     "wrapped exactly in <<SPEAK>> and <<SPEAK>> — plain text, no markdown, no "
     "symbols — for text to speech. Never use <<PROPOSE>> blocks here; edit files "
@@ -399,12 +399,12 @@ def _addon_awareness_note() -> str:
     # The phone-connection capability is NOT a registry add-on (it's a built-in
     # remote-access setup, not a calendar-style integration), so it has to be named
     # explicitly or the agent never knows it exists. It's one of the biggest
-    # capabilities — using Jarvis (voice included) from a phone, anywhere.
+    # capabilities — using Adam (voice included) from a phone, anywhere.
     parts.append(
         "USE ME ON YOUR PHONE (built-in — this is a major capability, treat it like a "
-        "headline add-on): the user can run Jarvis, voice and all, from their phone while "
+        "headline add-on): the user can run Adam, voice and all, from their phone while "
         "it talks to this same PC. To set it up: open the gear menu (the cog) -> Operator "
-        "Console -> the 'Connect phone' section — scanning the QR there uses Jarvis on the "
+        "Console -> the 'Connect phone' section — scanning the QR there uses Adam on the "
         "SAME Wi-Fi, and setting up Tailscale (guide: docs/CONNECT_YOUR_PHONE.md) lets them "
         "use it ANYWHERE, on the go. When the user asks what you can do, about add-ons, or "
         "about using you on the go / on mobile, ALWAYS mention this and offer to walk them "
@@ -423,7 +423,7 @@ def _addon_awareness_note() -> str:
 # (and speak a short line) rather than the generic connection-error.
 AUTH_REQUIRED_SENTINEL = "JVL_AUTH_REQUIRED:"
 AUTH_REQUIRED_MESSAGE = (
-    "Jarvis isn't signed in to Claude. Open a terminal (or the black Jarvis window), "
+    "Adam isn't signed in to Claude. Open a terminal (or the black Adam window), "
     "type  claude  and press Enter, then type  /login  and follow the prompts to sign "
     "in. Then try again."
 )
@@ -556,14 +556,14 @@ def _extract_actions(text: str) -> tuple[str, list[dict]]:
 
 
 # --- Chat management directives ---------------------------------------------
-# JARVIS owns the conversation it's in, hands-free: it can rename the current chat
+# Adam owns the conversation it's in, hands-free: it can rename the current chat
 # and (on the user's spoken yes) open a fresh one. The server never touches the
 # chat list — chats live client-side — so these are pure directives relayed to the
 # client, which does the rename/new-chat. Both markers are single-line and always
 # stripped from the reply so they never reach the screen or the voice.
 _RENAME_CHAT_RE = re.compile(r"<<RENAME_CHAT:\s*(.+?)>>", re.IGNORECASE)
 _NEW_CHAT_RE = re.compile(r"<<NEW_CHAT(?::\s*(.+?))?>>", re.IGNORECASE)
-# JARVIS can also switch the mode of the chat it's in on request ("go into operator
+# Adam can also switch the mode of the chat it's in on request ("go into operator
 # mode", "switch to Claude Code", "back to voice"). The client owns the mode toggle,
 # so this is the same relay pattern — and the client applies the same confirmation
 # gate for a switch INTO code that the hold gesture uses (code starts a fresh session).
@@ -690,7 +690,7 @@ def _brain_write_note(vault_path: str) -> str:
     paths: a non-destructive write whose path is inside the vault auto-applies
     through the server's guardrails; anything else is reviewed (default behavior)."""
     return (
-        "\n\nBRAIN UPDATES — the user's Jarvis brain (memory, daily logs, tasks, profile) lives "
+        "\n\nBRAIN UPDATES — the user's Adam brain (memory, daily logs, tasks, profile) lives "
         "in this folder:\n"
         f"  {vault_path}\n"
         "To update the brain, PROPOSE the change with the FULL ABSOLUTE path to the file inside "
@@ -707,45 +707,45 @@ def _brain_write_note(vault_path: str) -> str:
 
 
 def _self_edit_note() -> str:
-    """Tell the agent it may change Jarvis ITSELF when the user has enabled self-edit.
+    """Tell the agent it may change Adam ITSELF when the user has enabled self-edit.
     Same proposal convention as brain writes: propose with the ABSOLUTE path to the app
     file; EVERY self-edit is reviewed by the user and backed up first, so it's undoable."""
     return (
-        "\n\nSELF-EDIT — the user has allowed you to change Jarvis ITSELF (its own program: its "
-        "code, appearance, name, wake word, and so on). Jarvis's own files live in:\n"
+        "\n\nSELF-EDIT — the user has allowed you to change Adam ITSELF (its own program: its "
+        "code, appearance, name, wake word, and so on). Adam's own files live in:\n"
         f"  {config.APP_ROOT}\n"
-        "ONLY when the user explicitly asks you to change Jarvis itself, PROPOSE the edit with the "
+        "ONLY when the user explicitly asks you to change Adam itself, PROPOSE the edit with the "
         "FULL ABSOLUTE path to the app file. EVERY such change is reviewed by the user and a backup "
         "is saved first, so it can be undone. The whole-file rule applies: a proposed edit REPLACES "
         "THE ENTIRE FILE, so READ the file first and include ALL of its current contents PLUS your "
         "change. You cannot touch secrets (.env, settings.json), the data folder, or anything "
-        "outside Jarvis's own folder — those are refused. Make the SMALLEST change that satisfies "
+        "outside Adam's own folder — those are refused. Make the SMALLEST change that satisfies "
         "the request, and never claim it's done: propose it and let the user approve."
     )
 
 
 def _self_edit_offer_note() -> str:
     """When self-edit is OFF, give the agent the ONE correct answer for "change
-    Jarvis itself" requests: raise the capability tier to Unrestricted (self-edit is
+    Adam itself" requests: raise the capability tier to Unrestricted (self-edit is
     no longer a separate toggle — the tier governs it). Without this the agent invents
     a nonexistent 'folder access' pop-up or points at Settings (which can't rename
-    Jarvis). Added in both modes so a voice request gets the right answer too."""
+    Adam). Added in both modes so a voice request gets the right answer too."""
     return (
-        "\n\nCHANGING JARVIS ITSELF — if the user asks you to change Jarvis's own program (its "
+        "\n\nCHANGING Adam ITSELF — if the user asks you to change Adam's own program (its "
         "NAME / what it goes by, its wake word, its appearance, or its code), you currently CANNOT, "
         "because self-edit is only enabled on the Unrestricted capability tier and you are not on it. "
         "Do not attempt it and do not claim you will. Do NOT mention any 'folder access' or permission "
-        "pop-up (there is none), and do NOT point at the Settings/sign-in page (it can't rename Jarvis). "
+        "pop-up (there is none), and do NOT point at the Settings/sign-in page (it can't rename Adam). "
         "The ONLY way is to raise the capability tier: tell the user to open the gear menu (the cog/⚙ at "
         "the top of the app), tap '⚡ Capability' until it reads Unrestricted (they'll confirm the "
         "warning), then ask you again — at that point you can make the change (every self-edit is still "
-        "reviewed and backed up first, and a broken self-edit auto-rolls-back). Renaming Jarvis to go by "
+        "reviewed and backed up first, and a broken self-edit auto-rolls-back). Renaming Adam to go by "
         "another name is a self-edit and needs the Unrestricted tier."
     )
 
 
 def _capability_awareness_note() -> str:
-    """Make Jarvis self-aware of the capability-tier system and how it itself works,
+    """Make Adam self-aware of the capability-tier system and how it itself works,
     so it can answer 'what can you do', 'what mode am I on', and 'how do the tiers
     differ' accurately — and never claim a power the active tier forbids. The current
     tier is read live from config, so this always reflects the real posture."""
@@ -767,7 +767,7 @@ def _capability_awareness_note() -> str:
         "no self-edit.\n"
         "  • Unrestricted — full power: you may edit your OWN code, run shell commands, and write "
         "across the vault and the app, auto-approving everything. This is the ONLY tier that enables "
-        "self-edit (changing Jarvis itself), and turning it on requires an explicit confirmation.\n"
+        "self-edit (changing Adam itself), and turning it on requires an explicit confirmation.\n"
         "ALWAYS-ON RAILS (true at EVERY tier, even Unrestricted, and cannot be disabled): every write "
         "is backed up first, everything is written to an audit log, secret files (.env, settings.json, "
         "keys) are never readable or writable, and a self-edit that breaks the app auto-rolls-back. So "
@@ -843,9 +843,9 @@ LOG_FILE = config.LOG_FILE
 # NOT open the live rotating log file — the running server owns it and could be
 # mid-rollover — so we log to nowhere and skip the startup lines. Normal (non-probe)
 # startup is byte-for-byte unchanged.
-_PROBE_MODE = os.environ.get("JARVIS_SELF_EDIT_PROBE") == "1"
+_PROBE_MODE = os.environ.get("ADAM_SELF_EDIT_PROBE") == "1"
 
-log = logging.getLogger("jarvis.voice")
+log = logging.getLogger("adam.voice")
 log.setLevel(logging.INFO)
 
 # When the process started — /diagnostics reports uptime from this.
@@ -942,7 +942,7 @@ _ensure_vapid_keypair()
 
 # --- App setup --------------------------------------------------------------
 
-app = FastAPI(title="Jarvis Voice Local")
+app = FastAPI(title="Adam")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -1256,7 +1256,7 @@ async def run_claude(
     restrict = config.AGENT_RESTRICT_TOOLS and mode != "code"
     if restrict:
         # The agent's safe-write capabilities apply in BOTH voice and work mode — the
-        # user talks to ONE Jarvis (their daily voice driver with a bundled brain) and
+        # user talks to ONE Adam (their daily voice driver with a bundled brain) and
         # shouldn't have to switch modes to save a memory, add a calendar event, or
         # rename the assistant. (Work vs voice differ in verbosity + reachable dirs,
         # set elsewhere — not in which write lanes exist.) Without this, a brain/self-
@@ -1283,7 +1283,7 @@ async def run_claude(
     prompt = prompt + _addon_awareness_note()
     # Hands-free chat management (every mode): rename this chat / open a new one on consent.
     prompt = prompt + _chat_control_note()
-    # Self-awareness of the capability tiers + how Jarvis itself works (both modes), so
+    # Self-awareness of the capability tiers + how Adam itself works (both modes), so
     # it can answer "what can you do / what mode am I on" and never overclaim its powers.
     # Skipped in a code chat — it describes the restricted posture, which is exactly
     # what a code chat is NOT running under; CODE_SYSTEM_PROMPT is the truth there.
@@ -1309,7 +1309,7 @@ async def run_claude(
         # dirs too. add-dir grants read; writes are blocked by --disallowedTools.
         read_dirs = [VAULT_PATH] + (WORK_EXTRA_DIRS if mode == "work" else [])
         # Self-edit: let the agent READ its own code so it can propose changes to it
-        # (works in voice and work mode — renaming Jarvis is a common voice request).
+        # (works in voice and work mode — renaming Adam is a common voice request).
         if config.PERM_ALLOW_APP_SELF_EDIT:
             read_dirs = read_dirs + [config.APP_ROOT]
             # Plus the held update-conflict copies, so it can read the update's
@@ -1731,7 +1731,7 @@ def _send_push(
     banner = (spoken if spoken is not None else result) or ""
     banner = banner.strip() or "Done, sir."
     payload = json.dumps({
-        "title": "JARVIS",
+        "title": "Adam",
         "body": banner[:1500],        # banner text; full result replayed on open
         "spoken": banner[:1500],      # what the page speaks on tap
         "session_id": session_id,

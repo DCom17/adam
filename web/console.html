@@ -10,7 +10,7 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Jarvis Voice Local — Operator Console</title>
+<title>Adam — Operator Console</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -98,9 +98,9 @@
 </script>
 
 <header>
-  <a href="/" id="backToJarvis" title="Back to Jarvis"
+  <a href="/" id="backToAdam" title="Back to Adam"
      onclick="if(window.parent&&window.parent!==window){event.preventDefault();window.parent.postMessage({jvl:'close-console'},'*');}"
-     style="color:#58a6ff;text-decoration:none;margin-right:8px;font-size:14px;white-space:nowrap;">‹ JARVIS</a>
+     style="color:#58a6ff;text-decoration:none;margin-right:8px;font-size:14px;white-space:nowrap;">‹ Adam</a>
   <span class="dot" id="reachDot" title="reachability"></span>
   <h1>Operator Console <span class="muted" id="verTag"></span></h1>
   <span class="spacer"></span>
@@ -117,7 +117,7 @@
       <p>This console talks to your local server with your bearer token. The token is
          stored on this device only and is never shown again after you sign in.</p>
       <div class="row">
-        <input id="tokenInput" type="password" placeholder="Paste JARVIS_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
+        <input id="tokenInput" type="password" placeholder="Paste ADAM_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
         <button class="primary" id="signIn">Sign in</button>
       </div>
       <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
@@ -139,7 +139,7 @@
 
   <!-- Connect phone (local split-QR handoff) — v1.0 Slice 3.1. Two SEPARATE QRs,
        both generated in the browser from localStorage at runtime:
-         (1) URL-only QR  — the Jarvis HTTPS URL, nothing else (iOS Camera opens it).
+         (1) URL-only QR  — the Adam HTTPS URL, nothing else (iOS Camera opens it).
          (2) token-only QR — the bare token, NO url/https/label, so iOS Camera shows
              it as plain text you can Copy.
        The token is never in the served HTML, never sent to the server for QR, never
@@ -165,7 +165,7 @@
       </div>
 
       <!-- Easy path (default) — ONE QR that signs the phone in. It encodes
-           <jarvis-url>/#token=<token>. The token rides in the URL *fragment*, so it is
+           <adam-url>/#token=<token>. The token rides in the URL *fragment*, so it is
            never sent to the server and the phone app strips it from the URL on load.
            Trade-off: iOS Camera briefly previews the URL (incl. the token) when scanned,
            so this is for your OWN phone, off your OWN screen. Cautious users can switch
@@ -190,7 +190,7 @@ off your own screen. Don't screenshot, photograph, or share it. Hide it when don
       <div class="detail" id="qrHomeScreen">
         <div class="head">Make it an app (add to home screen)</div>
         <div class="muted">
-          Once Jarvis is open on your phone, add it to your home screen so it gets its own
+          Once Adam is open on your phone, add it to your home screen so it gets its own
           icon and opens full-screen like a normal app:
           <ul style="margin:6px 0 0 18px;padding:0;">
             <li><b>iPhone (Safari):</b> tap the <b>Share</b> button (square with an up-arrow) → <b>Add to Home Screen</b> → <b>Add</b>.</li>
@@ -201,7 +201,7 @@ off your own screen. Don't screenshot, photograph, or share it. Hide it when don
             token again — the installed app has its own private storage. To sign it in: turn on
             <b>Cautious mode</b> above, tap <b>Show token QR</b>, and scan that code with your
             phone Camera — it'll offer to <b>Copy</b> the token. Then paste it into the app's
-            token box (your Jarvis URL is usually already filled in) and you're in for good.
+            token box (your Adam URL is usually already filled in) and you're in for good.
           </div>
         </div>
       </div>
@@ -209,11 +209,11 @@ off your own screen. Don't screenshot, photograph, or share it. Hide it when don
       <!-- Two-step (cautious) mode: hidden by default; the original split-QR handoff. -->
       <div id="qrSplitWrap" class="hidden">
 
-      <!-- Step 1 — Open Jarvis on phone (URL QR; not sensitive) -->
+      <!-- Step 1 — Open Adam on phone (URL QR; not sensitive) -->
       <div class="detail" id="qrStep1">
-        <div class="head">Step 1 — Open Jarvis on phone</div>
+        <div class="head">Step 1 — Open Adam on phone</div>
         <div class="row">
-          <label>Jarvis URL</label>
+          <label>Adam URL</label>
           <span class="v" id="qrUrlText" style="word-break:break-all;">—</span>
           <button id="qrCopyUrl">Copy URL</button>
           <span class="muted" id="qrCopyMsg"></span>
@@ -222,7 +222,7 @@ off your own screen. Don't screenshot, photograph, or share it. Hide it when don
           <button id="qrUrlShow">Show URL QR</button>
         </div>
         <div id="qrUrlPanel" class="hidden">
-          <div class="muted" style="margin:8px 0 4px;">Scan with your phone Camera to open Jarvis.</div>
+          <div class="muted" style="margin:8px 0 4px;">Scan with your phone Camera to open Adam.</div>
           <canvas id="qrUrlCanvas" width="320" height="320" style="background:#fff;border-radius:6px;padding:10px;display:block;"></canvas>
         </div>
       </div>
@@ -3154,7 +3154,7 @@ async function copyDiagnostics() {
 
 // --- Connect phone: local SPLIT-QR handoff (client-only) --------------------
 // Two SEPARATE QRs, both built in the browser from localStorage at runtime:
-//   * URL QR   = the Jarvis HTTPS URL ONLY (iOS Camera opens it as a link).
+//   * URL QR   = the Adam HTTPS URL ONLY (iOS Camera opens it as a link).
 //   * token QR = the BARE token ONLY — no url, no "https", no "URL:", no title —
 //                so iOS Camera treats it as plain text and offers Copy.
 // The token is never written into served HTML, never sent to the server, never
@@ -3284,7 +3284,7 @@ function renderPhoneSetup(d) {
   var copy = _mk("button", "Copy", "margin-left:6px;"); copy.setAttribute("type", "button");
   row.appendChild(copy);
   box.appendChild(row);
-  box.appendChild(_mk("div", "This serves Jarvis to your phone over HTTPS at:"));
+  box.appendChild(_mk("div", "This serves Adam to your phone over HTTPS at:"));
   box.appendChild(_mk("div", d.phone_url || "", "font-weight:bold;word-break:break-all;"));
   if (d.serve_443_in_use && d.warnings && d.warnings.length) {
     var w = _mk("div", d.warnings[0], "margin-top:6px;"); w.className = "muted"; box.appendChild(w);
@@ -3300,13 +3300,13 @@ async function loadPhoneSetup(force) {
   var wiz = $("phoneSetupWiz"); if (!wiz) return;
   if (force) _phoneInfo = null;                        // re-detect after the user acts
   await qrLoadPhoneInfo();
-  qrSetUrlText();                                      // refresh the Step-1 "Jarvis URL" display
+  qrSetUrlText();                                      // refresh the Step-1 "Adam URL" display
   wiz.classList.remove("hidden");
   var best = _phoneInfo && _phoneInfo.best;
   if (best && best.secure) {
     // Ready — confirm it instead of silently disappearing.
     var box = $("phoneSetupBody"); box.textContent = "";
-    box.appendChild(_mk("div", "✓ Phone access is ready — your phone can reach Jarvis at:", "color:#7fe0a8;"));
+    box.appendChild(_mk("div", "✓ Phone access is ready — your phone can reach Adam at:", "color:#7fe0a8;"));
     box.appendChild(_mk("div", best.url, "font-weight:bold;word-break:break-all;"));
     box.appendChild(_mk("div", "Scan the sign-in QR below with your phone to connect.", "margin-top:4px;"));
     return;
@@ -3332,7 +3332,7 @@ function qrTokShow() {
   $("qrHide").classList.remove("hidden");
 }
 
-// Easy path — ONE QR encoding <jarvis-url>/#token=<token>. The token rides in the
+// Easy path — ONE QR encoding <adam-url>/#token=<token>. The token rides in the
 // fragment (never sent to the server); the phone app's bootstrap stores it and strips
 // it from the URL on load. Built fresh from localStorage at click time, never persisted.
 function qrComboPayload() {
@@ -3424,7 +3424,7 @@ window.__jvlQrSelfTest = function () {
   ok("url payload is the URL only", up === qrUrl());
   ok("token payload is the bare token", tp === qrToken());
   ok("token payload has no url/https/label",
-     tp.indexOf("http") < 0 && tp.indexOf("URL:") < 0 && tp.indexOf("Jarvis Voice Local") < 0);
+     tp.indexOf("http") < 0 && tp.indexOf("URL:") < 0 && tp.indexOf("Adam") < 0);
   ok("url payload has no token", up.indexOf(qrToken()) < 0 && up.indexOf("?" + "token=") < 0);
   qrUrlShow();
   ok("url QR canvas drawn", darkCount("qrUrlCanvas") > 50);

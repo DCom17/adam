@@ -1,4 +1,4 @@
-# Jarvis Voice Local - install the high-quality "real Jarvis" voice (Kokoro).
+# Adam - install the high-quality "real Adam" voice (Kokoro).
 #
 # Creates a dedicated voice engine workspace, installs the ONNX text-to-speech engine,
 # and downloads the voice model (~340 MB, one time). The core app never needs any of
@@ -27,9 +27,9 @@ function Get-Py {
     return $null
 }
 
-Say "Jarvis Voice Local - install the real Jarvis voice (Kokoro)" "Cyan"
+Say "Adam - install the real Adam voice (Kokoro)" "Cyan"
 Say "One-time ~340 MB download plus a short install. The new voice takes effect" "Gray"
-Say "after you restart Jarvis. Until then everything keeps working as-is." "Gray"
+Say "after you restart Adam. Until then everything keeps working as-is." "Gray"
 Write-Host ""
 
 $py = Get-Py
@@ -73,6 +73,6 @@ if (-not (Get-Big $MODEL_URL  $model  250)) { Say "Could not download the voice 
 if (-not (Get-Big $VOICES_URL $voices 20))  { Say "Could not download the voices file. Run INSTALL-VOICE again." "Yellow"; Read-Host "Press Enter to close" | Out-Null; exit 1 }
 
 Write-Host ""
-Say "The real Jarvis voice is installed." "Green"
-Say "Restart Jarvis (close the Jarvis window, then open it from the icon / START) to hear it." "Yellow"
+Say "The real Adam voice is installed." "Green"
+Say "Restart Adam (close the Adam window, then open it from the icon / START) to hear it." "Yellow"
 Read-Host "Press Enter to close" | Out-Null

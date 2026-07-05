@@ -1,11 +1,11 @@
 // ─── HUNTER DASHBOARD — READ / VERIFY ENDPOINT (standalone fragment) ────────
-// Ships with Jarvis Voice Local. This is the MINIMAL read-only endpoint, for the
+// Ships with Adam. This is the MINIMAL read-only endpoint, for the
 // case where you already have a sync script in your Sheet that lacks a verify
 // path. If you pasted the full hunter_dashboard.gs, you do NOT need this — that
 // file already contains a doGet with the verify action. (A Sheet can only have
 // ONE doGet, so never paste both.)
 //
-// It is READ-ONLY: returns your current State / Stats / Daily_Quests so Jarvis
+// It is READ-ONLY: returns your current State / Stats / Daily_Quests so Adam
 // can confirm a sync landed. It writes nothing and cannot delete anything.
 //
 // Called by the Hunter connector via GET:  ?token=...&action=verify

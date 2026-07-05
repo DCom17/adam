@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — AI plan tests (two doors: subscription vs pay-as-you-go).
+Adam — AI plan tests (two doors: subscription vs pay-as-you-go).
 
 Covers the productized billing surface:
   * usage_store: per-day accumulation, month totals, summary, garbage tolerance;
@@ -30,8 +30,8 @@ from pathlib import Path
 
 import config
 
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "b" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "b" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -42,7 +42,7 @@ import permissions  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 AUTH = {"Authorization": "Bearer " + TOKEN}
 client = TestClient(server.app)
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-JARVIS Obsidian Knowledge Graph Linker
-Conservative auto-linker for the JARVIS vault.
+Adam Obsidian Knowledge Graph Linker
+Conservative auto-linker for the Adam vault.
 
 Usage:
     python graph_linker.py --dry-run    Scan and report candidates. No files modified.
@@ -487,7 +487,7 @@ def write_report(
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="JARVIS Knowledge Graph Linker")
+    parser = argparse.ArgumentParser(description="Adam Knowledge Graph Linker")
     parser.add_argument("--dry-run", action="store_true", help="Scan only, no files modified")
     parser.add_argument("--apply", action="store_true", help="Apply links (creates backup first)")
     args = parser.parse_args()
@@ -497,7 +497,7 @@ def main() -> None:
         sys.exit(1)
 
     mode = "DRY-RUN" if args.dry_run else "APPLY"
-    print("=== JARVIS Knowledge Graph Linker ===")
+    print("=== Adam Knowledge Graph Linker ===")
     print(f"Vault root: {VAULT_ROOT}")
     print(f"Mode: {mode}")
     print()

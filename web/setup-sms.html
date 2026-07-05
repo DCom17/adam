@@ -10,7 +10,7 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Jarvis Voice Local — SMS Setup</title>
+<title>Adam — SMS Setup</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -54,7 +54,7 @@
 <body>
 
 <header>
-  <h1>SMS Setup <span class="muted">— Jarvis Voice Local</span></h1>
+  <h1>SMS Setup <span class="muted">— Adam</span></h1>
   <span class="spacer"></span>
   <a href="/console">Operator Console</a>
   <button id="signOut" class="hidden">Sign out</button>
@@ -66,13 +66,13 @@
     <div class="head">Sign in</div>
     <div class="body">
       <p class="muted">This page talks to your local server with your bearer token (the same
-        JARVIS_TOKEN the Operator Console uses). It is stored on this device only.</p>
-      <p class="muted">Easiest way in: on your computer, start Jarvis with the <b>Start Jarvis</b>
-        launcher (<code>scripts\start-jarvis.ps1</code>) — it opens you already signed in, so you
+        ADAM_TOKEN the Operator Console uses). It is stored on this device only.</p>
+      <p class="muted">Easiest way in: on your computer, start Adam with the <b>Start Adam</b>
+        launcher (<code>scripts\start-adam.ps1</code>) — it opens you already signed in, so you
         won't see this box. On a phone, open the Operator Console's <b>Connect phone</b> and scan the
         sign-in QR. To copy the token by hand, run <code>scripts\copy-token.ps1</code> and paste it above.</p>
       <div class="row">
-        <input id="tokenInput" type="password" placeholder="Paste JARVIS_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
+        <input id="tokenInput" type="password" placeholder="Paste ADAM_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
         <button class="primary" id="signIn">Sign in</button>
       </div>
       <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
@@ -87,24 +87,24 @@
   <section>
     <div class="body">
       <div class="warnbox">This SMS integration is <b>opt-in</b> and stays <b>disabled</b> until you
-finish setup. It lets you text Jarvis hands-free (from your phone or Meta glasses); Jarvis reads
+finish setup. It lets you text Adam hands-free (from your phone or Meta glasses); Adam reads
 the message, acts on it in your vault, and replies as a push notification. Only texts from
 <b>your own number</b> (OWNER_PHONE) are ever processed — everything else is ignored. This is
-<b>inbound only</b>: Jarvis does not send SMS back out.</div>
+<b>inbound only</b>: Adam does not send SMS back out.</div>
     </div>
   </section>
 
   <!-- The good news: polling means NO public exposure, unlike a Twilio webhook. -->
   <section>
-    <div class="head">How it stays private — Jarvis polls Twilio</div>
+    <div class="head">How it stays private — Adam polls Twilio</div>
     <div class="body">
-      <div class="infobox">Jarvis does <b>not</b> expose anything to the internet for this. Instead of
+      <div class="infobox">Adam does <b>not</b> expose anything to the internet for this. Instead of
 Twilio pushing texts to a public webhook (which would mean opening a public address), <b>your server
 quietly checks Twilio every few seconds</b> for new texts to your number, over an outbound,
 authenticated connection. Nothing inbound is published — this works fine on your private network
 or Tailscale, exactly like the rest of the app.
 
-The only tradeoff is a few seconds of delay between sending a text and Jarvis acting on it.</div>
+The only tradeoff is a few seconds of delay between sending a text and Adam acting on it.</div>
     </div>
   </section>
 
@@ -116,7 +116,7 @@ The only tradeoff is a few seconds of delay between sending a text and Jarvis ac
           <h3>Create a Twilio account and buy a phone number</h3>
           <p class="muted">Sign up at <a href="https://www.twilio.com/try-twilio" target="_blank" rel="noopener">twilio.com &#8599;</a>,
             then buy a number with SMS capability (Phone Numbers &#8594; Buy a number). This is
-            the number you will text. Texting it costs whatever Twilio charges you; Jarvis adds nothing.
+            the number you will text. Texting it costs whatever Twilio charges you; Adam adds nothing.
             You do <b>not</b> need to configure the number's webhook — polling replaces it.</p>
         </li>
         <li>
@@ -133,13 +133,13 @@ The only tradeoff is a few seconds of delay between sending a text and Jarvis ac
             <label style="min-width:96px;">Auth Token</label>
             <input id="twilioAuthToken" type="password" placeholder="your Twilio Auth Token" style="flex:1;min-width:260px;" autocomplete="off">
           </div>
-          <p class="muted">These are sent only to your own Jarvis server to run the test below. The
+          <p class="muted">These are sent only to your own Adam server to run the test below. The
             token is never saved here, never put in a link, and never logged.</p>
         </li>
         <li>
           <h3>Enter your Twilio number</h3>
           <p class="muted">The number you bought, in E.164 form (e.g. <code>+15555550123</code>).
-            Jarvis polls Twilio for inbound texts sent <b>to</b> this number.</p>
+            Adam polls Twilio for inbound texts sent <b>to</b> this number.</p>
           <div class="row">
             <label style="min-width:96px;">Twilio number</label>
             <input id="twilioNumber" type="text" placeholder="+15555550123" style="flex:1;min-width:260px;" autocomplete="off">
@@ -147,7 +147,7 @@ The only tradeoff is a few seconds of delay between sending a text and Jarvis ac
         </li>
         <li>
           <h3>Enter YOUR phone number (the owner number)</h3>
-          <p class="muted">This is <b>your own cell number</b> — the phone you'll text Jarvis from, in
+          <p class="muted">This is <b>your own cell number</b> — the phone you'll text Adam from, in
             E.164 form (e.g. <code>+15555550123</code>). Only texts from this number are ever acted on;
             everything else is ignored. (From Meta glasses, this is the phone the glasses text through.)</p>
           <div class="row">
@@ -175,7 +175,7 @@ The only tradeoff is a few seconds of delay between sending a text and Jarvis ac
   <section id="finishSec" class="hidden">
     <div class="head">&#10003; Verified — turn it on</div>
     <div class="body">
-      <p>Your Twilio credentials work. One click and Jarvis writes its own settings and saves your
+      <p>Your Twilio credentials work. One click and Adam writes its own settings and saves your
         Twilio values + your phone number for you — no editing files.</p>
       <div class="row">
         <button class="primary" id="enableBtn">Enable SMS</button>
@@ -200,13 +200,13 @@ ever acted on. Your Auth Token is saved to your local <code>.env</code> only —
   <section id="doneSec" class="hidden">
     <div class="head">&#10003; SMS enabled</div>
     <div class="body">
-      <div class="okbox">Saved. Jarvis wrote your settings, Twilio values, and your phone number for you.</div>
-      <p><b>One more step:</b> restart Jarvis so the poller starts.</p>
-      <p class="muted">Close the black "Jarvis Voice Local" window (closing the app/browser tab isn't
-        enough — the server runs in that window), then start Jarvis again.</p>
+      <div class="okbox">Saved. Adam wrote your settings, Twilio values, and your phone number for you.</div>
+      <p><b>One more step:</b> restart Adam so the poller starts.</p>
+      <p class="muted">Close the black "Adam" window (closing the app/browser tab isn't
+        enough — the server runs in that window), then start Adam again.</p>
       <p style="margin-top:12px;">Then, from <b>your phone</b>, text your Twilio number something like:</p>
-      <div class="okbox">"Jarvis, add milk to my grocery list."</div>
-      <p class="muted">Give it a few seconds (Jarvis polls Twilio), then check for the push reply.</p>
+      <div class="okbox">"Adam, add milk to my grocery list."</div>
+      <p class="muted">Give it a few seconds (Adam polls Twilio), then check for the push reply.</p>
     </div>
   </section>
 
@@ -240,7 +240,7 @@ function enterGate() { show($("gateView")); hide($("wizardView")); hide($("signO
 async function signIn() {
   var t = $("tokenInput").value.trim();
   var u = $("urlInput").value.trim();
-  if (!t) { $("gateErr").textContent = "Paste your JARVIS_TOKEN."; show($("gateErr")); return; }
+  if (!t) { $("gateErr").textContent = "Paste your ADAM_TOKEN."; show($("gateErr")); return; }
   LS.token = t;
   if (u) LS.url = u;
   // Verify the token against a cheap token-gated route before entering.
@@ -275,7 +275,7 @@ async function testConnection() {
       body: JSON.stringify({ account_sid: sid, auth_token: token, number: number })
     });
     $("testStatus").textContent = "";
-    if (r.status === 403) { $("testErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("testErr")); return; }
+    if (r.status === 403) { $("testErr").textContent = "Your Adam session was rejected — sign in again."; show($("testErr")); return; }
     var data = await r.json();
     if (data.ok) {
       $("testOk").textContent = "✓ Connected to Twilio. Polling number: " + number + ".";
@@ -288,7 +288,7 @@ async function testConnection() {
     }
   } catch (e) {
     $("testStatus").textContent = "";
-    $("testErr").textContent = "Could not reach your Jarvis server to run the test.";
+    $("testErr").textContent = "Could not reach your Adam server to run the test.";
     show($("testErr"));
   }
 }
@@ -328,7 +328,7 @@ async function enableSms() {
       body: JSON.stringify({ account_sid: sid, auth_token: token, number: number, owner_phone: owner })
     });
     $("enableStatus").textContent = "";
-    if (r.status === 403) { $("enableErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
+    if (r.status === 403) { $("enableErr").textContent = "Your Adam session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
     var data = await r.json();
     if (data.ok) {
       hide($("finishSec"));
@@ -340,7 +340,7 @@ async function enableSms() {
     }
   } catch (e) {
     $("enableStatus").textContent = "";
-    $("enableErr").textContent = "Could not reach your Jarvis server to save the setting.";
+    $("enableErr").textContent = "Could not reach your Adam server to save the setting.";
     show($("enableErr"));
     $("enableBtn").disabled = false;
   }

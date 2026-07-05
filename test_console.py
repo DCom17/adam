@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — operator console + server smoke tests (v0.8.0, Slice 1).
+Adam — operator console + server smoke tests (v0.8.0, Slice 1).
 
 Headless FastAPI TestClient coverage for the read-only Operator Console and the
 routes it depends on. Proves:
@@ -30,8 +30,8 @@ import config
 # import and refuses to start without a token + a resolvable Claude. On the real
 # box these are already set (and are used as-is); elsewhere we supply harmless
 # stand-ins so the smoke can still run. No secret is asserted from these.
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "a" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "a" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable  # any existing executable path satisfies validate()
 
@@ -74,10 +74,10 @@ from fastapi.testclient import TestClient  # noqa: E402
 # global, so this isolates /jobs without forking the process.
 job_store.init(_SANDBOX / "jobs.db")
 
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 AUTH = {"Authorization": "Bearer " + TOKEN}
 SECRETS = [s for s in (
-    server.JARVIS_TOKEN,
+    server.ADAM_TOKEN,
     getattr(config, "VAPID_PUBLIC_KEY", ""),
     getattr(config, "TWILIO_AUTH_TOKEN", ""),
 ) if s]
@@ -311,7 +311,7 @@ def main() -> int:
           html.find('id="connectPhoneSec"') > html.find('id="statusSec"')
           and html.find('id="connectPhoneSec"') < html.find('id="jobsSec"'))
     check("has the 3-step layout (Step 1/2/3)",
-          "Step 1 — Open Jarvis on phone" in html
+          "Step 1 — Open Adam on phone" in html
           and "Step 2 — Copy access token" in html
           and "Step 3" in html)
     check("has a Show URL QR button", 'id="qrUrlShow"' in html and "Show URL QR" in html)
@@ -461,7 +461,7 @@ def _headless_qr_checks() -> None:
                   up == url and tok not in (up or ""))
             check("[hl] token payload is the bare token (no url/https/label/?token=)",
                   tp == tok and all(s not in (tp or "")
-                                    for s in ("http", "https", "URL:", "Jarvis Voice Local", "?token=")))
+                                    for s in ("http", "https", "URL:", "Adam", "?token=")))
             check("[hl] token NOT in section DOM before reveal",
                   tok not in pg.inner_text("#connectPhoneSec"))
             check("[hl] token text hidden before reveal",
@@ -504,7 +504,7 @@ def _headless_qr_checks() -> None:
             check("[hl] token QR decodes to the bare token EXACTLY", dtok == tok)
             check("[hl] token QR decoded content has no http/https/URL:/title",
                   bool(dtok) and all(s not in dtok
-                                     for s in ("http", "https", "URL:", "Jarvis Voice Local")))
+                                     for s in ("http", "https", "URL:", "Adam")))
 
             # Reveal shows the token only on explicit click.
             pg.click("#qrReveal")

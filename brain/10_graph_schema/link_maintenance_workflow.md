@@ -5,7 +5,7 @@
 > below don't run here. Hand-created `[[wiki links]]` still follow the schema rules; the
 > automated dry-run/apply commands are declined (see CLAUDE.md → Knowledge Graph Linking).
 
-Standard operating procedure for maintaining the [[JARVIS Command System|JARVIS]] knowledge graph linking system.
+Standard operating procedure for maintaining the [[Adam Command System|Adam]] knowledge graph linking system.
 
 Related: `linking_rules.md`, `canonical_nodes.md`, `aliases.md`, `scripts/graph_linker.py`
 

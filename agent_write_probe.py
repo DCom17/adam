@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — agent write probe (manual safety check, Phase 3).
+Adam — agent write probe (manual safety check, Phase 3).
 
 Empirically answers: "Can Claude Code itself still write a file directly?" It
 spawns the real `claude` CLI twice in a THROWAWAY temp directory (never your

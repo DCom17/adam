@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Twilio AI-voicemail connector (opt-in, off by default).
+Adam — Twilio AI-voicemail connector (opt-in, off by default).
 
 When a call to the user goes unanswered, their carrier forwards it to a Twilio
 number. Twilio answers it *itself* (a greeting + <Record>, hosted on Twilio — see

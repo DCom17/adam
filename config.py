@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — configuration layer.
+Adam — configuration layer.
 
 One place to resolve every runtime value. Nothing machine-specific lives in
 server.py anymore; it all flows from here.
@@ -29,13 +29,15 @@ from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent
 # Where the user's settings.json + .env live. Defaults to the repo root; the
-# JARVIS_CONFIG_ROOT env var points it elsewhere so tests run against clean
+# ADAM_CONFIG_ROOT env var points it elsewhere so tests run against clean
 # example defaults (and a packaged install can keep config outside the app dir).
-CONFIG_ROOT = Path(os.environ.get("JARVIS_CONFIG_ROOT", "").strip() or ROOT)
+# JARVIS_CONFIG_ROOT is honored as a fallback for pre-rename environments.
+CONFIG_ROOT = Path(os.environ.get("ADAM_CONFIG_ROOT", "").strip()
+                   or os.environ.get("JARVIS_CONFIG_ROOT", "").strip() or ROOT)
 load_dotenv(CONFIG_ROOT / ".env")  # secrets + machine values
 
-APP_NAME = "jarvis-voice-local"
-APP_VERSION = "0.9.34"
+APP_NAME = "adam-local"
+APP_VERSION = "0.9.35"
 
 
 # --- Settings file ----------------------------------------------------------
@@ -120,12 +122,12 @@ except (TypeError, ValueError):
     API_BUDGET_MONTHLY_USD = 10.0
 
 # The model picker the UI offers, with the per-plan recommendation. Haiku is
-# deliberately never recommended — it follows Jarvis's structured safety seams
+# deliberately never recommended — it follows Adam's structured safety seams
 # (PROPOSE blocks, memory-write formats) too loosely — but stays selectable.
 KNOWN_MODELS = (
     {"id": "claude-opus-4-8", "label": "Claude Opus", "note": "most capable"},
     {"id": "claude-sonnet-5", "label": "Claude Sonnet", "note": "fast + affordable"},
-    {"id": "claude-haiku-4-5", "label": "Claude Haiku", "note": "cheapest — not recommended for Jarvis"},
+    {"id": "claude-haiku-4-5", "label": "Claude Haiku", "note": "cheapest — not recommended for Adam"},
 )
 RECOMMENDED_MODEL = {"subscription": "claude-opus-4-8", "api_key": "claude-sonnet-5"}
 
@@ -244,10 +246,10 @@ PERM_PROTECTED_FILE_PATTERNS = list(
 )
 
 # Self-edit lane (default OFF). When enabled, the agent's proposed changes may write to
-# the app's OWN source files - so a user can tell Jarvis to change/customize itself -
+# the app's OWN source files - so a user can tell Adam to change/customize itself -
 # STILL through the full approve -> backup -> audit pipeline. Secrets (via the protected
 # patterns above) stay refused, the runtime data tree stays off-limits, and only
-# source/text file types are eligible. This is the "let Jarvis edit itself" gate.
+# source/text file types are eligible. This is the "let Adam edit itself" gate.
 PERM_ALLOW_APP_SELF_EDIT = bool(_perm("allow_app_self_edit", False))
 APP_ROOT = str(_resolve_path(".", "."))
 PERM_APP_SELF_EDIT_DIRS = _perm_dirs("app_self_edit_dirs", [APP_ROOT])
@@ -366,7 +368,7 @@ PROPOSED_CHANGES_FILE = STATE_DIR / "proposed_changes.json"
 # product's front-door control. Power users can still hand-tune the granular
 # agent_safety / permissions blocks instead (leave capability_tier unset/"custom").
 #
-#   safe         — draft_only: Jarvis proposes; writes need approval. (default)
+#   safe         — draft_only: Adam proposes; writes need approval. (default)
 #   powerful     — controlled_write, auto-approve non-destructive writes across the
 #                  whole vault, connectors on; destructive still confirmed; no shell.
 #   unrestricted — controlled_write opened all the way: self-edit ON, shell ON,
@@ -455,7 +457,7 @@ PERM_SELF_EDIT_AUTO_ROLLBACK = True
 # "latest release" endpoint (no auth, no fragile file IDs), and apply the attached
 # build with the smart 3-way updater. The maintainer publishes a release to ship.
 # `update_repo` is "owner/name" of the PUBLIC releases repo; override in settings.json.
-UPDATE_REPO = str(_as("update_repo", "DCom17/jarvis-voice-releases")).strip()
+UPDATE_REPO = str(_as("update_repo", "DCom17/adam-releases")).strip()
 # Master switch for the in-app update check/banner (the UPDATE.cmd path still works).
 UPDATE_CHECK_ENABLED = bool(_as("update_check_enabled", True))
 
@@ -464,7 +466,15 @@ UPDATE_CHECK_ENABLED = bool(_as("update_check_enabled", True))
 # vanish an in-flight or finished job (the old in-memory dict did). Stdlib
 # sqlite3 — no new dependency. The already-persisted JSON stores (approvals,
 # proposed_changes, push_sub, last_result) are intentionally left as-is.
-JOBS_DB = STATE_DIR / "jarvis.db"
+JOBS_DB = STATE_DIR / "adam.db"
+# Pre-rename installs (<= 0.9.34) have their job history in jarvis.db; updates
+# preserve data/, so carry it forward once. WAL/SHM sidecars move with it.
+_LEGACY_JOBS_DB = STATE_DIR / "jarvis.db"
+if _LEGACY_JOBS_DB.exists() and not JOBS_DB.exists():
+    for _suffix in ("", "-wal", "-shm"):
+        _old = Path(str(_LEGACY_JOBS_DB) + _suffix)
+        if _old.exists():
+            _old.rename(Path(str(JOBS_DB) + _suffix))
 USAGE_DB = STATE_DIR / "usage.db"
 STATE_SCHEMA_VERSION = 1
 # Cross-device chat sync: the server holds one authoritative copy of the user's
@@ -502,7 +512,7 @@ CALENDAR_TIMEOUT_SECONDS = int(_CAL.get("timeout_seconds", 20))
 # Inbound texts via POLLING the Twilio REST API (no public webhook / ingress).
 # The server pulls inbound messages to TWILIO_NUMBER every poll_interval_seconds
 # and routes them through the brain (see twilio_sms.py + server's startup poller).
-# Secrets live in .env (Secrets section below). Inbound only — Jarvis never sends
+# Secrets live in .env (Secrets section below). Inbound only — Adam never sends
 # SMS out, and there is no delete.
 # --- Integrations: Gmail (opt-in, OFF by default) ---------------------------
 # A connector to the user's OWN Google Apps Script Gmail bridge (gmail_bridge.gs),
@@ -512,7 +522,7 @@ CALENDAR_TIMEOUT_SECONDS = int(_CAL.get("timeout_seconds", 20))
 # (default false) AND each send routes through the approval flow. Delete/archive/
 # trash is not supported anywhere. See gmail.py.
 # --- Integrations: LinkedIn (opt-in, OFF by default) ------------------------
-# Two opt-in lanes. DRAFT lane (default): Jarvis writes posts/profile text the
+# Two opt-in lanes. DRAFT lane (default): Adam writes posts/profile text the
 # user copies into LinkedIn by hand — no credentials, no automation. API
 # auto-post lane (advanced, off): BYO LinkedIn Developer App + the user's OWN
 # member access token (w_member_social); create_post() publishes ONLY to the
@@ -570,7 +580,10 @@ HUNTER_BRIDGE_URL = str(_HUN.get("bridge_url", "") or "").strip()
 HUNTER_TIMEOUT_SECONDS = int(_HUN.get("timeout_seconds", 20))
 
 # --- Secrets (environment / .env ONLY) --------------------------------------
-JARVIS_TOKEN = os.environ.get("JARVIS_TOKEN", "").strip()
+# ADAM_TOKEN is the product token; JARVIS_TOKEN is honored as a fallback so
+# pre-rename installs (whose .env survives updates untouched) keep working.
+ADAM_TOKEN = (os.environ.get("ADAM_TOKEN", "").strip()
+              or os.environ.get("JARVIS_TOKEN", "").strip())
 # Calendar bridge token: secret, so .env only (never settings.json, never logged).
 CALENDAR_TOKEN = os.environ.get("GOOGLE_CALENDAR_TOKEN", "").strip()
 # Hunter bridge token: secret, so .env only (never settings.json, never logged).
@@ -722,9 +735,9 @@ def ensure_dirs() -> None:
 def validate() -> None:
     """Fail fast on misconfiguration that would otherwise surface as a confusing
     runtime error. Secrets that are merely optional (Twilio, push) are not required."""
-    if not JARVIS_TOKEN:
+    if not ADAM_TOKEN:
         raise RuntimeError(
-            "JARVIS_TOKEN missing. Copy .env.example to .env and set it."
+            "ADAM_TOKEN missing. Copy .env.example to .env and set it."
         )
     if not CLAUDE_EXE:
         raise RuntimeError(

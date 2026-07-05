@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — diff + hash helpers (Phase 4 Trustworthy Change Review).
+Adam — diff + hash helpers (Phase 4 Trustworthy Change Review).
 
 Small, dependency-free utilities that let the proposed-change flow answer three
 questions a user needs before approving a write:

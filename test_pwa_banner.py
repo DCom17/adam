@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — secure-context banner tests (v0.9.0, Slice 2).
+Adam — secure-context banner tests (v0.9.0, Slice 2).
 
 Static (always-run, TestClient): the PWA (/) and console (/console) carry a guarded
 secure-context banner + the pure helper window.__jvlSecCtxWarn, the banner adds no
@@ -22,8 +22,8 @@ from pathlib import Path
 
 import config
 
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "a" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "a" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -36,9 +36,9 @@ import server             # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 job_store.init(_SANDBOX / "jobs.db")
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 SECRETS = [s for s in (
-    server.JARVIS_TOKEN,
+    server.ADAM_TOKEN,
     getattr(config, "VAPID_PUBLIC_KEY", ""),
     getattr(config, "TWILIO_AUTH_TOKEN", ""),
 ) if s]

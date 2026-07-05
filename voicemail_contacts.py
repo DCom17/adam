@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — known-callers list for voicemail.
+Adam — known-callers list for voicemail.
 
 Maps phone numbers to names so a voicemail push can say "Voicemail from Mom" instead
 of a bare +1 number. Optional: with no file, callers are shown by number.
@@ -13,7 +13,7 @@ Numbers match forgivingly on their last 10 digits, so +1/area-code/format differ
 between the list and Twilio's caller-ID don't matter. Loaded fresh on each lookup, so
 the file can be edited without a restart.
 
-Harvested from the standalone jarvis-call-relay (app/contacts.py).
+Harvested from the standalone adam-call-relay (app/contacts.py).
 """
 
 from __future__ import annotations

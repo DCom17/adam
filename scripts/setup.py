@@ -1,18 +1,18 @@
 """
-Jarvis Voice Local — guided first-run setup.
+Adam — guided first-run setup.
 
 Run from the project root (Python avoids the PowerShell execution-policy wall):
 
     python scripts/setup.py
 
 What it does (idempotent, non-destructive):
-  1. Ensures .env exists and has a real JARVIS_TOKEN (generates one only if
+  1. Ensures .env exists and has a real ADAM_TOKEN (generates one only if
      missing — never overwrites an existing token).
   2. Confirms Claude Code is resolvable; offers to record claude_exe if not.
   3. Prompts for your vault_path (the files Claude works against).
   4. Runs the setup doctor and prints a PASS/WARN/FAIL report.
 
-It only ever edits JARVIS_TOKEN (.env) and, with your consent, claude_exe and
+It only ever edits ADAM_TOKEN (.env) and, with your consent, claude_exe and
 vault_path (settings.json). It never touches agent_safety.mode, the permissions
 block, or approval/backup/audit logic.
 """
@@ -55,14 +55,14 @@ def main() -> int:
     settings = ROOT / "settings.json"
     settings_example = ROOT / "settings.example.json"
 
-    print("\nJarvis Voice Local — setup\n" + "=" * 32)
+    print("\nAdam — setup\n" + "=" * 32)
 
     # 1. Token / .env (never prints the token value).
     res = onboarding.ensure_env_token(env, env_example)
     msg = {
-        "unchanged": "Existing JARVIS_TOKEN kept (not changed).",
-        "token_generated": "Generated a new JARVIS_TOKEN and wrote it to .env.",
-        "created_with_token": "Created .env with a fresh JARVIS_TOKEN.",
+        "unchanged": "Existing ADAM_TOKEN kept (not changed).",
+        "token_generated": "Generated a new ADAM_TOKEN and wrote it to .env.",
+        "created_with_token": "Created .env with a fresh ADAM_TOKEN.",
     }[res["action"]]
     print("\n[1] Secrets / .env")
     print("    " + msg)

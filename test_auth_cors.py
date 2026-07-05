@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — auth hardening + CORS tests (v0.9.0, Slice 1).
+Adam — auth hardening + CORS tests (v0.9.0, Slice 1).
 
 Covers the constant-time bearer-token gate and confirms the (pre-existing) CORS
 setting is honored end-to-end. Proves:
@@ -26,8 +26,8 @@ from pathlib import Path
 import config
 
 # Import-time stand-ins so server.py's config.validate() passes off the real box.
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "a" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "a" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -49,7 +49,7 @@ from fastapi.testclient import TestClient          # noqa: E402
 
 job_store.init(_SANDBOX / "jobs.db")
 
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 client = TestClient(server.app)
 
 _passed = 0

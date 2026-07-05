@@ -1,4 +1,4 @@
-# Jarvis Voice Local
+# Adam
 
 A local-first voice assistant. Your phone talks to a small backend running on
 **your own computer**, which drives **your own Claude Code** against **your own
@@ -9,7 +9,7 @@ keys, no cloud sessions. You run it, you own it.
 Phone PWA  ->  your desktop backend (this app)  ->  your Claude Code  ->  your files
 ```
 
-> **Status — v0.9.34, friends-&-family / prosumer beta.** Desktop-local works out of the
+> **Status — v0.9.35, friends-&-family / prosumer beta.** Desktop-local works out of the
 > box via the double-click **`SETUP.cmd`** wizard; phone access is supported via
 > **Tailscale Serve** (HTTPS); updates arrive through a one-click in-app updater
 > (GitHub Releases). Not yet done before it's a full consumer product: a tray app /
@@ -41,7 +41,7 @@ Phone PWA  ->  your desktop backend (this app)  ->  your Claude Code  ->  your f
 
 ## What it does
 
-- **Voice and text chat** with a Claude Code agent, in the **JARVIS** register, from a
+- **Voice and text chat** with a Claude Code agent, in the **Adam** register, from a
   phone PWA or the desktop browser.
 - **Safe by default (`draft_only`)** — the agent reads and **proposes** file changes; it
   cannot write your files directly. You review a diff and **approve → apply**; the
@@ -56,7 +56,7 @@ Phone PWA  ->  your desktop backend (this app)  ->  your Claude Code  ->  your f
 - **File / photo uploads** — including iPhone HEIC (auto-converted to JPEG).
 - **Web Push** — the installed PWA is notified when a background job finishes.
 - **Inbound SMS** (optional) — text the assistant hands-free via Twilio.
-- **The real Jarvis voice (optional)** — out of the box, spoken replies use the
+- **The real Adam voice (optional)** — out of the box, spoken replies use the
   browser's built-in (robotic) voice. Double-click **`INSTALL-VOICE.cmd`** (setup also
   offers it at the end) for the high-quality local voice — a one-time ~340 MB download
   that runs entirely on your PC and serves both desktop and phone. If the voice service
@@ -84,15 +84,15 @@ Phone PWA  ->  your desktop backend (this app)  ->  your Claude Code  ->  your f
 In the extracted folder, **double-click `SETUP.cmd`** (or open `START_HERE.txt` first).
 A guided wizard does the rest: it installs **Python** and **Claude Code** for you if
 they're missing, walks you through the **one-time Claude sign-in** (the only step it
-can't do for you — it's your own account), configures everything, and opens Jarvis in
-your browser **already signed in**. To open Jarvis again any time, double-click
+can't do for you — it's your own account), configures everything, and opens Adam in
+your browser **already signed in**. To open Adam again any time, double-click
 **`START.cmd`**. No terminal, no token to copy.
 
 The command-line steps below do the same thing manually, for those who prefer it.
 
 ### Manual setup
 
-From the project root (`jarvis-voice-local\`):
+From the project root (`adam-local\`):
 
 ```powershell
 # 1. Install dependencies
@@ -106,11 +106,11 @@ python scripts/setup.py
 
 `setup.py` is a plain Python script on purpose — it sidesteps PowerShell
 execution-policy restrictions that can block the `.ps1` launchers. It only ever
-edits `JARVIS_TOKEN` (in `.env`) and, with your confirmation, `claude_exe` and
+edits `ADAM_TOKEN` (in `.env`) and, with your confirmation, `claude_exe` and
 `vault_path` (in `settings.json`). It never touches `agent_safety.mode`, the
 `permissions` block, or the approval/backup/audit logic.
 
-**Signing in is automatic.** The launcher (`scripts\start-jarvis.ps1`, or the
+**Signing in is automatic.** The launcher (`scripts\start-adam.ps1`, or the
 `START.cmd` double-click) opens your browser **already signed in** — it passes your
 token to the app in the URL fragment, which is stored locally and stripped from the URL
 immediately (it never reaches the server or its logs). You don't paste anything.
@@ -122,7 +122,7 @@ single sign-in QR (see [Connect your phone](docs/CONNECT_YOUR_PHONE.md)).
 <summary>Getting the token by hand (rarely needed)</summary>
 
 If you ever need the raw token (e.g., to sign in a browser that didn't go through the
-launcher), run `.\scripts\copy-token.ps1`. It copies your `JARVIS_TOKEN` to the
+launcher), run `.\scripts\copy-token.ps1`. It copies your `ADAM_TOKEN` to the
 clipboard, **read-only**: it never prints/logs the token, never changes
 `.env`/`settings.json`, and never sends it anywhere — it shows only a masked hint
 (length + last 4 chars). If `.env` or the token is missing, it tells you to run
@@ -144,9 +144,9 @@ report the problem and exit non-zero, and never auto-edit the file to "fix" it.
 <summary>Manual setup (if you'd rather not use the script)</summary>
 
 ```powershell
-# Create your secrets file, then set JARVIS_TOKEN to a long random value:
+# Create your secrets file, then set ADAM_TOKEN to a long random value:
 Copy-Item .env.example .env
-python -c "import secrets; print(secrets.token_hex(32))"   # paste into JARVIS_TOKEN=
+python -c "import secrets; print(secrets.token_hex(32))"   # paste into ADAM_TOKEN=
 
 # Create your settings file, then edit it (see "Configuration" below):
 Copy-Item settings.example.json settings.json
@@ -178,7 +178,7 @@ You never need to edit `server.py` or `index.html` for normal setup.
 
 | Key | Required? | What it does |
 |---|---|---|
-| `JARVIS_TOKEN` | **Yes** | The bearer token that gates the API. |
+| `ADAM_TOKEN` | **Yes** | The bearer token that gates the API. |
 | `VAPID_PUBLIC_KEY` / `VAPID_SUBJECT` | No | Enables Web Push. |
 | `TWILIO_AUTH_TOKEN` / `OWNER_PHONE` / `TWILIO_WEBHOOK_URL` | No | Enables inbound SMS. |
 
@@ -186,7 +186,7 @@ You never need to edit `server.py` or `index.html` for normal setup.
 
 ## Permissions & the safe write boundary
 
-Jarvis Voice Local ships a **controlled-action permission layer** — the safety
+Adam ships a **controlled-action permission layer** — the safety
 foundation that lets the assistant read, draft, and (on your approval) modify files
 without being able to touch anything you didn't approve.
 
@@ -413,14 +413,14 @@ Then derive the public key per the `py_vapid`/`pywebpush` docs and put it in
 
 Async jobs and their history **survive the process** — a server restart, crash, or
 machine sleep no longer loses an in-flight or finished job (which used to give the phone
-a 404 and *"Connection error — session reset"*). Jobs live in SQLite so Jarvis behaves
+a 404 and *"Connection error — session reset"*). Jobs live in SQLite so Adam behaves
 like real local desktop software.
 
 ### Where state lives
 
 | What | Where | Format |
 |---|---|---|
-| **Async jobs + history** *(new)* | `data/state/jarvis.db` | **SQLite** (stdlib `sqlite3`, no new dependency) |
+| **Async jobs + history** *(new)* | `data/state/adam.db` | **SQLite** (stdlib `sqlite3`, no new dependency) |
 | Push subscriptions | `data/state/push_sub.json` | JSON *(already persisted; unchanged)* |
 | Last finished result | `data/state/last_result.json` | JSON *(already persisted; unchanged)* |
 | Pending approvals | `data/state/approvals.json` | JSON *(unchanged)* |
@@ -481,7 +481,7 @@ tokens, or push keys are ever written to the job DB.**
 
 ### Schema versioning
 
-`jarvis.db` carries a `schema_version` table. On startup the schema is created if
+`adam.db` carries a `schema_version` table. On startup the schema is created if
 missing and a minimal forward-migration function runs (a clear log line reports
 the version). It's deliberately small — no heavyweight migration framework.
 
@@ -492,7 +492,7 @@ recreated on next start:
 
 ```powershell
 .\scripts\stop-dev.ps1
-Remove-Item data\state\jarvis.db, data\state\jarvis.db-wal, data\state\jarvis.db-shm -ErrorAction SilentlyContinue
+Remove-Item data\state\adam.db, data\state\adam.db-wal, data\state\adam.db-shm -ErrorAction SilentlyContinue
 ```
 
 This clears job history only; approvals, proposed changes, push subs, and the
@@ -515,7 +515,7 @@ mapping, delivered bookkeeping, schema versioning, and sweep.
 **Easiest — one launcher** (after `setup.py`): double-click or run
 
 ```powershell
-.\scripts\start-jarvis.ps1
+.\scripts\start-adam.ps1
 ```
 
 It checks Python is present, reminds you to run `setup.py` first if `.env` is missing,
@@ -544,7 +544,7 @@ Then open the app:
   **not** a secure context on a phone, so the mic/voice won't work and the app shows an
   insecure-connection banner.
 - In the app's settings field, set the server URL if it isn't the page origin, and paste
-  your `JARVIS_TOKEN`. (Tip: run `.\scripts\copy-token.ps1` to put the token on your
+  your `ADAM_TOKEN`. (Tip: run `.\scripts\copy-token.ps1` to put the token on your
   clipboard instead of opening `.env` by hand.)
 
 > The port shown above is the default in `settings.example.json`; your install may use a
@@ -553,7 +553,7 @@ Then open the app:
 ### Operator console (read-only)
 
 A desktop-friendly operator console is served at <http://localhost:8000/console>.
-Paste your `JARVIS_TOKEN` once (kept in the browser's `localStorage`, never
+Paste your `ADAM_TOKEN` once (kept in the browser's `localStorage`, never
 re-displayed) to view server status, job history, the proposed-change/approval
 queue, diffs, and a read-only **Audit log** view (newest-first, bounded, with a
 50/100/200/500 limit selector).
@@ -581,8 +581,8 @@ Expected:
 ```json
 {
   "status": "ok",
-  "app": "jarvis-voice-local",
-  "version": "0.9.34",
+  "app": "adam-local",
+  "version": "0.9.35",
   "claude_configured": true,
   "vault_configured": true,
   "permissions": { "write_dirs": ["...\\data\\outputs", "...\\data\\drafts"], "...": "..." },
@@ -606,7 +606,7 @@ throwaway sandbox — it never touches your real `data/` tree.
 ## Where things live
 
 ```
-jarvis-voice-local/
+adam-local/
   server.py              # FastAPI backend (routes + Claude subprocess)
   config.py              # single config layer (.env + settings.json + defaults)
   permissions.py         # Level 3 permission manager (allow-lists, audit, backups)
@@ -627,7 +627,7 @@ jarvis-voice-local/
     agent_workspace/     #   throwaway sandbox cwd Claude runs in (safe modes)
     backups/             #   pre-overwrite backups
     logs/                #   voice_server.log + audit.jsonl
-    state/               #   jarvis.db (jobs), push subs, last result, approvals.json, proposed_changes.json
+    state/               #   adam.db (jobs), push subs, last result, approvals.json, proposed_changes.json
   .env.example           # secrets template -> copy to .env
   settings.example.json  # settings template -> copy to settings.json
   requirements.txt
@@ -641,10 +641,10 @@ jarvis-voice-local/
 
 | Symptom | Fix |
 |---|---|
-| `JARVIS_TOKEN missing` at startup | Copy `.env.example` to `.env`, set `JARVIS_TOKEN`. |
+| `ADAM_TOKEN missing` at startup | Copy `.env.example` to `.env`, set `ADAM_TOKEN`. |
 | `Claude executable not found` | Install Claude Code, or set `claude_exe` in `settings.json`. |
 | `/health` shows `vault_configured: false` | Set `vault_path` to an existing folder. |
-| 403 from the API | The bearer token in the app doesn't match `JARVIS_TOKEN`. |
+| 403 from the API | The bearer token in the app doesn't match `ADAM_TOKEN`. |
 | Replies don't speak | Local TTS is down — the app falls back to browser voice. Check `tts_url`. |
 | Push never arrives | VAPID not configured, or the PWA isn't installed to the Home Screen. |
 | Port already in use | Run `scripts\stop-dev.ps1`, or change `port` in `settings.json`. |

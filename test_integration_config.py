@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — integration_config writer tests.
+Adam — integration_config writer tests.
 
 Proves the comma/bracket-proof config writer that backs the wizards' one-click
 "Enable" buttons:
@@ -100,7 +100,7 @@ def main() -> int:
     print("\n[4] set_env_var replaces an existing KEY= line in place")
     ep = sandbox / ".env"
     ep.write_text(
-        "JARVIS_TOKEN=keepme\n"
+        "ADAM_TOKEN=keepme\n"
         "# --- Google Calendar bridge ---\n"
         "GOOGLE_CALENDAR_TOKEN=\n"
         "HUNTER_TOKEN=keep-too\n",
@@ -109,7 +109,7 @@ def main() -> int:
     ic.set_env_var("GOOGLE_CALENDAR_TOKEN", "abc123def", env_path=ep, backup_dir=backups)
     txt = ep.read_text("utf-8")
     check("token value written", "GOOGLE_CALENDAR_TOKEN=abc123def" in txt)
-    check("other secrets untouched", "JARVIS_TOKEN=keepme" in txt and "HUNTER_TOKEN=keep-too" in txt)
+    check("other secrets untouched", "ADAM_TOKEN=keepme" in txt and "HUNTER_TOKEN=keep-too" in txt)
     check("no duplicate key line",
           txt.count("GOOGLE_CALENDAR_TOKEN=") == 1)
     check("trailing newline preserved", txt.endswith("\n"))
@@ -117,7 +117,7 @@ def main() -> int:
 
     print("\n[5] set_env_var replaces a commented #KEY= placeholder")
     ep2 = sandbox / ".env2"
-    ep2.write_text("JARVIS_TOKEN=x\n#GOOGLE_CALENDAR_TOKEN=placeholder\n", "utf-8")
+    ep2.write_text("ADAM_TOKEN=x\n#GOOGLE_CALENDAR_TOKEN=placeholder\n", "utf-8")
     ic.set_env_var("GOOGLE_CALENDAR_TOKEN", "tok", env_path=ep2, backup_dir=backups)
     t2 = ep2.read_text("utf-8")
     check("commented placeholder replaced (uncommented)", "GOOGLE_CALENDAR_TOKEN=tok" in t2)
@@ -125,13 +125,13 @@ def main() -> int:
 
     print("\n[6] set_env_var appends with a section header when the key is absent")
     ep3 = sandbox / ".env3"
-    ep3.write_text("JARVIS_TOKEN=x\n", "utf-8")
+    ep3.write_text("ADAM_TOKEN=x\n", "utf-8")
     ic.set_env_var("GOOGLE_CALENDAR_TOKEN", "newtok", env_path=ep3,
                    backup_dir=backups, section_header="# --- Google Calendar bridge ---")
     t3 = ep3.read_text("utf-8")
     check("key appended", "GOOGLE_CALENDAR_TOKEN=newtok" in t3)
     check("section header added once", t3.count("# --- Google Calendar bridge ---") == 1)
-    check("original key preserved", "JARVIS_TOKEN=x" in t3)
+    check("original key preserved", "ADAM_TOKEN=x" in t3)
 
     print("\n[7] token written to .env never lands in settings.json")
     check("settings.json carries no token", "abc123def" not in sp.read_text("utf-8"))

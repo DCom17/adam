@@ -1,4 +1,4 @@
-# Update JARVIS framework from the remote, touching ONLY core_manifest.txt files.
+# Update Adam framework from the remote, touching ONLY core_manifest.txt files.
 #
 # Safe by construction: every file NOT in the manifest is your data (profile,
 # memory, logs, tasks, dashboard/calendar state, your graph vocabulary) and this
@@ -18,7 +18,7 @@ if (-not (Test-Path (Join-Path $RepoRoot ".git"))) {
 
 # Remote/branch (defaults origin/main; overridable in config.update)
 $remote = "origin"; $branch = "main"
-$cfgPath = Join-Path $RepoRoot "config\jarvis.config.json"
+$cfgPath = Join-Path $RepoRoot "config\adam.config.json"
 if (Test-Path $cfgPath) {
   $cfg = Get-Content -Raw $cfgPath | ConvertFrom-Json
   if ($cfg.update) {

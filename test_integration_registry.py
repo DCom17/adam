@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — add-on registry + /integrations/status tests.
+Adam — add-on registry + /integrations/status tests.
 
 Proves the scaffold every parallel add-on build conforms to:
 
@@ -25,8 +25,8 @@ from pathlib import Path
 import config
 
 # Import-time stand-ins so server.py's config.validate() passes off the real box.
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "d" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "d" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -42,7 +42,7 @@ from fastapi.testclient import TestClient   # noqa: E402
 job_store.init(_SANDBOX / "jobs.db")
 
 ROOT = Path(__file__).resolve().parent
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 client = TestClient(server.app)
 AUTH = {"Authorization": "Bearer " + TOKEN}
 

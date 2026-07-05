@@ -23,5 +23,5 @@ Use these relationship labels in LLM Wiki notes.
 
 - [[Daily Quests]] -- is_part_of --> [[Hunter Tracker]]
 - [[Calendar Packet Workflow]] -- protects_against --> [[Calendar Mistakes]]
-- [[Claude Code]] -- edits --> [[JARVIS Vault]]
+- [[Claude Code]] -- edits --> [[Adam Vault]]
 - [[Google Calendar]] -- is_source_of_truth_for --> [[Schedule]]

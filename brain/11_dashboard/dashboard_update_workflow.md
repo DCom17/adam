@@ -145,7 +145,7 @@ These State tab cells are formula-driven. Never include them in the sync payload
 | State!D2 | total_xp | SUM of XP_Log confirmed entries |
 | State!E2 | xp_to_next | Calculated from Level_Curve |
 
-Claude/JARVIS writes ONLY these State fields:
+Claude/Adam writes ONLY these State fields:
 
 | Cell | Field | Who sets it |
 |---|---|---|

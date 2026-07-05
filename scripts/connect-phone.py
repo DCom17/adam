@@ -1,31 +1,31 @@
 """
-Connect-phone helper for Jarvis Voice Local.
+Connect-phone helper for Adam.
 
-Inspects your Tailscale state and exposes the Jarvis backend to your phone over
+Inspects your Tailscale state and exposes the Adam backend to your phone over
 Tailscale Serve HTTPS — the supported mobile path.
 
 DEFAULT is read-only: with no flags it only INSPECTS (read-only `tailscale status` /
 `serve status`) and PRINTS the exact command to run. It reads or prints no token, and
-never touches Jarvis config / .env / settings.json / the server / scripts/voice_server.
+never touches Adam config / .env / settings.json / the server / scripts/voice_server.
 
 Two opt-in flags perform the single mutation this helper is allowed to make — running
 the port-scoped `tailscale serve` ON or OFF, and nothing else. They ask for confirmation
 first, and NEVER run `serve reset`, `funnel`, `login`, or `set`:
     --apply   run the recommended `tailscale serve --bg --https=<port> http://127.0.0.1:<target>`
-    --off     stop ONLY the Jarvis serve on that HTTPS port (`serve --https=<port> off`)
+    --off     stop ONLY the Adam serve on that HTTPS port (`serve --https=<port> off`)
 
-If another app already serves on the tailnet's :443 (e.g. Morrow -> 127.0.0.1:8849),
-Jarvis is recommended on a separate HTTPS port (:8443), and --apply REFUSES to overwrite
-any port already in use — so an existing serve (Morrow included) is never clobbered.
+If another app already serves on the tailnet's :443 (any existing proxy to a local
+port), Adam is recommended on a separate HTTPS port (:8443), and --apply REFUSES to
+overwrite any port already in use — so an existing serve is never clobbered.
 
 Usage:
     python scripts/connect-phone.py            # inspect + print guidance (read-only)
     python scripts/connect-phone.py --json     # machine-readable diagnostic (no secrets)
     python scripts/connect-phone.py --apply     # run the serve command (asks to confirm)
     python scripts/connect-phone.py --apply --yes   # ...without the prompt (non-interactive)
-    python scripts/connect-phone.py --off       # stop the Jarvis serve (port-scoped)
-    python scripts/connect-phone.py --port 8443        # force the Jarvis HTTPS port
-    python scripts/connect-phone.py --target-port 8010 # override the local Jarvis port
+    python scripts/connect-phone.py --off       # stop the Adam serve (port-scoped)
+    python scripts/connect-phone.py --port 8443        # force the Adam HTTPS port
+    python scripts/connect-phone.py --target-port 8010 # override the local Adam port
 """
 
 from __future__ import annotations
@@ -41,11 +41,10 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import config        # for the local Jarvis port (never the token)
+import config        # for the local Adam port (never the token)
 import onboarding     # reuse the Tailscale detection (PATH + standard Windows paths)
 
-MORROW_PORT = 8849          # the known local app that serves on :443 -> 127.0.0.1:8849
-DEFAULT_ALT_HTTPS = 8443    # where we put Jarvis when :443 is taken
+DEFAULT_ALT_HTTPS = 8443    # where we put Adam when :443 is taken
 
 
 # --- Tailscale (all READ-ONLY) --------------------------------------------------
@@ -67,31 +66,34 @@ def _run(ts_path: str, args: list[str], timeout: int = 6) -> str | None:
 
 def parse_serve_status(text: str | None) -> dict:
     """Parse `tailscale serve status` output (read-only). Determines whether :443 is in
-    use, which HTTPS ports are served, and whether the known Morrow proxy is present."""
+    use, which HTTPS ports are served, and which local port each serve proxies to —
+    so callers can tell an Adam serve from another app's without naming any app."""
     info = {
         "has_serve": False,
         "served_https_ports": [],
         "port_443_in_use": False,
-        "morrow_detected": False,
+        "proxy_targets": {},   # https port -> proxied local port (when parseable)
         "raw": (text or "").strip(),
     }
     if not text or "no serve config" in text.lower():
         return info
+    port = None
     for line in text.splitlines():
         line = line.strip()
         m = re.match(r"https://([^\s/]+)", line)
-        if not m:
+        if m:
+            host = m.group(1)
+            info["has_serve"] = True
+            pm = re.search(r":(\d+)$", host)
+            port = int(pm.group(1)) if pm else 443
+            if port not in info["served_https_ports"]:
+                info["served_https_ports"].append(port)
+            if port == 443:
+                info["port_443_in_use"] = True
             continue
-        host = m.group(1)
-        info["has_serve"] = True
-        pm = re.search(r":(\d+)$", host)
-        port = int(pm.group(1)) if pm else 443
-        if port not in info["served_https_ports"]:
-            info["served_https_ports"].append(port)
-        if port == 443:
-            info["port_443_in_use"] = True
-    if str(MORROW_PORT) in text:
-        info["morrow_detected"] = True
+        tm = re.search(r"proxy https?://127\.0\.0\.1:(\d+)", line)
+        if tm and port is not None:
+            info["proxy_targets"][port] = int(tm.group(1))
     return info
 
 
@@ -151,15 +153,15 @@ def _serve_run(ts_path: str, args: list[str]) -> dict:
 
 def apply_serve(ts_path: str, https_port: int, target_port: int) -> dict:
     """Run ONLY `tailscale serve --bg --https=<port> http://127.0.0.1:<target>` — the
-    one command that shares Jarvis to the tailnet. Callers must have already refused to
-    overwrite an occupied port, so an existing serve (e.g. Morrow on :443) is untouched."""
+    one command that shares Adam to the tailnet. Callers must have already refused to
+    overwrite an occupied port, so an existing serve (e.g. another app on :443) is untouched."""
     return _serve_run(ts_path, ["--bg", f"--https={int(https_port)}",
                                 f"http://127.0.0.1:{int(target_port)}"])
 
 
 def turn_off_serve(ts_path: str, https_port: int) -> dict:
     """Run ONLY the port-scoped `tailscale serve --https=<port> off` (never `reset`), so
-    stopping Jarvis leaves every other serve intact."""
+    stopping Adam leaves every other serve intact."""
     return _serve_run(ts_path, [f"--https={int(https_port)}", "off"])
 
 
@@ -187,12 +189,14 @@ def _do_apply(d: dict, assume_yes: bool) -> int:
         return 1
     port = int(d["recommended_https_port"])
     if port in d["served_https_ports"]:
-        who = "Morrow" if (port == 443 and d["morrow_detected"]) else "an existing serve"
+        tgt = (d.get("serve_proxy_targets") or {}).get(port)
+        who = "another app (proxying 127.0.0.1:%d)" % tgt if tgt and tgt != int(d["target_port"]) \
+              else "an existing serve"
         print("[!] :%d is already used by %s — refusing to overwrite it." % (port, who))
-        print("    If that's already Jarvis, you're connected:  %s" % d["phone_url"])
-        print("    To put Jarvis on a different port instead:  --apply --port <PORT>")
+        print("    If that's already Adam, you're connected:  %s" % d["phone_url"])
+        print("    To put Adam on a different port instead:  --apply --port <PORT>")
         return 1
-    print("\nAbout to share Jarvis to your tailnet over HTTPS by running:")
+    print("\nAbout to share Adam to your tailnet over HTTPS by running:")
     print("    %s" % d["serve_command"])
     if not _confirm("Run it now?", assume_yes):
         print("    Cancelled — nothing changed.")
@@ -202,7 +206,7 @@ def _do_apply(d: dict, assume_yes: bool) -> int:
         print("[!] `tailscale serve` did not succeed: %s" % (res["stderr"] or res["stdout"] or "unknown error"))
         print("    Nothing else was changed. You can run the command above by hand.")
         return 1
-    print("[ok] Jarvis is now shared on your tailnet.")
+    print("[ok] Adam is now shared on your tailnet.")
     print("     Open on your phone (Tailscale ON):  %s" % d["phone_url"])
     print("     Stop sharing later:  %s" % d["teardown_command"])
     return 0
@@ -213,12 +217,14 @@ def _do_off(d: dict, off_port: int, assume_yes: bool) -> int:
         print("[!] Tailscale isn't installed. Nothing changed.")
         return 1
     off_port = int(off_port)
-    if off_port == 443 and d["morrow_detected"]:
-        print("[!] Refusing to turn off :443 — that's another app (Morrow), not Jarvis.")
-        print("    Pass --port <the Jarvis port> if you really mean a specific one. Nothing changed.")
+    tgt = (d.get("serve_proxy_targets") or {}).get(off_port)
+    if tgt and tgt != int(d["target_port"]):
+        print("[!] Refusing to turn off :%d — that serve proxies 127.0.0.1:%d, which is "
+              "another app, not Adam." % (off_port, tgt))
+        print("    Pass --port <the Adam port> if you really mean a specific one. Nothing changed.")
         return 1
     cmd = build_teardown_command(off_port)
-    print("\nAbout to stop ONLY the Jarvis serve on :%d by running:" % off_port)
+    print("\nAbout to stop ONLY the Adam serve on :%d by running:" % off_port)
     print("    %s" % cmd)
     if not _confirm("Run it now?", assume_yes):
         print("    Cancelled — nothing changed.")
@@ -227,7 +233,7 @@ def _do_off(d: dict, off_port: int, assume_yes: bool) -> int:
     if not res["ok"]:
         print("[!] `tailscale serve off` did not succeed: %s" % (res["stderr"] or res["stdout"] or "unknown error"))
         return 1
-    print("[ok] Stopped the Jarvis serve on :%d. Any other serve is untouched." % off_port)
+    print("[ok] Stopped the Adam serve on :%d. Any other serve is untouched." % off_port)
     return 0
 
 
@@ -256,14 +262,15 @@ def gather(https_override: int | None = None, target_override: int | None = None
 
     warnings = [
         "Do NOT run `tailscale serve reset` if another serve exists — it removes ALL "
-        "serve configs (e.g. it would drop a Morrow serve on :443).",
+        "serve configs (including another app's serve on :443).",
         "Do NOT use Tailscale Funnel and do NOT expose the backend on the public internet.",
         "The cloudflared public path is advanced and REQUIRES Cloudflare Access "
         "(see docs/ADVANCED_REMOTE.md).",
     ]
     if serve_info["port_443_in_use"]:
-        which = "Morrow (127.0.0.1:%d)" % MORROW_PORT if serve_info["morrow_detected"] else "another app"
-        warnings.insert(0, "Tailscale Serve :443 is already used by %s — Jarvis is "
+        tgt = serve_info["proxy_targets"].get(443)
+        which = "another app (127.0.0.1:%d)" % tgt if tgt and tgt != target_port else "another app"
+        warnings.insert(0, "Tailscale Serve :443 is already used by %s — Adam is "
                            "recommended on :%d so that serve stays intact." % (which, https_port))
 
     return {
@@ -274,7 +281,7 @@ def gather(https_override: int | None = None, target_override: int | None = None
         "tailscale_backend_state": backend_state,  # diagnostic, not a secret
         "serve_has_config": serve_info["has_serve"],
         "serve_443_in_use": serve_info["port_443_in_use"],
-        "morrow_detected": serve_info["morrow_detected"],
+        "serve_proxy_targets": serve_info["proxy_targets"],
         "served_https_ports": serve_info["served_https_ports"],
         "target_port": target_port,
         "recommended_https_port": https_port,
@@ -290,7 +297,7 @@ def gather(https_override: int | None = None, target_override: int | None = None
 
 def _print_human(d: dict) -> None:
     p = print
-    p("\nJarvis Voice Local - connect your phone (Tailscale Serve, supported path)")
+    p("\nAdam - connect your phone (Tailscale Serve, supported path)")
     p("=" * 70)
     if not d["tailscale_found"]:
         p("[!] Tailscale was not found (PATH or the standard Windows install paths).")
@@ -300,15 +307,17 @@ def _print_human(d: dict) -> None:
     p("Tailscale: found%s" % (" (status reachable)" if d["tailscale_status_reachable"]
                               else " (status unavailable - is Tailscale running/signed in?)"))
     if d["serve_has_config"]:
-        extra = " incl. Morrow on 127.0.0.1:%d" % MORROW_PORT if d["morrow_detected"] else ""
+        others = sorted(t for pt, t in (d.get("serve_proxy_targets") or {}).items()
+                        if t != int(d["target_port"]))
+        extra = " incl. another app on 127.0.0.1:%d" % others[0] if others else ""
         p("Existing serve: yes, HTTPS ports %s%s" % (d["served_https_ports"] or "?", extra))
     else:
         p("Existing serve: none")
     p("")
-    p("Recommended: serve Jarvis (local port %d) on HTTPS port %d." %
+    p("Recommended: serve Adam (local port %d) on HTTPS port %d." %
       (d["target_port"], d["recommended_https_port"]))
     if d["serve_443_in_use"]:
-        p("  (:443 is already taken, so Jarvis uses :%d to avoid clobbering it.)"
+        p("  (:443 is already taken, so Adam uses :%d to avoid clobbering it.)"
           % d["recommended_https_port"])
     p("")
     p("1) Run this on the PC (or let the helper do it: re-run with --apply):")
@@ -318,20 +327,20 @@ def _print_human(d: dict) -> None:
                           d["serve_command"].split(" ", 1)[1]))
     p("   Then check it:  tailscale serve status")
     p("")
-    p("2) Your Jarvis phone URL will be:")
+    p("2) Your Adam phone URL will be:")
     p("     %s" % d["phone_url"])
     p("")
     p("3) On the iPhone:")
     p("     - Tailscale app ON (same account/tailnet)")
     p("     - open the URL above in Safari")
     p("     - confirm the insecure-connection banner is HIDDEN (proper HTTPS)")
-    p("     - paste your JARVIS_TOKEN in the app settings (no 403)")
+    p("     - paste your ADAM_TOKEN in the app settings (no 403)")
     p("     - tap Activate, allow the mic, speak -> transcript + reply")
     p("     - Share -> Add to Home Screen; open from the icon; re-confirm auth + voice")
     p("     - negative check (same Wi-Fi): open http://<pc-lan-ip>:%d -> banner SHOWS, "
       "voice unavailable (expected)" % d["target_port"])
     p("")
-    p("4) When done, remove ONLY the Jarvis serve (keeps any other serve intact):")
+    p("4) When done, remove ONLY the Adam serve (keeps any other serve intact):")
     p("     %s" % d["teardown_command"])
     p("")
     p("Notes:")
@@ -344,10 +353,10 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Print safe Tailscale Serve guidance for phone access (read-only).")
     ap.add_argument("--json", action="store_true", help="machine-readable diagnostic (no secrets)")
     ap.add_argument("--apply", action="store_true", help="run the recommended `tailscale serve` (opt-in; asks to confirm)")
-    ap.add_argument("--off", action="store_true", help="stop ONLY the Jarvis serve on the chosen HTTPS port (port-scoped)")
+    ap.add_argument("--off", action="store_true", help="stop ONLY the Adam serve on the chosen HTTPS port (port-scoped)")
     ap.add_argument("--yes", action="store_true", help="skip the confirmation prompt for --apply/--off")
-    ap.add_argument("--port", type=int, default=None, help="force the Jarvis HTTPS serve port")
-    ap.add_argument("--target-port", type=int, default=None, help="override the local Jarvis port (default: config.PORT)")
+    ap.add_argument("--port", type=int, default=None, help="force the Adam HTTPS serve port")
+    ap.add_argument("--target-port", type=int, default=None, help="override the local Adam port (default: config.PORT)")
     args = ap.parse_args(argv)
 
     if args.apply and args.off:

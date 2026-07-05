@@ -33,7 +33,7 @@ The assistant should:
    - `11_dashboard/stat_definitions.md` — reference for quest evidence requirements
    - `11_dashboard/xp_rules.md` — reference for XP caps and categories
 
-4. Have a real conversation — ask only the gaps the briefing can't already answer. The briefing should already cover most of the day, so confirm it and probe changes rather than asking the user to recite everything. Cover anything the briefing flags under "Questions JARVIS should ask," plus:
+4. Have a real conversation — ask only the gaps the briefing can't already answer. The briefing should already cover most of the day, so confirm it and probe changes rather than asking the user to recite everything. Cover anything the briefing flags under "Questions Adam should ask," plus:
    - any new or changed fixed commitments
    - flexible tasks not already known
    - deadlines that shifted

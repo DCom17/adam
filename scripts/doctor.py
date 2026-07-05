@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — setup doctor (re-runnable health check).
+Adam — setup doctor (re-runnable health check).
 
     python scripts/doctor.py
 
@@ -21,7 +21,7 @@ import onboarding  # noqa: E402
 
 
 def main() -> int:
-    print("\nJarvis Voice Local — setup doctor\n" + "=" * 36)
+    print("\nAdam — setup doctor\n" + "=" * 36)
     checks = onboarding.run_doctor()
     for c in checks:
         print(f"  {c['status']:4}  {c['name']}: {c['detail']}")

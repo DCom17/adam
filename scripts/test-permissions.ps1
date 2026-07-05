@@ -1,4 +1,4 @@
-# Jarvis Voice Local - run the permission-system test suite.
+# Adam - run the permission-system test suite.
 # Exercises the Level 3 layer (read/write allow-lists, blocked + protected paths,
 # destructive detection, backups, audit log, approval lifecycle) against a
 # throwaway sandbox. Does not touch your real data/ tree or require the server.

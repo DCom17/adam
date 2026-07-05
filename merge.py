@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Phase 2 three-way merge (the "AI-merge" core).
+Adam — Phase 2 three-way merge (the "AI-merge" core).
 
 When BOTH the maintainer and the friend changed the same file, update_engine asks
 this module to reconcile them. The deterministic part is a classic line-based

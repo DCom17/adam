@@ -29,7 +29,7 @@ _SPEAK_DASHPAUSE = re.compile(r"\s*[—–―]\s*")  # em/en/bar dash -> spoken 
 
 
 def _sanitize_for_speech(text: str) -> str:
-    """Strip symbols and hyphens/dashes that the TTS would verbalize. JARVIS gets
+    """Strip symbols and hyphens/dashes that the TTS would verbalize. Adam gets
     its pauses from commas and periods, never from dashes or punctuation art."""
     t = _SPEAK_STRIP.sub("", text)
     t = _SPEAK_DASHPAUSE.sub(", ", t)   # long dashes become a real spoken pause
@@ -67,7 +67,7 @@ async def speak(request: Request, body: SpeakRequest):
 
 @router.get("/voice/status", dependencies=[Depends(require_token)])
 async def voice_status():
-    """Read-only: has the real Jarvis voice been installed on this PC? Lets the app
+    """Read-only: has the real Adam voice been installed on this PC? Lets the app
     surface the INSTALL-VOICE upgrade to anyone still on the browser fallback. The
     app can't run the installer (a browser can't), so this only informs. No secrets."""
     return {"installed": server._voice_pkg_installed()}

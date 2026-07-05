@@ -1,6 +1,6 @@
 # Canonical Nodes
 
-This file defines all canonical node names for the [[JARVIS Command System|JARVIS vault]] knowledge graph.
+This file defines all canonical node names for the [[Adam Command System|Adam vault]] knowledge graph.
 
 The `graph_linker.py` script reads this file.
 
@@ -13,7 +13,7 @@ The `graph_linker.py` script reads this file.
 
 ### Core System
 
-- [[JARVIS Command System]]
+- [[Adam Command System]]
 - [[Shared Brain]]
 - [[Claude Code]]
 - [[Obsidian Vault]]

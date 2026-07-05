@@ -1,5 +1,5 @@
 """
-Allow-list release builder for Jarvis Voice Local (v0.9.0, Slice 3).
+Allow-list release builder for Adam (v0.9.0, Slice 3).
 
 Builds a distributable ZIP containing ONLY the files on an explicit allow-list — never
 a directory walk — so a new secret/runtime/backup file can't slip in just by existing.
@@ -8,7 +8,7 @@ any path matches a secret / runtime / rollback-backup pattern. Pure stdlib. Touc
 product behavior; only reads files and writes a ZIP under dist/.
 
 Usage:
-    python scripts/make_release.py                 # build dist/jarvis-voice-local-vX.Y.Z.zip
+    python scripts/make_release.py                 # build dist/adam-local-vX.Y.Z.zip
     python scripts/make_release.py --out <dir>     # choose output dir
     python scripts/make_release.py --version 0.9.0 # override the version label
     python scripts/make_release.py --list          # print the staged file list, build nothing
@@ -51,9 +51,12 @@ _WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.htm
 _SCRIPT_FILES = [
     "setup.py", "doctor.py", "make_release.py", "make_release.ps1", "apply_update.py",
     "self_update.py", "publish-release.ps1",
-    "wizard.ps1", "add-app-shortcut.ps1", "jarvis-app.vbs", "update.ps1", "install-voice.ps1",
+    "wizard.ps1", "add-app-shortcut.ps1", "adam-app.vbs", "update.ps1", "install-voice.ps1",
     "tts_server/tts_server.py", "tts_server/requirements.txt",
-    "start-jarvis.ps1", "connect-phone.py", "connect-phone.ps1",
+    "start-adam.ps1", "connect-phone.py", "connect-phone.ps1",
+    # forwarding shims: pre-rename desktop/taskbar shortcuts point at the old
+    # launcher names (start-jarvis.ps1 directly, jarvis-app.vbs via wscript)
+    "start-jarvis.ps1", "jarvis-app.vbs",
     "copy-token.ps1",
     "start-dev.ps1", "stop-dev.ps1", "restart-dev.ps1",
     "health-check.ps1", "test-permissions.ps1", "agent-write-probe.ps1",
@@ -217,7 +220,7 @@ def build_zip(out_dir: Path | str | None = None, version: str | None = None) -> 
     version = version or _version()
     out_dir = Path(out_dir) if out_dir else (ROOT / "dist")
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"jarvis-voice-local-v{version}.zip"
+    out_path = out_dir / f"adam-local-v{version}.zip"
     # Write files at the ZIP ROOT (no internal wrapper folder). Windows "Extract All"
     # already creates a folder named after the zip, so a root-level layout puts SETUP
     # directly inside the extracted folder instead of one more nested level down.
@@ -228,7 +231,7 @@ def build_zip(out_dir: Path | str | None = None, version: str | None = None) -> 
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="Build a secret-free Jarvis Voice Local release ZIP.")
+    ap = argparse.ArgumentParser(description="Build a secret-free Adam release ZIP.")
     ap.add_argument("--out", default=None, help="output directory (default: ./dist)")
     ap.add_argument("--version", default=None, help="version label (default: config.APP_VERSION)")
     ap.add_argument("--list", action="store_true", help="print the staged file list and exit")

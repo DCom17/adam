@@ -209,7 +209,7 @@ async def linkedin_enable(req: LinkedInEnableRequest):
     to hand-editing settings.json (+ .env for the API lane).
 
     DRAFT lane (api_enabled=false): writes only the settings.json linkedin block —
-    no credentials, no .env. This is the recommended default (Jarvis drafts, you
+    no credentials, no .env. This is the recommended default (Adam drafts, you
     paste). API auto-post lane (api_enabled=true): re-validates the access token,
     resolves the author URN, writes the settings block (client_id + author_urn) AND
     the .env secrets. The access token / client secret are written only to the local
@@ -429,7 +429,7 @@ async def voicemail_answer_twiml(owner_name: str | None = None, greeting: str | 
 
 @router.post("/integrations/voicemail/greeting-preview", dependencies=[Depends(require_token)])
 async def voicemail_greeting_preview(req: VoicemailGreetingRequest):
-    """Render the greeting in Jarvis's Kokoro voice (bm_daniel) so the user can hear
+    """Render the greeting in Adam's Kokoro voice (bm_daniel) so the user can hear
     the upgrade voice before deciding to host it. Returns audio/wav, or 503 if the
     local TTS service isn't running. No credentials, nothing saved."""
     text = (req.text or "").strip() or None

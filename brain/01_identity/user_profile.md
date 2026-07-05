@@ -1,7 +1,7 @@
 # User Profile
 
-This file describes **you** — JARVIS reads it on startup to operate as your
-assistant. **"Bootstrap JARVIS"** fills this in by interviewing you; you can also
+This file describes **you** — Adam reads it on startup to operate as your
+assistant. **"Bootstrap Adam"** fills this in by interviewing you; you can also
 edit it directly anytime. Keep sensitive data (passwords, full financial/account
 details) out of this file.
 

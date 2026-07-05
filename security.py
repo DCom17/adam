@@ -23,6 +23,6 @@ def require_token(authorization: str = Header(default="")) -> None:
     # Compare on bytes with hmac.compare_digest (constant-time; avoids str's ASCII-only
     # restriction so a non-ASCII header can't raise instead of cleanly 403'ing).
     if not hmac.compare_digest(
-        token.encode("utf-8"), config.JARVIS_TOKEN.encode("utf-8")
+        token.encode("utf-8"), config.ADAM_TOKEN.encode("utf-8")
     ):
         raise HTTPException(status_code=403, detail="Forbidden")

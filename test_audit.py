@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — read-only audit viewer tests (v0.8.1).
+Adam — read-only audit viewer tests (v0.8.1).
 
 Headless FastAPI TestClient coverage for GET /audit. Proves:
   * auth matrix: missing/wrong token -> 403, valid token -> 200;
@@ -10,7 +10,7 @@ Headless FastAPI TestClient coverage for GET /audit. Proves:
   * limit is honored, clamped to [1, 500];
   * a malformed line becomes a safe marker and never echoes its raw content;
   * extra / secret-like fields are dropped by the whitelist;
-  * JARVIS_TOKEN / VAPID / TWILIO values never appear in the response body.
+  * ADAM_TOKEN / VAPID / TWILIO values never appear in the response body.
 
 The route reads config.AUDIT_LOG_FILE / config.PERM_AUDIT_LOG_ENABLED live, so
 each case repoints the audit file at a throwaway temp path. Real history is never
@@ -31,8 +31,8 @@ import config
 # Make the app importable on any machine: server.py calls config.validate() at
 # import and refuses to start without a token + a resolvable Claude. Supply
 # harmless stand-ins where the real box hasn't (no secret is asserted from these).
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "a" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "a" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -41,10 +41,10 @@ _SANDBOX = Path(tempfile.mkdtemp(prefix="jvl_audit_test_"))
 import server  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 AUTH = {"Authorization": "Bearer " + TOKEN}
 SECRETS = [s for s in (
-    server.JARVIS_TOKEN,
+    server.ADAM_TOKEN,
     getattr(config, "VAPID_PUBLIC_KEY", ""),
     getattr(config, "VAPID_PRIVATE_KEY", ""),
     getattr(config, "TWILIO_AUTH_TOKEN", ""),

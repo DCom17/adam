@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — external-action execution lane (the shared write path).
+Adam — external-action execution lane (the shared write path).
 
 The connectors (calendar, gmail, hunter, linkedin) can perform real-world writes,
 but the safety model forbids Claude from executing them: the server is the SOLE

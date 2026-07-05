@@ -3,7 +3,7 @@
 Triggered by: **user sign-off** at the end of a planning conversation (any natural closer — no fixed phrase). See CLAUDE.md → Sign-Off Execution Rule.
 
 Purpose:
-Create Google Calendar events from the approved [[JARVIS Command System|JARVIS]] [[Calendar Packet Workflow|calendar packet]] by emitting a `calendar.create` ACTION block. The server sends it to the user's own [[Google Calendar Bridge|Calendar add-on]]. **You never run a script and never touch Google Calendar directly — read `INTEGRATION_EXECUTION.md` for the exact mechanism.**
+Create Google Calendar events from the approved [[Adam Command System|Adam]] [[Calendar Packet Workflow|calendar packet]] by emitting a `calendar.create` ACTION block. The server sends it to the user's own [[Google Calendar Bridge|Calendar add-on]]. **You never run a script and never touch Google Calendar directly — read `INTEGRATION_EXECUTION.md` for the exact mechanism.**
 
 Mode:
 Create-only. The product's connector has **no delete** and does not auto-update at sign-off — there is nothing to delete-gate. A one-off edit is a deliberate `calendar.update` block you stage only when the user asks.
@@ -36,7 +36,7 @@ Each marker on its own line; the JSON body on one line. The server extracts it a
 ```
 <<ACTION type="calendar.create" summary="Add today's planned events">>
 { "events": [
-  { "title": "Study block", "start": "2026-07-04T14:00:00", "end": "2026-07-04T15:30:00", "location": "", "description": "Created from JARVIS calendar packet." }
+  { "title": "Study block", "start": "2026-07-04T14:00:00", "end": "2026-07-04T15:30:00", "location": "", "description": "Created from Adam calendar packet." }
 ] }
 <<END_ACTION>>
 ```

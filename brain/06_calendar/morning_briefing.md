@@ -10,4 +10,4 @@ pulls it to make planning fast.
 - Approaching deadlines:
 - Carry-over tasks:
 - Open weaknesses / boss context:
-- Questions JARVIS should ask:
+- Questions Adam should ask:

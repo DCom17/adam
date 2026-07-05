@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — external-action execution lane (the shared write path).
+Adam — external-action execution lane (the shared write path).
 
 Calendar is the reference; the lane is generic. Proves:
 
@@ -32,8 +32,8 @@ from pathlib import Path
 
 import config
 
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "g" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "g" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -51,7 +51,7 @@ from fastapi.testclient import TestClient   # noqa: E402
 
 job_store.init(_SANDBOX / "jobs.db")
 
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 client = TestClient(server.app)
 AUTH = {"Authorization": "Bearer " + TOKEN}
 

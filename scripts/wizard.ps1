@@ -1,4 +1,4 @@
-# Jarvis Voice Local — guided first-run wizard.
+# Adam — guided first-run wizard.
 #
 # Launched by double-clicking SETUP.cmd (which bypasses the PowerShell execution policy).
 # Goal: take a non-technical Windows user from a freshly-extracted ZIP to a running,
@@ -80,7 +80,7 @@ function Ensure-OnPath($exePath) {
     } catch {}
 }
 
-# Return the path to a Python 3.10+ (what Jarvis needs), or $null. Checks PATH first,
+# Return the path to a Python 3.10+ (what Adam needs), or $null. Checks PATH first,
 # then the standard install dirs - a freshly-installed Python isn't always first on PATH.
 function Find-GoodPython {
     $cands = @()
@@ -99,10 +99,10 @@ function Find-GoodPython {
 Clear-Host
 Write-Host ""
 Write-Host "  ============================================================" -ForegroundColor Cyan
-Write-Host "     JARVIS VOICE LOCAL  -  easy setup" -ForegroundColor Cyan
+Write-Host "     ADAM LOCAL  -  easy setup" -ForegroundColor Cyan
 Write-Host "  ============================================================" -ForegroundColor Cyan
 Write-Host ""
-Info "This will set up Jarvis on this computer. It runs entirely on YOUR"
+Info "This will set up Adam on this computer. It runs entirely on YOUR"
 Info "machine, using YOUR own Claude account. Nothing is shared or hosted."
 Write-Host ""
 Info "I'll handle almost everything automatically. There is ONE step only you"
@@ -112,7 +112,7 @@ Write-Host ""
 if (-not (YesNo "Ready to begin?")) { Info "No problem - run SETUP again whenever you're ready."; exit 0 }
 
 # === STEP 1 — Python ===============================================================
-Section 1 "Python (the engine Jarvis runs on)"
+Section 1 "Python (the engine Adam runs on)"
 Update-PathFromRegistry
 $pythonExe = Find-GoodPython
 if ($pythonExe) {
@@ -120,9 +120,9 @@ if ($pythonExe) {
     Good "Python is ready.  ($((& $pythonExe --version) 2>&1))"
 } else {
     if (Get-Command python -ErrorAction SilentlyContinue) {
-        Warn "Your Python is too old for Jarvis - it needs Python 3.10 or newer."
+        Warn "Your Python is too old for Adam - it needs Python 3.10 or newer."
     } else {
-        Warn "Python isn't installed yet. Jarvis needs it to run."
+        Warn "Python isn't installed yet. Adam needs it to run."
     }
     if ((HaveWinget) -and (YesNo "Install an up-to-date Python automatically now? (recommended)")) {
         Info "Installing Python 3.12 via winget - this can take a couple of minutes..."
@@ -137,7 +137,7 @@ if ($pythonExe) {
         Warn "The automatic installer (winget) isn't available on this Windows version."
     }
     if (-not $pythonExe) {
-        Bad "Jarvis needs Python 3.10 or newer, and I couldn't set it up automatically."
+        Bad "Adam needs Python 3.10 or newer, and I couldn't set it up automatically."
         Info "  1. Go to:  https://www.python.org/downloads/"
         Info "  2. Download the latest Python 3, run the installer, and CHECK"
         Info "     'Add python.exe to PATH'."
@@ -156,7 +156,7 @@ if ($claudeExe) {
     Ensure-OnPath $claudeExe
     Good "Claude Code is already installed."
 } else {
-    Warn "Claude Code isn't installed yet. It's the AI that powers Jarvis."
+    Warn "Claude Code isn't installed yet. It's the AI that powers Adam."
     if (YesNo "Install Claude Code automatically now? (recommended)") {
         Info "Installing Claude Code (official installer, no extra software needed)..."
         try {
@@ -195,17 +195,17 @@ if len(sys.argv) > 4 and sys.argv[4]:
 }
 
 Write-Host ""
-Info "How will Jarvis's AI time be paid for? Two doors - and you can switch"
+Info "How will Adam's AI time be paid for? Two doors - and you can switch"
 Info "anytime later under Settings -> AI plan in the app:"
 Write-Host ""
 Info "  [1] Sign in with Claude   (recommended for regular daily use)"
 Info "      You have - or will get - a Claude plan (about `$20/month for Pro)."
-Info "      Jarvis runs on it at a flat rate: no meter, nothing extra to pay."
+Info "      Adam runs on it at a flat rate: no meter, nothing extra to pay."
 Write-Host ""
 Info "  [2] Pay as you go   (no subscription needed)"
 Info "      Load prepaid credit onto an Anthropic API key - like an arcade card:"
 Info "      `$5 is roughly 200-300 conversations, it reloads only when YOU choose,"
-Info "      and Jarvis can never spend past your credit. A monthly budget in the"
+Info "      and Adam can never spend past your credit. A monthly budget in the"
 Info "      app adds its own hard stop, and a live cost meter keeps it honest."
 Write-Host ""
 $door = ""
@@ -252,15 +252,15 @@ if ($door -eq "2") {
         }
         Pause-Enter "When you've signed in to Claude, press Enter here to continue"
     } else {
-        Warn "You can sign in later, but Jarvis won't answer until you do."
+        Warn "You can sign in later, but Adam won't answer until you do."
         Info "To sign in later: open a terminal and type  claude  , then log in."
         Pause-Enter "Press Enter to continue"
     }
 }
 
 # === STEP 3 — Dependencies =========================================================
-Section 3 "Jarvis's building blocks (one-time download)"
-Info "Downloading the small set of components Jarvis needs (needs internet)..."
+Section 3 "Adam's building blocks (one-time download)"
+Info "Downloading the small set of components Adam needs (needs internet)..."
 $req = Join-Path $root "requirements.txt"
 # pip routinely writes harmless notices (cache messages, "new release available") to
 # stderr. With $ErrorActionPreference='Stop', PowerShell turns any native stderr line
@@ -284,7 +284,7 @@ if (-not (Test-CoreImports)) {
     $ErrorActionPreference = $pipEAP
 }
 if (-not (Test-CoreImports)) {
-    Bad "Jarvis's components didn't finish installing."
+    Bad "Adam's components didn't finish installing."
     Info "This is almost always a momentary internet problem. To finish by hand:"
     Info "  1. Make sure you're online."
     Info "  2. In this folder's address bar type  powershell  and press Enter, then run:"
@@ -296,9 +296,9 @@ if (-not (Test-CoreImports)) {
 Good "Components installed."
 
 # === STEP 4 — Your notes folder ====================================================
-Section 4 "Your notes folder (the files Jarvis works with)"
-$defaultVault = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "Jarvis Files"
-Info "Jarvis reads and helps with files in one folder you choose."
+Section 4 "Your notes folder (the files Adam works with)"
+$defaultVault = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "Adam Files"
+Info "Adam reads and helps with files in one folder you choose."
 Info "Default (recommended):  $defaultVault"
 $vault = $defaultVault
 if (-not (YesNo "Use that default folder?")) {
@@ -355,31 +355,31 @@ if ($doctorExit -ne 0) {
 }
 
 # === STEP 6 — Launch ===============================================================
-Section 6 "Starting Jarvis"
-Info "Adding a Jarvis app shortcut, then starting it up..."
-# Make Jarvis launchable like an app (Desktop + Start Menu), not just from this folder.
+Section 6 "Starting Adam"
+Info "Adding a Adam app shortcut, then starting it up..."
+# Make Adam launchable like an app (Desktop + Start Menu), not just from this folder.
 try { & (Join-Path $root "scripts\add-app-shortcut.ps1") | Out-Host } catch {}
 Write-Host ""
 Good "Setup complete!"
-Info "Open Jarvis any time from the 'Jarvis Voice Local' icon on your Desktop"
+Info "Open Adam any time from the 'Adam' icon on your Desktop"
 Info "or in the Start Menu. (Double-clicking START in this folder still works too.)"
 Write-Host ""
 try {
-    & (Join-Path $root "scripts\start-jarvis.ps1")
+    & (Join-Path $root "scripts\start-adam.ps1")
 } catch {
     Warn "Couldn't auto-launch: $($_.Exception.Message)"
-    Info "Double-click START (or run scripts\start-jarvis.ps1) to open Jarvis."
+    Info "Double-click START (or run scripts\start-adam.ps1) to open Adam."
 }
 
-# Offer the real Jarvis voice now that the app is up - kept OUT of core setup so a big
+# Offer the real Adam voice now that the app is up - kept OUT of core setup so a big
 # download can't break the first run. Default is no; INSTALL-VOICE adds it any time.
 Write-Host ""
 Line
-Info "Right now Jarvis uses your browser's built-in (robotic) voice. You can upgrade"
-Info "to the real Jarvis voice - a one-time ~340 MB download that runs on your PC."
-if (YesNo "Install the real Jarvis voice now?" $false) {
+Info "Right now Adam uses your browser's built-in (robotic) voice. You can upgrade"
+Info "to the real Adam voice - a one-time ~340 MB download that runs on your PC."
+if (YesNo "Install the real Adam voice now?" $false) {
     & (Join-Path $root "scripts\install-voice.ps1")
-    Info "Done - restart Jarvis (close its window, then open it again) to hear the new voice."
+    Info "Done - restart Adam (close its window, then open it again) to hear the new voice."
 } else {
     Info "No problem. Double-click INSTALL-VOICE in this folder whenever you want it."
 }

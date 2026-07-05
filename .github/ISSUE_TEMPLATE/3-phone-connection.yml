@@ -8,8 +8,8 @@ body:
       value: |
         Phones need **HTTPS** — plain `http://<pc-ip>` silently breaks the mic and shows the
         insecure-connection banner. The supported path is Tailscale Serve:
-        see [Connect your phone](https://github.com/DCom17/jarvis-voice/blob/main/docs/CONNECT_YOUR_PHONE.md).
-        **Never share your `.env`, your `JARVIS_TOKEN`, or your `settings.json`.**
+        see [Connect your phone](https://github.com/DCom17/adam/blob/main/docs/CONNECT_YOUR_PHONE.md).
+        **Never share your `.env`, your `ADAM_TOKEN`, or your `settings.json`.**
         Please replace your Tailscale hostname with `<tailnet-host>` in anything you paste.
   - type: input
     id: version

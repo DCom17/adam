@@ -1,11 +1,11 @@
-# JARVIS Kit — Core Manifest
+# Adam Kit — Core Manifest
 #
 # This is the contract that makes updates safe. An update may overwrite ONLY the
 # files listed below (the framework). Every file NOT listed here is YOUR DATA
 # (profile, memory, logs, tasks, dashboard state, calendar state, your graph
 # vocabulary) and an update must NEVER touch it.
 #
-# "Update JARVIS" reads this file and copies only these paths from the new
+# "Update Adam" reads this file and copies only these paths from the new
 # release over your install. Lines starting with # are comments. Paths are
 # relative to the kit root, forward slashes.
 #
@@ -27,8 +27,8 @@ setup_dashboard.md
 setup_calendar.md
 
 # --- Config (examples + loader only; your real config/.env are never listed) ---
-config/jarvis.config.example.json
-config/jarvis_config.ps1
+config/adam.config.example.json
+config/adam_config.ps1
 
 # --- Scripts ---
 scripts/graph_linker.py
@@ -37,7 +37,7 @@ scripts/update.ps1
 
 # --- Identity / persona (framework) ---
 01_identity/assistant_identity.md
-01_identity/jarvis_voice.md
+01_identity/adam_voice.md
 01_identity/operating_rules.md
 
 # --- Inbox rules ---

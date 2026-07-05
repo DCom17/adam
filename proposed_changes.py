@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — proposed-change store (Phase 3 controlled-write flow).
+Adam — proposed-change store (Phase 3 controlled-write flow).
 
 This is the file-specific half of the approval system. Where `approvals.py` is a
 generic yes/no queue, a *proposed change* carries everything needed to actually

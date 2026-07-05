@@ -1,17 +1,7 @@
-' JARVIS app launcher (pinnable). This is the target of the "JARVIS" shortcut.
-'
-' It runs start-jarvis.ps1 -AppWindow with no console window of its own, so clicking
-' the pinned JARVIS orb: starts the server if it isn't running (the server still opens
-' its OWN visible window, per Jarvis's transparent design), waits for it, then opens a
-' clean chrome-less Edge app window - already signed in. If the server is already up it
-' just opens the window. Pinnable because the shortcut's target is wscript.exe.
-Option Explicit
-Dim fso, shell, here, root, ps1, cmd
-Set fso   = CreateObject("Scripting.FileSystemObject")
-Set shell = CreateObject("WScript.Shell")
-here = fso.GetParentFolderName(WScript.ScriptFullName)   ' ...\scripts
-root = fso.GetParentFolderName(here)                      ' project root
-ps1  = fso.BuildPath(here, "start-jarvis.ps1")
-cmd  = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File " & Chr(34) & ps1 & Chr(34) & " -AppWindow"
-shell.CurrentDirectory = root
-shell.Run cmd, 0, False    ' 0 = hidden launcher (no flash); the server window is spawned visible by the ps1
+' Forwarding shim: the product was renamed Adam, and this launcher is now
+' adam-app.vbs. Kept for one release so desktop/taskbar shortcuts created by
+' older installs (they target wscript.exe -> this file) keep working after an
+' update. add-app-shortcut.ps1 replaces those shortcuts when it is re-run.
+Set fso = CreateObject("Scripting.FileSystemObject")
+here = fso.GetParentFolderName(WScript.ScriptFullName)
+CreateObject("WScript.Shell").Run "wscript.exe """ & fso.BuildPath(here, "adam-app.vbs") & """", 0, False

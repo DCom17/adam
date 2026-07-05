@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — cross-device chat-sync store + endpoint tests.
+Adam — cross-device chat-sync store + endpoint tests.
 
 Proves the server-side session store and its /sessions pull/push endpoints:
   * upsert is last-write-wins by `updated` (a stale device can't clobber a fresher
@@ -27,8 +27,8 @@ from pathlib import Path
 
 import config
 
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "a" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "a" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -36,7 +36,7 @@ _SANDBOX = Path(tempfile.mkdtemp(prefix="jvl_session_test_"))
 _STATE = _SANDBOX / "state"
 _STATE.mkdir(parents=True, exist_ok=True)
 config.STATE_DIR = _STATE
-config.JOBS_DB = _STATE / "jarvis.db"
+config.JOBS_DB = _STATE / "adam.db"
 config.SESSIONS_DB = _STATE / "sessions.db"
 config.PUSH_SUB_FILE = _STATE / "push_sub.json"
 config.LAST_RESULT_FILE = _STATE / "last_result.json"
@@ -51,7 +51,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 session_store.init(config.SESSIONS_DB)
 
 client = TestClient(server.app)
-AUTH = {"Authorization": "Bearer " + config.JARVIS_TOKEN}
+AUTH = {"Authorization": "Bearer " + config.ADAM_TOKEN}
 
 _passed = 0
 

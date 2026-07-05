@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Phase 2 smart-update engine tests (M1).
+Adam — Phase 2 smart-update engine tests (M1).
 
 Proves the three-way update never silently loses a friend's local change:
   * each verdict category is classified correctly (new/unchanged/take_incoming/

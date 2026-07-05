@@ -1,18 +1,18 @@
 /****************************************************
  * HUNTER DASHBOARD — BOUND SCRIPT TEMPLATE
- * Ships with Jarvis Voice Local. De-personalized.
+ * Ships with Adam. De-personalized.
  *
  * This is the complete script for YOUR OWN copy of the Hunter dashboard Sheet.
  * It does three things:
  *   1. setupHunterDashboard()  — builds every tab, header, formula, and starter
  *      row from a BLANK spreadsheet. Run this once.
- *   2. doPost(e)               — the sync bridge. Jarvis POSTs a sheet_sync
+ *   2. doPost(e)               — the sync bridge. Adam POSTs a sheet_sync
  *      payload (with your token) and it updates the data tabs. WRITE side.
  *   3. doGet(e)?action=verify  — read-only. Returns your current State / Stats /
- *      Daily_Quests so Jarvis can confirm a sync landed. No write, no delete.
+ *      Daily_Quests so Adam can confirm a sync landed. No write, no delete.
  *
  * SECURITY / TRUST:
- *   - The script runs in YOUR Google account. Jarvis never holds a Google
+ *   - The script runs in YOUR Google account. Adam never holds a Google
  *     credential — only a random token you generate here.
  *   - Run setHunterToken() ONCE. It generates a token, stores it in this script's
  *     Script Properties, and logs it. Copy that value into your .env as
@@ -25,7 +25,7 @@
  *   2) Run setupHunterDashboard()  (approve the permission prompt).
  *   3) Run setHunterToken()        (copy the logged HUNTER_TOKEN into .env).
  *   4) Deploy -> New deployment -> Web app -> Execute as: Me, Access: Anyone.
- *   5) Copy the /exec URL into the Jarvis Hunter setup wizard and Test.
+ *   5) Copy the /exec URL into the Adam Hunter setup wizard and Test.
  ****************************************************/
 
 const HUNTER_TOKEN_PROP = 'HUNTER_TOKEN';

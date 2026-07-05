@@ -1,6 +1,27 @@
 # Changelog
 
-All notable changes to Jarvis Voice Local are documented here.
+All notable changes are documented here. Entries before 0.9.35 use the product's
+old name, Jarvis Voice Local — they are a historical record and were left as written.
+
+## 0.9.35 - Jarvis Voice Local is now Adam
+
+- **The product is renamed Adam.** Same app, new name (the old one collided with
+  a famous trademark). The app id is now `adam-local`, the release ZIP is
+  `adam-local-vX.Y.Z.zip`, the launcher is `scripts\start-adam.ps1`, and updates
+  ship from the `DCom17/adam-releases` repo.
+- **Existing installs update seamlessly — nothing to reconfigure.**
+  - Your `.env` keeps working: `JARVIS_TOKEN` is still honored (new installs get
+    `ADAM_TOKEN`), so your phone stays signed in.
+  - Your job history carries over: `data/state/jarvis.db` is renamed to `adam.db`
+    automatically on first start.
+  - Old desktop shortcuts keep working: `start-jarvis.ps1` remains as a forwarder
+    to the new launcher.
+  - The update check follows GitHub's redirect from the old releases repo, so
+    pre-rename installs still see and apply this update.
+- The phone-connection helper no longer hardcodes any particular coexisting app:
+  it now reads each existing Tailscale serve's proxy target, refuses to overwrite
+  any serve that isn't Adam's, and reports whose port is whose generically.
+- The in-app brain template, docs, setup wizard, and web UI all speak "Adam" now.
 
 ## 0.9.34 - Two doors: run Jarvis on your Claude plan OR pay as you go
 

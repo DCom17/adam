@@ -1,6 +1,6 @@
 # Connect Your Phone (supported mobile path: Tailscale)
 
-This guide gets the Jarvis Voice Local PWA — including **voice** — working on your
+This guide gets the Adam PWA — including **voice** — working on your
 iPhone, talking to the backend on your own Windows PC. The supported v0.9 path is
 **Tailscale + Tailscale Serve**, which gives your phone a real HTTPS address to your PC
 without exposing anything to the public internet.
@@ -37,10 +37,10 @@ PC on your private network.
 
 Confirm both devices appear in your tailnet (the Tailscale admin console lists them).
 
-### 2. Start the Jarvis backend on the PC
+### 2. Start the Adam backend on the PC
 
 ```powershell
-.\scripts\start-jarvis.ps1   # or: .\scripts\start-dev.ps1
+.\scripts\start-adam.ps1   # or: .\scripts\start-dev.ps1
 python scripts\doctor.py     # should be all PASS / no FAIL
 ```
 
@@ -57,21 +57,21 @@ python scripts\connect-phone.py     # or: .\scripts\connect-phone.ps1
 By default the helper is **read-only** — it inspects your Tailscale + serve state and
 prints the exact command, the resulting phone URL, an on-phone checklist, and the safe
 teardown, without changing anything. Importantly, if another local app already serves on
-the tailnet's `:443` (for example **Morrow** at `127.0.0.1:8849`), the helper recommends
-running Jarvis on a **separate HTTPS port (`:8443`)** so the existing serve is left intact.
+the tailnet's `:443` (another app proxying a local port), the helper recommends
+running Adam on a **separate HTTPS port (`:8443`)** so the existing serve is left intact.
 
 **Prefer not to type the command?** Let the helper run it for you:
 
 ```powershell
 python scripts\connect-phone.py --apply       # runs the serve command (asks to confirm)
 python scripts\connect-phone.py --apply --yes  # ...without the prompt
-python scripts\connect-phone.py --off          # stop sharing Jarvis again (port-scoped)
+python scripts\connect-phone.py --off          # stop sharing Adam again (port-scoped)
 ```
 
 `--apply` runs **only** the recommended `tailscale serve …` and asks you to confirm first.
 It will **refuse to overwrite** a port that's already in use, so it can never clobber
-another serve (Morrow included), and it never runs `reset`, `funnel`, or `login`. `--off`
-stops **only** the Jarvis serve on its port and leaves every other serve alone.
+another serve (whatever app owns it), and it never runs `reset`, `funnel`, or `login`. `--off`
+stops **only** the Adam serve on its port and leaves every other serve alone.
 
 **Manual equivalent** (Tailscale Serve puts a valid-cert HTTPS front in front of your
 local port, reachable only inside your tailnet — never Funnel, never public):
@@ -79,7 +79,7 @@ local port, reachable only inside your tailnet — never Funnel, never public):
 ```powershell
 # If :443 is free (use your install's port — default 8000):
 tailscale serve --bg --https=443 http://127.0.0.1:8000
-# If :443 is already used by another app (e.g. Morrow), use a separate port:
+# If :443 is already used by another app, use a separate port:
 tailscale serve --bg --https=8443 http://127.0.0.1:8000
 
 tailscale serve status
@@ -90,16 +90,16 @@ tailscale serve status
 your local app port. (Tailscale's docs cover Serve flags and any version differences.)
 
 > ⚠ **Do not run `tailscale serve reset`** if another serve already exists — it removes
-> **all** serve configs (it would drop a Morrow serve on `:443`). To remove only the
-> Jarvis serve later, use the port-scoped off:
-> `tailscale serve --https=8443 off` (use the port you served Jarvis on).
+> **all** serve configs (it would drop the other app's serve on `:443`). To remove only the
+> Adam serve later, use the port-scoped off:
+> `tailscale serve --https=8443 off` (use the port you served Adam on).
 
 ### 4. Open it on the iPhone
 
 - In **Safari**, go to `https://<machine>.<tailnet>.ts.net`.
 - Confirm there is **no insecure-connection banner** (its absence means you're on a
   proper secure context).
-- Tap the settings (gear), paste your **`JARVIS_TOKEN`** (from your PC's `.env`), and
+- Tap the settings (gear), paste your **`ADAM_TOKEN`** (from your PC's `.env`), and
   save.
 - **Add to Home Screen** (Share → Add to Home Screen) for the full app experience.
 
@@ -117,8 +117,8 @@ can copy.)
    HTTPS URL** (e.g.
    `https://<machine>.<tailnet>.ts.net` or `…:8443`) — that's the address the phone
    needs from off-Wi-Fi, and it's what the URL QR will carry.
-2. In the **Connect phone** panel, **Step 1 — Open Jarvis on phone**: click **Show URL
-   QR** and scan it with the iPhone **Camera**; tap the link to open Jarvis on the phone.
+2. In the **Connect phone** panel, **Step 1 — Open Adam on phone**: click **Show URL
+   QR** and scan it with the iPhone **Camera**; tap the link to open Adam on the phone.
 3. **Step 2 — Copy access token**: click **Show token QR**, scan it with the **Camera**,
    then tap **Copy** (iOS shows it as plain text because this QR has no link in it).
 4. **Step 3**: in the phone app's settings, **paste** the token, save, then test voice.
@@ -141,7 +141,7 @@ which is what makes **voice** work off your home Wi-Fi.
 
 > **About the spoken voice:** in this beta the reply is spoken with your phone's
 > **built-in (default/robotic) text-to-speech** — that's expected, not a bug. No
-> high-quality voice backend ships with this release; the polished "real Jarvis voice" is
+> high-quality voice backend ships with this release; the polished "real Adam voice" is
 > a final-product goal. What you're verifying here is that the mic → transcript → spoken
 > reply **loop** works over HTTPS, not the voice quality. (See
 > [Beta handoff → About the voice](BETA_HANDOFF.md#about-the-voice-please-read-set-your-expectations).)
@@ -151,7 +151,7 @@ which is what makes **voice** work off your home Wi-Fi.
 - **The insecure-connection banner is showing** → you're on `http://` (e.g. a plain
   LAN IP), not the Tailscale HTTPS URL. Open the `https://<machine>.<tailnet>.ts.net`
   address instead. Voice/mic will not work until the banner is gone.
-- **403 / "Forbidden"** → token problem. Re-paste the exact `JARVIS_TOKEN` from the
+- **403 / "Forbidden"** → token problem. Re-paste the exact `ADAM_TOKEN` from the
   PC's `.env`; no extra spaces.
 - **Can't reach the server / page won't load** → Tailscale isn't up on one device,
   they're on different tailnets, the backend isn't running, or `tailscale serve` isn't

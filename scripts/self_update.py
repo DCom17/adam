@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — UPDATE.cmd's worker. Resolves the latest GitHub release,
+Adam — UPDATE.cmd's worker. Resolves the latest GitHub release,
 and if it's newer, downloads + applies it with the smart 3-way updater. The
 in-app "Update now" button uses the same updater module, so both paths behave
 identically.
@@ -46,7 +46,7 @@ def main() -> int:
         print(f"  {len(conflicts)} file(s) you'd customized were also changed by this update:")
         for r in conflicts[:20]:
             print(f"    needs review: {r}")
-        print("  Open Jarvis and say 'merge the update conflicts' to reconcile them.")
+        print("  Open Adam and say 'merge the update conflicts' to reconcile them.")
         return 10
     return 0
 

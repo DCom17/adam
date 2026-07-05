@@ -1,4 +1,4 @@
-# Jarvis Voice Local — Consumer Test Checklist
+# Adam — Consumer Test Checklist
 
 **Version:** 1.8 (acceptance checklist for app v0.9.0)
 **Date:** 2026-06-24
@@ -14,7 +14,7 @@ release builder) — all validated below except the manual Tailscale round-trip.
 **v1.8:** recorded the v1.0 consumer slices in the status boundary — Slice 1 (launcher)
 ACCEPTED, Slice 2 (connect-phone helper) ACCEPTED, Slice 3 (Local QR Handoff) ACCEPTED
 (full suite 558/558, doctor 15/0/0, QR programmatically decoded in headless tests); and
-captured the preserved v1.0 product requirements (first-class Jarvis voice; Tailscale
+captured the preserved v1.0 product requirements (first-class Adam voice; Tailscale
 HTTPS as the phone path).
 **v1.7:** added the v0.9 manual Tailscale verification section (PENDING) and recorded the
 v0.9.0 automated validation (463/463 suite incl. auth/CORS, banner, and release tests;
@@ -48,23 +48,23 @@ Where the product stands for beta, and the line between what's shipped and what'
   user-facing docs. Automated validation: full suite **470/470**, doctor **15/0/0**,
   `draft_only`, release ZIP secret-free.
 - **Post-checkpoint Patch 1 — ACCEPTED.** `make_release` default version label fixed
-  (`python scripts/make_release.py` → `jarvis-voice-local-v0.9.0.zip`); `--version`
+  (`python scripts/make_release.py` → `adam-local-v0.9.0.zip`); `--version`
   override intact; release tests expanded.
 - **Post-checkpoint Patch 2 — ACCEPTED.** Doctor now detects Tailscale via PATH **and**
   the standard Windows install paths (real doctor: "Tailscale detected and up");
   desktop-local-with-no-Tailscale still 0 WARN; `test_onboarding` → 65.
 - **v1.0 Slice 1 — ACCEPTED.** Simple one-click launcher
-  `scripts/start-jarvis.ps1` (visible window, no service/autostart, no duplicate, opens
+  `scripts/start-adam.ps1` (visible window, no service/autostart, no duplicate, opens
   the browser), setup-guidance + README/BETA_HANDOFF consumer polish, launcher added to
   the release manifest. No runtime/endpoint/write-path/auth/CORS change.
 - **v1.0 Slice 2 — ACCEPTED.** Read-only `scripts/connect-phone.py` (+ `.ps1`) helper:
-  detects Tailscale + any existing serve (e.g. Morrow on `:443`), recommends a free HTTPS
+  detects Tailscale + any existing serve on `:443`, recommends a free HTTPS
   port (`:8443`), prints the exact `tailscale serve` command + resulting phone URL +
   on-phone checklist + safe port-scoped teardown. Print-only — never mutates Tailscale,
   never `reset`/Funnel, no token in output. `test_connect_phone.py` 38 checks.
 - **v1.0 Slice 3 — ACCEPTED (Local QR Handoff).** New **Connect phone** section in the
   Operator Console (after Status). Fully client-side: click **Show phone QR** to render
-  a QR of the plain-text payload `Jarvis Voice Local / URL: <https url> / TOKEN: <token>`
+  a QR of the plain-text payload `Adam / URL: <https url> / TOKEN: <token>`
   to a `<canvas>`. No `?token=` param, no auto-consume, no browser history, token from
   `localStorage` at runtime only, never in served HTML, never sent to the server for QR,
   never logged, never saved as an image. Token hidden by default; **Reveal token** is
@@ -89,7 +89,7 @@ Where the product stands for beta, and the line between what's shipped and what'
     re-tested on a stock iPhone.** APP_VERSION stays 0.9.0.
   - **Slice 3.1 SPLIT-QR patch — IMPLEMENTED + automated-verified 2026-06-24 (still
     PARTIAL/BLOCKED pending owner on-device retest).** `web/console.html` now shows a 3-step
-    Connect phone layout with TWO separate QRs: **Show URL QR** (payload = the Jarvis HTTPS
+    Connect phone layout with TWO separate QRs: **Show URL QR** (payload = the Adam HTTPS
     URL only) and **Show token QR** (payload = the BARE token only — no `https`, no `URL:`,
     no title — so iOS Camera reads it as copyable plain text). Single **Hide** clears both
     canvases + re-masks the token; **Reveal token** stays explicit. Same vendored MIT
@@ -97,10 +97,10 @@ Where the product stands for beta, and the line between what's shipped and what'
     `test_console.py` **116 → 127** — the optional headless block now screenshots and
     **decodes BOTH QRs**, asserting the URL QR == the URL exactly (no token) and the token
     QR == the bare token exactly (no `http`/`https`/`URL:`/title). Full suite **569/569**;
-    doctor **15/0/0**; the rebuilt `dist/jarvis-voice-local-v0.9.0-beta.1.zip` ships the
+    doctor **15/0/0**; the rebuilt `dist/adam-local-v0.9.0-beta.1.zip` ships the
     split-QR `console.html`, carries no real token, and reports APP_VERSION 0.9.0.
   - **Slice 3 on-device iPhone gate — PASS (owner-confirmed 2026-06-24).** The stock-iPhone
-    retest of the split-QR design passed: URL QR opens the Jarvis `:8443` URL; token QR is
+    retest of the split-QR design passed: URL QR opens the Adam `:8443` URL; token QR is
     surfaced by iOS Camera as copyable text (token obtained without typing); token not in
     the URL; no auto-login from the URL alone; Hide clears both QRs; phone setup completed
     without manually typing the token. **Slice 3 (Local QR Handoff, split-QR form) is now
@@ -117,7 +117,7 @@ Where the product stands for beta, and the line between what's shipped and what'
   pairing), **tray / auto-start**. (The read-only connect-phone helper (Slice 2) and the
   local QR token handoff (Slice 3) are now DONE; the *automated* wizard remains deferred.)
 - **PRESERVED v1.0 product requirements (not yet met — do not regress):** (1) the **correct
-  Jarvis voice** is a first-class final-product requirement — generic/robot/browser TTS is
+  Adam voice** is a first-class final-product requirement — generic/robot/browser TTS is
   acceptable only as a fallback/beta limitation, never the final experience; (2) **phone
   access away from the same Wi-Fi** is required — supported path is **Tailscale + Tailscale
   Serve HTTPS**; plain LAN http is not the phone voice path, and public bearer-token-only
@@ -169,7 +169,7 @@ API / route (all PASS): `GET /audit` no token -> 403, wrong token -> 403, valid 
 default 100, clamped to [1, 500]; bounded `deque` tail; missing/disabled file ->
 `available:false` + empty entries, empty file -> `available:true`; malformed line ->
 safe `{"_parse_error":true}` marker with **no raw content echoed**; field **whitelist**
-drops extra + secret-like keys; `JARVIS_TOKEN`/VAPID/TWILIO never in the body. Live on
+drops extra + secret-like keys; `ADAM_TOKEN`/VAPID/TWILIO never in the body. Live on
 :8010: 88 real entries, malformed 0, no token leak, clamp verified.
 
 Manual browser check (headless Chrome via the DevTools Protocol — the page's own JS
@@ -224,9 +224,9 @@ suite covers the doctor diagnostics and the secure-context banner rule; only the
 device round-trip is manual).
 
 **Status: PASS — owner-verified 2026-06-24** on the real PC (`chainforge`, Windows) +
-iPhone (`iphone182`, Safari), same tailnet. Because this machine already serves Morrow
-on the tailnet's 443, Jarvis was served on a **separate HTTPS port (8443)**
-(`tailscale serve --https=8443 http://127.0.0.1:8010`) so Morrow stayed intact; the
+iPhone (`iphone182`, Safari), same tailnet. Because this machine already had another app served
+on the tailnet's 443, Adam was served on a **separate HTTPS port (8443)**
+(`tailscale serve --https=8443 http://127.0.0.1:8010`) so that serve stayed intact; the
 generic single-app case would use 443. The full round-trip worked end-to-end.
 
 Setup:
@@ -240,7 +240,7 @@ Setup:
 Mobile round-trip (iPhone Safari at the HTTPS tailnet URL):
 - [x] Page loads over the HTTPS tailnet URL.
 - [x] **Secure-context banner is HIDDEN** (proper secure context confirmed).
-- [x] Token auth works — `JARVIS_TOKEN`, no 403.
+- [x] Token auth works — `ADAM_TOKEN`, no 403.
 - [x] Microphone permission granted.
 - [x] Voice **input** transcribes ("able to hear me").
 - [x] Spoken **reply** plays back (browser TTS voice — the local Kokoro TTS is PC-only
@@ -315,7 +315,7 @@ Voice loop, audio, and PWA behaviors that only a real iOS device exercises:
 
 ## Purpose
 
-Prove that Jarvis Voice Local — a **local-first desktop companion + mobile voice
+Prove that Adam — a **local-first desktop companion + mobile voice
 client** — works correctly across every state, transition, and failure path
 **before** any new feature work begins. The quality bar is the one set by the
 personal-rig dogfood pass: correctness over speed. A test that "usually works" is
@@ -384,8 +384,8 @@ local time before each session** so you can find your run.
 
 | ID | Step | Expected | ✅ |
 |----|------|----------|----|
-| PRE-1 | Fresh clone/folder; `.env` and `settings.json` **not** yet created | App refuses to start (or `/health` reports unconfigured); a clear message names the missing file — no silent boot with no token | [P] 2026-06-23 — empty `JARVIS_TOKEN` → `config.validate()` raises "JARVIS_TOKEN missing. Copy .env.example to .env and set it." at import (server can't boot) |
-| PRE-2 | Copy `.env.example`→`.env`, set `JARVIS_TOKEN` to a long random value | `.env` present; token is not the placeholder string | [P] 2026-06-23 — instance configured; token len 48, validates |
+| PRE-1 | Fresh clone/folder; `.env` and `settings.json` **not** yet created | App refuses to start (or `/health` reports unconfigured); a clear message names the missing file — no silent boot with no token | [P] 2026-06-23 — empty `ADAM_TOKEN` → `config.validate()` raises "ADAM_TOKEN missing. Copy .env.example to .env and set it." at import (server can't boot) |
+| PRE-2 | Copy `.env.example`→`.env`, set `ADAM_TOKEN` to a long random value | `.env` present; token is not the placeholder string | [P] 2026-06-23 — instance configured; token len 48, validates |
 | PRE-3 | Copy `settings.example.json`→`settings.json`, set `claude_exe` (or rely on PATH auto-detect) and `vault_path`/work dirs as desired | `settings.json` present; paths are project-relative or absolute and valid | [P] 2026-06-23 — `settings.json` present, valid paths (via /health) |
 | PRE-4 | Start the server (`scripts/start-dev.ps1`) | Server boots; log shows a clean boot line + `state_schema_version` | [P] 2026-06-23 (assistant-verified, server-side) |
 | PRE-5 | `GET /ping` | 200 | [P] 2026-06-23 (via /health 200) |
@@ -403,13 +403,13 @@ local time before each session** so you can find your run.
 | SET-3 | Custom `port` in `settings.json` | Server binds the configured port; `/health` reflects it | [P] 2026-06-23 — runs on custom port 8010 from `settings.json`; `/health` reports `port:8010` |
 | AUTH-1 | First open, no token stored on device | Settings modal auto-opens; orb is Standby | [P] 2026-06-23 — iPhone Safari private tab (fresh device): modal auto-opened, orb in Standby |
 | AUTH-2 | Save with empty token | Alert "paste your token"; modal stays open | [P] 2026-06-23 — empty Save → alert "Paste your auth token to sign in.", modal stayed open, not signed in |
-| AUTH-3 | Paste the **correct** `JARVIS_TOKEN`, Save | Modal closes; a turn now works | [P] 2026-06-23 — signed in and ran many turns this session (one-tap + stored token) |
+| AUTH-3 | Paste the **correct** `ADAM_TOKEN`, Save | Modal closes; a turn now works | [P] 2026-06-23 — signed in and ran many turns this session (one-tap + stored token) |
 | AUTH-4 | Paste a **wrong** token, then send a turn | Server returns **403**; UI shows "Auth rejected. Check your token." + auto-deactivate; no turn result | [P] 2026-06-23 — wrong token + malformed header → 403; correct → 200 (UI message string verified by inspection) |
 | AUTH-5 | Protected endpoint with **no** token (`/ask_async`, `/jobs`, `/proposed-changes`) | **403 Forbidden** on every protected route | [P] 2026-06-23 — `/jobs` no-token 403, wrong-token 403, correct-token 200 (assistant-verified) |
 | AUTH-6 | Token with leading/trailing whitespace | Trimmed before use; auth still succeeds | [P] 2026-06-23 — `config.py` `.strip()`: `"  paddedtoken  "`→`"paddedtoken"` |
 | AUTH-7 | Reload / reopen after sign-in | Token persists; settings modal does **not** reopen | [P] 2026-06-23 — reopened the app repeatedly all session without re-signing in |
 | AUTH-8 | One-tap login via `…/?token=XXX` (if supported) | Token stored; address bar stripped of the token; nothing left in URL/history | [P] 2026-06-23 — used the one-tap URL to sign in; `consumeLoginParams()` strips token via `history.replaceState` (inspection) |
-| CFG-1 | **Missing-config failure**: start with `.env` absent or `JARVIS_TOKEN` blank | App fails fast with a clear message; it does **not** boot wide-open with no auth | [P] 2026-06-23 — empty token → `config.validate()` raises at import; server can't boot (see PRE-1) |
+| CFG-1 | **Missing-config failure**: start with `.env` absent or `ADAM_TOKEN` blank | App fails fast with a clear message; it does **not** boot wide-open with no auth | [P] 2026-06-23 — empty token → `config.validate()` raises at import; server can't boot (see PRE-1) |
 | CFG-2 | Invalid `claude_exe` path and not on PATH | Startup or `/health` surfaces "claude not configured/found" rather than failing cryptically on first turn | [P] 2026-06-23 — `config.validate()` raises "Claude executable not found…" when `CLAUDE_EXE` unresolved (same fail-fast path; inspection) |
 | CFG-3 | `vault_path` / `work_extra_dirs` empty (default) | App runs; work mode simply has no extra context dirs — no crash, no hardcoded path assumed | [P] 2026-06-23 — no `validate()` gate on `vault_path`; used only as read context, absent → no extra dirs, no crash (inspection) |
 
@@ -503,19 +503,19 @@ local time before each session** so you can find your run.
 | SAFE-2 | **No direct writes to your files** | A work-mode request that would edit a file does **not** modify it directly; Claude runs in a throwaway workspace with your dirs read-only | [P] 2026-06-23 — file only appeared after panel Apply, never from the turn itself |
 | SAFE-3 | **Proposed change created** | Such a request produces a **proposed change** record instead of an edit | [P] 2026-06-23 — `<<PROPOSE>>` → record `ac8df920dc79` |
 | SAFE-4 | **Pending approval visible** | The proposed change appears in `GET /proposed-changes` and in the PWA pending panel with target + risk | [P] 2026-06-23 — badge + panel showed target+risk+diff |
-| SAFE-5 | **Approve → Apply flow** | Approve, then Apply: the server (the sole writer) applies it, re-running the full permission check first | [P] 2026-06-23 — `Jarvis_test.MD` status `applied`, `applied_by: server`. **UX:** Approve+Apply collapsed to ONE button (was a confusing two-tap). |
-| SAFE-6 | **Deny flow** | Deny: the change is never applied; status terminal `denied` | [P] 2026-06-23 — `Jarvis_test2.MD` status `denied`, no file written |
+| SAFE-5 | **Approve → Apply flow** | Approve, then Apply: the server (the sole writer) applies it, re-running the full permission check first | [P] 2026-06-23 — `Adam_test.MD` status `applied`, `applied_by: server`. **UX:** Approve+Apply collapsed to ONE button (was a confusing two-tap). |
+| SAFE-6 | **Deny flow** | Deny: the change is never applied; status terminal `denied` | [P] 2026-06-23 — `Adam_test2.MD` status `denied`, no file written |
 | SAFE-7 | **Diff review** | `GET /proposed-changes/{id}/diff` returns a unified diff (or a clear "unavailable" reason for binary/oversize); the PWA shows it colorized | [P] 2026-06-23 — colorized diff shown in panel |
 | SAFE-8 | **Stale / conflict detection** | If the target file changed since the proposal, Apply returns **409 conflict** and does **not** overwrite; status → `conflict` | [P] 2026-06-23 — modified file on disk → apply 409 "target file changed since proposed"; file not overwritten |
 | SAFE-9 | Conflict recovery | `POST …/refresh-diff` re-baselines and resets to pending (no force-apply); re-approve to proceed | [P] 2026-06-23 — conflict→refresh-diff reset to `pending` (stale=False), re-approve+apply then wrote "proposed v2"; no force-apply |
-| SAFE-10 | **Backup before write** | Applying a change that overwrites an existing file creates a timestamped backup in `data/backups/` first; the backup path is reported | [P] 2026-06-23 — overwrite created `data/backups/20260623_111104_Jarvis_test.MD` |
+| SAFE-10 | **Backup before write** | Applying a change that overwrites an existing file creates a timestamped backup in `data/backups/` first; the backup path is reported | [P] 2026-06-23 — overwrite created `data/backups/20260623_111104_Adam_test.MD` |
 | SAFE-11 | Blocked / protected target | A change targeting a protected pattern (`.env`, `*.pem`, `*.key`, `settings.json`, …) or outside the write allow-list is **refused** on apply | [P] 2026-06-23 — apply on `settings.json` → 422 "not in an allowed write directory (or blocked/protected)"; file untouched |
 | SAFE-12 | Destructive action gate | A destructive action requires approval before it can apply | [P] 2026-06-23 — delete while pending → 409 "not approved (status=pending)"; file intact |
 | SAFE-13 | **Audit-log event** | Each decision (create/approve/deny/apply/conflict) writes one JSON line to `data/logs/audit.jsonl`; no secrets in it | [P] 2026-06-23 — `proposed_change_created`/`_denied`/`auto_apply_setting_changed` lines verified, no secrets |
 | SAFE-14 | `legacy_direct` is opt-in only | Direct writes are only possible if the operator deliberately sets `agent_safety.mode = legacy_direct`; it is documented as unsafe for product use | [P] 2026-06-23 — default `draft_only`; `/health` shows `unsafe_legacy_mode:false`; legacy path only via deliberate `agent_safety.mode` change (inspection) |
 | SAFE-16 | **Auto-apply mode** (new, 2026-06-23, opt-in) | A toggle in the Pending panel lets the user auto-apply proposed changes (incl. overwrites/deletes). Must be **OFF by default**, fail-closed (token-gated), and must STILL enforce every server guardrail on each write: allow-list, protected-path refusal, staleness/conflict check, backup, audit (`proposed_change_auto_applied` + `auto_apply_setting_changed` events). | [P] 2026-06-23 (device-verified) — `/ui-prefs` GET/POST token-gated (no-token→403; default `false`). `run_claude` approves+applies via the same `apply()` (all guardrails intact); per-write + toggle audit events. PWA toggle works. |
-| SAFE-17 | **Proposal-outcome context** (new, 2026-06-23, default-on) | The agent is told, at the start of a turn, which proposed changes the user resolved (applied/denied/conflict) since the last turn — so it has continuity and never re-pitches a denied change — without being able to see/operate the panel. A per-marker prevents repeating an outcome. | [P-pending] built 2026-06-23 — `proposed_changes.resolved_since(ts)` + `resolved_at_ts` stamp; `_proposal_outcome_note()` injected into the prompt every turn, marker (`proposals_reported_ts`) advances so nothing repeats; `DRAFT_MODE_NOTE` reconciled. [P] 2026-06-23 (device-verified) — user asked "did we ever approve note 68" and JARVIS correctly answered "68.MD came back denied, not written" (job record confirms). |
-| SAFE-15 | **Agent narration honesty** (new, 2026-06-23) | The LLM must NOT claim it approved/applied/saved a change or that it's "on its way" (it can't see/operate the panel), and must not nag for approval in chat or chase a prior proposal in later turns | [P-pending] fix 2026-06-23 — user hit exactly this: JARVIS said "approved, on its way to the server" and re-asked to approve a change the user had **denied**. `DRAFT_MODE_NOTE` now tells Claude it cannot approve/apply, must only say it *proposed*, must not ask for in-chat approval, and must not chase prior proposals. Server restarted to load. [P] 2026-06-23 (device-verified — no more false "approved/on its way"). |
+| SAFE-17 | **Proposal-outcome context** (new, 2026-06-23, default-on) | The agent is told, at the start of a turn, which proposed changes the user resolved (applied/denied/conflict) since the last turn — so it has continuity and never re-pitches a denied change — without being able to see/operate the panel. A per-marker prevents repeating an outcome. | [P-pending] built 2026-06-23 — `proposed_changes.resolved_since(ts)` + `resolved_at_ts` stamp; `_proposal_outcome_note()` injected into the prompt every turn, marker (`proposals_reported_ts`) advances so nothing repeats; `DRAFT_MODE_NOTE` reconciled. [P] 2026-06-23 (device-verified) — user asked "did we ever approve note 68" and Adam correctly answered "68.MD came back denied, not written" (job record confirms). |
+| SAFE-15 | **Agent narration honesty** (new, 2026-06-23) | The LLM must NOT claim it approved/applied/saved a change or that it's "on its way" (it can't see/operate the panel), and must not nag for approval in chat or chase a prior proposal in later turns | [P-pending] fix 2026-06-23 — user hit exactly this: Adam said "approved, on its way to the server" and re-asked to approve a change the user had **denied**. `DRAFT_MODE_NOTE` now tells Claude it cannot approve/apply, must only say it *proposed*, must not ask for in-chat approval, and must not chase prior proposals. Server restarted to load. [P] 2026-06-23 (device-verified — no more false "approved/on its way"). |
 
 ---
 
@@ -583,7 +583,7 @@ local time before each session** so you can find your run.
 | REL-6 | **No crash on bad input** | Empty message, malformed request, junk payload → clean 4xx, server stays up | [P] 2026-06-23 — malformed JSON→422, empty body→422, server stayed up |
 | REL-7 | **No secret leakage in logs** | Token, VAPID private key, Twilio token never appear in any log or job record; only a truncated prompt summary is stored | [P] 2026-06-23 — token value: 0 matches in logs; no VAPID/Twilio secrets; audit events clean |
 | REL-8 | Rate limits | Hammering `/ask*` / `/speak` returns 429 without wedging the app (speak falls back to browser voice) | [P] 2026-06-23 — 30×200 then 429 on `/upload` (shared slowapi limiter); server stayed healthy. `/ask`,`/ask_async` 30/min; `/speak` 120/min |
-| REL-9 | Crash relaunch (if a service/scheduled task is configured) | The configured boot/relaunch mechanism brings the server back; document whatever the customer set up | [DEFERRED — N/A for shipped product, non-gating] 2026-06-23 — no auto-relaunch service/task ships with jarvis-voice-local by design (local-first, customer-run; relaunch is customer/deployment-configured — Windows Scheduled Task, NSSM, or installer/runtime wrapper). REL-1 already verified manual restart; crash/restart recovery logic proven (server returns cleanly, in-flight jobs → `interrupted` handled correctly). Registering a task just to tick this would be deployment/infra work, not iPhone acceptance. No code touch. Beta-safe. |
+| REL-9 | Crash relaunch (if a service/scheduled task is configured) | The configured boot/relaunch mechanism brings the server back; document whatever the customer set up | [DEFERRED — N/A for shipped product, non-gating] 2026-06-23 — no auto-relaunch service/task ships with adam-local by design (local-first, customer-run; relaunch is customer/deployment-configured — Windows Scheduled Task, NSSM, or installer/runtime wrapper). REL-1 already verified manual restart; crash/restart recovery logic proven (server returns cleanly, in-flight jobs → `interrupted` handled correctly). Registering a task just to tick this would be deployment/infra work, not iPhone acceptance. No code touch. Beta-safe. |
 
 ---
 
@@ -607,7 +607,7 @@ These are **intentionally** not part of the release gate. Record them as deferre
 not as failures.
 
 > **Glasses rule (binding):** smart-glasses testing is **OPTIONAL before a generic
-> local beta**, but **REQUIRED before any public claim** that Jarvis Voice Local
+> local beta**, but **REQUIRED before any public claim** that Adam
 > *supports smart glasses* or *glasses-first hands-free* use. Do not advertise
 > glasses support until DEF-1 has been run and passed on a real device.
 

@@ -1,11 +1,11 @@
 """
-Jarvis Voice Local — voicemail message store + the relay record.
+Adam — voicemail message store + the relay record.
 
 Each finalized voicemail produces one record appended to a JSONL log under the
 app's state dir. The record is what gets pushed to the phone and what /voicemails
 lists back. Storage is append-only JSONL — simple, durable, easy to tail.
 
-Harvested from the standalone jarvis-call-relay (app/messages.py) and adapted to
+Harvested from the standalone adam-call-relay (app/messages.py) and adapted to
 Voice Local's config paths. No secret ever lands here — just caller number, name,
 duration, transcript, and timestamps.
 """
@@ -19,7 +19,7 @@ from pathlib import Path
 
 import config
 
-log = logging.getLogger("jarvis.voicemail")
+log = logging.getLogger("adam.voicemail")
 
 
 def _store_file() -> Path:

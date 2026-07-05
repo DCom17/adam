@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Twilio inbound-SMS connector (opt-in, off by default).
+Adam — Twilio inbound-SMS connector (opt-in, off by default).
 
 This is the *polling* transport for inbound texts. Instead of Twilio POSTing to a
 public webhook (which would force a public HTTPS ingress and break the product's
@@ -17,7 +17,7 @@ Trust model (mirrors google_calendar.py):
 Capabilities, on purpose:
   * read  — list_inbound(), probe()   (safe; pulls inbound messages / verifies creds)
   * send  — NOT IMPLEMENTED. v1 is inbound-only (write_capable: False). There is
-            deliberately no send_sms(); Jarvis replies via Web Push, never SMS.
+            deliberately no send_sms(); Adam replies via Web Push, never SMS.
   * delete — NOT IMPLEMENTED.
 
 This module is transport + the poll loop's bookkeeping (cursor/dedup). It does not

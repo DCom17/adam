@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — calendar READ endpoint tests (GET /integrations/calendar/events).
+Adam — calendar READ endpoint tests (GET /integrations/calendar/events).
 
 This is the reference "safe read" surface for the add-on pattern. Proves:
 
@@ -23,8 +23,8 @@ from pathlib import Path
 
 import config
 
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "e" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "e" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -39,7 +39,7 @@ from fastapi.testclient import TestClient   # noqa: E402
 
 job_store.init(_SANDBOX / "jobs.db")
 
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 client = TestClient(server.app)
 AUTH = {"Authorization": "Bearer " + TOKEN}
 

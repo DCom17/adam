@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Settings add-on cards (U2) + brain add-on awareness (U3).
+Adam — Settings add-on cards (U2) + brain add-on awareness (U3).
 
 Covers the two registry-consuming surfaces:
 
@@ -25,8 +25,8 @@ from pathlib import Path
 
 import config
 
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "f" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "f" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -41,7 +41,7 @@ from fastapi.testclient import TestClient   # noqa: E402
 job_store.init(_SANDBOX / "jobs.db")
 
 ROOT = Path(__file__).resolve().parent
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 client = TestClient(server.app)
 AUTH = {"Authorization": "Bearer " + TOKEN}
 

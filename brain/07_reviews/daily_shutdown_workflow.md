@@ -148,7 +148,7 @@ Populate from what you just closed out plus known context:
 - **Approaching deadlines** — with date and days-out
 - **Carry-over tasks** — unfinished items, flagged critical / flexible / deferred
 - **Open weaknesses / boss context** — active weakness ID + day count, nearest boss milestone
-- **Questions JARVIS should ask** — only the gaps the briefing can't already answer
+- **Questions Adam should ask** — only the gaps the briefing can't already answer
 
 Pull most of this straight from the "Tomorrow Starting Point" you just wrote, active tasks, waiting items, and dashboard state. Update the `Last built` timestamp.
 
@@ -163,7 +163,7 @@ Header columns: `date, condition, adherence, sleep_quality, sleep_hours, workout
 - **Sleep** quality (7-pt) + hours
 - **Adherence** (yes / partial / no) — only if an experiment was assigned today
 
-**JARVIS infers everything else:**
+**Adam infers everything else:**
 - Levers (workout, mindset_block, nutrition, caffeine, late_screens, outdoors, social, alcohol) — infer from daily log + calendar. Mark "unknown" if genuinely undeterminable. Never guess.
 - `deep_work_pct` — planned focus/deep-work blocks completed today (percentage)
 - `output_xp` — XP earned today

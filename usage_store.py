@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — per-day AI spend store.
+Adam — per-day AI spend store.
 
 Every claude.exe turn's JSON result carries `total_cost_usd` (what the turn
 would cost at API rates). This module accumulates those numbers per calendar

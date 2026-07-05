@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — first-run onboarding + setup doctor (v0.7.0, Slice 1).
+Adam — first-run onboarding + setup doctor (v0.7.0, Slice 1).
 
 Importable, testable logic behind `scripts/setup.py` (guided first-run) and
 `scripts/doctor.py` (re-runnable health check). Kept at the repo root, next to
@@ -7,11 +7,11 @@ Importable, testable logic behind `scripts/setup.py` (guided first-run) and
 
 Design rules (enforced here, do not weaken):
   * Idempotent. Re-running never regenerates an existing real token.
-  * Never overwrite an existing real JARVIS_TOKEN.
+  * Never overwrite an existing real ADAM_TOKEN.
   * Never print secret VALUES (only booleans / paths / status).
   * Preserve comments and unrelated lines when editing .env.
   * Back up before modifying .env (and settings.json), then write atomically.
-  * Setup may only edit JARVIS_TOKEN (.env) and — with consent — claude_exe and
+  * Setup may only edit ADAM_TOKEN (.env) and — with consent — claude_exe and
     vault_path (settings.json). It must NEVER touch agent_safety.mode, the
     permissions block, or approval/backup/audit/conflict logic.
 """
@@ -78,12 +78,15 @@ def _atomic_write(path: Path, text: str) -> None:
 
 
 def _token_value_from_lines(lines: list[str]) -> str | None:
-    """Return the current JARVIS_TOKEN value (may be empty string), or None if
-    there is no JARVIS_TOKEN line at all."""
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("JARVIS_TOKEN=") and not stripped.startswith("#"):
-            return stripped[len("JARVIS_TOKEN="):].strip()
+    """Return the current ADAM_TOKEN value (may be empty string), or None if
+    there is no ADAM_TOKEN line at all. A legacy JARVIS_TOKEN line counts as
+    the current token (same precedence as config.py), so re-running setup on a
+    pre-rename install never mints a new token and strands the phone's copy."""
+    for key in ("ADAM_TOKEN=", "JARVIS_TOKEN="):
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith(key) and not stripped.startswith("#"):
+                return stripped[len(key):].strip()
     return None
 
 
@@ -92,7 +95,7 @@ def _is_real_token(value: str | None) -> bool:
 
 
 def ensure_env_token(env_path: Path, example_path: Path) -> dict:
-    """Make sure `.env` exists and carries a real JARVIS_TOKEN, without ever
+    """Make sure `.env` exists and carries a real ADAM_TOKEN, without ever
     clobbering an existing one.
 
     Returns a dict (NO secret values):
@@ -113,8 +116,8 @@ def ensure_env_token(env_path: Path, example_path: Path) -> dict:
     else:
         # No example to seed from — start with a minimal, commented file.
         original = (
-            "# Jarvis Voice Local — secrets & machine values.\n"
-            "JARVIS_TOKEN=" + TOKEN_PLACEHOLDER + "\n"
+            "# Adam — secrets & machine values.\n"
+            "ADAM_TOKEN=" + TOKEN_PLACEHOLDER + "\n"
         )
         env_created = True
 
@@ -135,14 +138,14 @@ def ensure_env_token(env_path: Path, example_path: Path) -> dict:
     new_lines: list[str] = []
     for line in lines:
         stripped = line.strip()
-        if (not replaced and stripped.startswith("JARVIS_TOKEN=")
+        if (not replaced and stripped.startswith("ADAM_TOKEN=")
                 and not stripped.startswith("#")):
-            new_lines.append(f"JARVIS_TOKEN={token}")
+            new_lines.append(f"ADAM_TOKEN={token}")
             replaced = True
         else:
             new_lines.append(line)
     if not replaced:
-        new_lines.append(f"JARVIS_TOKEN={token}")
+        new_lines.append(f"ADAM_TOKEN={token}")
 
     # Preserve a trailing newline.
     text = "\n".join(new_lines)
@@ -489,11 +492,11 @@ def run_doctor(reload_config: bool = True) -> list[dict]:
         checks.append(_check("Configuration file", PASS, "settings parse cleanly (UTF-8/BOM ok)"))
 
     # 1. Token present.
-    if cfg.JARVIS_TOKEN:
-        checks.append(_check("JARVIS_TOKEN present", PASS, "a bearer token is set"))
+    if cfg.ADAM_TOKEN:
+        checks.append(_check("ADAM_TOKEN present", PASS, "a bearer token is set"))
     else:
-        checks.append(_check("JARVIS_TOKEN present", FAIL,
-                             "no JARVIS_TOKEN — run setup, or set it in .env"))
+        checks.append(_check("ADAM_TOKEN present", FAIL,
+                             "no ADAM_TOKEN — run setup, or set it in .env"))
 
     # 2. Claude resolved (Windows-aware).
     claude_path, how = _resolve_claude(cfg)
@@ -579,7 +582,7 @@ def run_doctor(reload_config: bool = True) -> list[dict]:
 
     # 11. No secret leakage in /health output.
     secret_values = [
-        cfg.JARVIS_TOKEN, cfg.VAPID_PUBLIC_KEY, cfg.TWILIO_AUTH_TOKEN,
+        cfg.ADAM_TOKEN, cfg.VAPID_PUBLIC_KEY, cfg.TWILIO_AUTH_TOKEN,
         getattr(cfg, "CALENDAR_TOKEN", ""),
         getattr(cfg, "HUNTER_TOKEN", ""),
         getattr(cfg, "GMAIL_TOKEN", ""),
@@ -618,7 +621,7 @@ def run_doctor(reload_config: bool = True) -> list[dict]:
     # 15d. Voicemail (missed-call) poller (advisory; opt-in; never FAIL).
     checks.append(_voicemail_check(cfg))
 
-    # 16. Bundled Jarvis brain (informational; never FAIL/WARN). Confirms the
+    # 16. Bundled Adam brain (informational; never FAIL/WARN). Confirms the
     # de-personalized brain shipped with the app and whether it's the active vault.
     checks.append(_brain_check(cfg))
 
@@ -626,22 +629,22 @@ def run_doctor(reload_config: bool = True) -> list[dict]:
 
 
 def _brain_check(cfg) -> dict:
-    """Informational status of the bundled Jarvis brain (the de-personalized vault
+    """Informational status of the bundled Adam brain (the de-personalized vault
     that ships with the product). Always PASS — a standalone install without the
     brain is a valid (advanced) configuration, so this never WARNs/FAILs."""
     brain = ROOT / "brain"
     if not brain.is_dir():
-        return _check("Jarvis brain", PASS, "running without the bundled brain (standalone mode)")
+        return _check("Adam brain", PASS, "running without the bundled brain (standalone mode)")
     has_core = (brain / "CLAUDE.md").exists() and (brain / "BOOTSTRAP.md").exists()
     if not has_core:
-        return _check("Jarvis brain", PASS, "brain/ present (CLAUDE.md/BOOTSTRAP.md not detected)")
+        return _check("Adam brain", PASS, "brain/ present (CLAUDE.md/BOOTSTRAP.md not detected)")
     try:
         pointed = Path(cfg.VAULT_PATH).resolve() == brain.resolve()
     except Exception:
         pointed = False
     if pointed:
-        return _check("Jarvis brain", PASS, "bundled brain present and active (vault_path -> brain/)")
-    return _check("Jarvis brain", PASS,
+        return _check("Adam brain", PASS, "bundled brain present and active (vault_path -> brain/)")
+    return _check("Adam brain", PASS,
                   f"bundled brain present; vault_path points elsewhere ({cfg.VAULT_PATH})")
 
 

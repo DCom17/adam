@@ -10,7 +10,7 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Jarvis Voice Local — LinkedIn Setup</title>
+<title>Adam — LinkedIn Setup</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -54,7 +54,7 @@
 <body>
 
 <header>
-  <h1>LinkedIn Setup <span class="muted">— Jarvis Voice Local</span></h1>
+  <h1>LinkedIn Setup <span class="muted">— Adam</span></h1>
   <span class="spacer"></span>
   <a href="/console">Operator Console</a>
   <button id="signOut" class="hidden">Sign out</button>
@@ -66,13 +66,13 @@
     <div class="head">Sign in</div>
     <div class="body">
       <p class="muted">This page talks to your local server with your bearer token (the same
-        JARVIS_TOKEN the Operator Console uses). It is stored on this device only.</p>
-      <p class="muted">Easiest way in: on your computer, start Jarvis with the <b>Start Jarvis</b>
-        launcher (<code>scripts\start-jarvis.ps1</code>) — it opens you already signed in, so you
+        ADAM_TOKEN the Operator Console uses). It is stored on this device only.</p>
+      <p class="muted">Easiest way in: on your computer, start Adam with the <b>Start Adam</b>
+        launcher (<code>scripts\start-adam.ps1</code>) — it opens you already signed in, so you
         won't see this box. On a phone, open the Operator Console's <b>Connect phone</b> and scan the
         sign-in QR. To copy the token by hand, run <code>scripts\copy-token.ps1</code> and paste it above.</p>
       <div class="row">
-        <input id="tokenInput" type="password" placeholder="Paste JARVIS_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
+        <input id="tokenInput" type="password" placeholder="Paste ADAM_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
         <button class="primary" id="signIn">Sign in</button>
       </div>
       <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
@@ -87,9 +87,9 @@
   <section>
     <div class="body">
       <div class="warnbox">This LinkedIn integration is <b>opt-in</b> and stays <b>disabled</b> until you
-turn it on. By default it is a <b>drafting</b> tool: Jarvis writes posts (and profile text) that
-<b>you</b> review and paste into LinkedIn by hand — no LinkedIn login, no automation. Jarvis <b>cannot
-read your LinkedIn feed</b> and <b>cannot delete</b> anything. Jarvis never creates or signs up for a
+turn it on. By default it is a <b>drafting</b> tool: Adam writes posts (and profile text) that
+<b>you</b> review and paste into LinkedIn by hand — no LinkedIn login, no automation. Adam <b>cannot
+read your LinkedIn feed</b> and <b>cannot delete</b> anything. Adam never creates or signs up for a
 LinkedIn account — automating signup violates LinkedIn's User Agreement.</div>
     </div>
   </section>
@@ -98,14 +98,14 @@ LinkedIn account — automating signup violates LinkedIn's User Agreement.</div>
   <section>
     <div class="head">Lane 1 — Draft posts (default, recommended)</div>
     <div class="body">
-      <p>This is the whole product for most people. With the connector on, Jarvis drafts a post or
+      <p>This is the whole product for most people. With the connector on, Adam drafts a post or
          profile blurb, you approve it like any other draft, and you copy it into LinkedIn yourself.</p>
       <ul class="muted">
         <li>No LinkedIn credentials needed — nothing to connect.</li>
         <li>Every draft routes through the normal approval flow before you see it.</li>
         <li>You paste the final text into LinkedIn by hand, so you always have the last word.</li>
       </ul>
-      <p class="muted">To enable just the draft lane, save this in <b>settings.json</b> and restart Jarvis:</p>
+      <p class="muted">To enable just the draft lane, save this in <b>settings.json</b> and restart Adam:</p>
       <pre class="snippet" id="draftSnippet">"integrations": {
   "linkedin": {
     "enabled": true,
@@ -121,8 +121,8 @@ LinkedIn account — automating signup violates LinkedIn's User Agreement.</div>
         <span class="status" id="enableDraftStatus"></span>
       </div>
       <div class="errbox hidden" id="enableDraftErr"></div>
-      <div class="okbox hidden" id="draftDoneBox">Saved. Draft lane is on. <b>Restart Jarvis</b> (close the
-black "Jarvis Voice Local" window and relaunch), then ask Jarvis to "draft a LinkedIn post about …".</div>
+      <div class="okbox hidden" id="draftDoneBox">Saved. Draft lane is on. <b>Restart Adam</b> (close the
+black "Adam" window and relaunch), then ask Adam to "draft a LinkedIn post about …".</div>
     </div>
   </section>
 
@@ -130,12 +130,12 @@ black "Jarvis Voice Local" window and relaunch), then ask Jarvis to "draft a Lin
   <section>
     <div class="head">Lane 2 — Auto-post to your own feed (advanced, optional)</div>
     <div class="body">
-      <div class="warnbox">Advanced and entirely optional. This lets Jarvis publish an
+      <div class="warnbox">Advanced and entirely optional. This lets Adam publish an
 <b>already-approved</b> post to <b>your own</b> LinkedIn feed over the API. It is <b>never automatic</b> —
 every post is an explicit action you take on a draft you already approved. It needs your own LinkedIn
 Developer App and a member access token, which <b>expires about every 60 days</b> (LinkedIn issues no
-long-lived token), so you will re-paste it periodically. There is <b>no shared Jarvis app</b> — it must
-be fully your own. Jarvis still cannot read your feed and cannot delete posts.</div>
+long-lived token), so you will re-paste it periodically. There is <b>no shared Adam app</b> — it must
+be fully your own. Adam still cannot read your feed and cannot delete posts.</div>
 
       <details class="advanced">
         <summary>Set up the API auto-post lane</summary>
@@ -159,7 +159,7 @@ be fully your own. Jarvis still cannot read your feed and cannot delete posts.</
           <li>
             <h3>Run the OAuth flow and get an access token</h3>
             <p class="muted">From the app's <b>Auth</b> tab, do the 3-legged OAuth flow as yourself and
-              copy the resulting <b>member access token</b>. (For v1 you run this once by hand — Jarvis
+              copy the resulting <b>member access token</b>. (For v1 you run this once by hand — Adam
               does not host a redirect. The token lasts about 60 days; re-paste it when it expires.)</p>
             <p class="muted">You'll also see your <b>Client ID</b> and <b>Client Secret</b> on the
               <b>Auth</b> tab.</p>
@@ -180,7 +180,7 @@ be fully your own. Jarvis still cannot read your feed and cannot delete posts.</
             </div>
             <p class="muted">For the <b>test</b>, only the access token is sent — to LinkedIn, to confirm it
               works and resolve your author id (your Client Secret is not sent by the test). When you later
-              click <b>Enable auto-post lane</b>, Jarvis saves the token (and Client Secret, if you entered
+              click <b>Enable auto-post lane</b>, Adam saves the token (and Client Secret, if you entered
               one) to your local <code>.env</code> for you — you never edit a file by hand. Nothing is ever
               put in a link or logged.</p>
           </li>
@@ -202,7 +202,7 @@ be fully your own. Jarvis still cannot read your feed and cannot delete posts.</
   <section id="finishSec" class="hidden">
     <div class="head">&#10003; Verified — turn on the auto-post lane</div>
     <div class="body">
-      <p>Your token works and your author id is resolved. One click and Jarvis writes its own settings
+      <p>Your token works and your author id is resolved. One click and Adam writes its own settings
         and saves your token (and client secret, if you entered one) for you — no editing files.</p>
       <div class="row">
         <button class="primary" id="enableBtn">Enable auto-post lane</button>
@@ -228,10 +228,10 @@ action on a draft you already approved.</div>
   <section id="doneSec" class="hidden">
     <div class="head">&#10003; Auto-post lane enabled</div>
     <div class="body">
-      <div class="okbox">Saved. Jarvis wrote your settings and your secrets for you.</div>
-      <p><b>One more step:</b> restart Jarvis (close the black "Jarvis Voice Local" window and relaunch)
+      <div class="okbox">Saved. Adam wrote your settings and your secrets for you.</div>
+      <p><b>One more step:</b> restart Adam (close the black "Adam" window and relaunch)
         so it loads the new setting.</p>
-      <p class="muted">Then: ask Jarvis to draft a post, approve it, and use the publish action. Posting
+      <p class="muted">Then: ask Adam to draft a post, approve it, and use the publish action. Posting
         is never automatic — it's always an explicit action on an approved draft.</p>
     </div>
   </section>
@@ -266,7 +266,7 @@ function enterGate() { show($("gateView")); hide($("wizardView")); hide($("signO
 async function signIn() {
   var t = $("tokenInput").value.trim();
   var u = $("urlInput").value.trim();
-  if (!t) { $("gateErr").textContent = "Paste your JARVIS_TOKEN."; show($("gateErr")); return; }
+  if (!t) { $("gateErr").textContent = "Paste your ADAM_TOKEN."; show($("gateErr")); return; }
   LS.token = t;
   if (u) LS.url = u;
   // Verify the token against a cheap token-gated route before entering.
@@ -301,7 +301,7 @@ async function testConnection() {
       body: JSON.stringify({ access_token: token, client_id: clientId || null })
     });
     $("testStatus").textContent = "";
-    if (r.status === 403) { $("testErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("testErr")); return; }
+    if (r.status === 403) { $("testErr").textContent = "Your Adam session was rejected — sign in again."; show($("testErr")); return; }
     var data = await r.json();
     if (data.ok) {
       $("testOk").textContent = "✓ Connected" + (data.name ? " as " + data.name : "") + ". Author id resolved.";
@@ -313,7 +313,7 @@ async function testConnection() {
     }
   } catch (e) {
     $("testStatus").textContent = "";
-    $("testErr").textContent = "Could not reach your Jarvis server to run the test.";
+    $("testErr").textContent = "Could not reach your Adam server to run the test.";
     show($("testErr"));
   }
 }
@@ -351,13 +351,13 @@ async function enableDraft() {
       body: JSON.stringify({ api_enabled: false })
     });
     $("enableDraftStatus").textContent = "";
-    if (r.status === 403) { $("enableDraftErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("enableDraftErr")); $("enableDraftBtn").disabled = false; return; }
+    if (r.status === 403) { $("enableDraftErr").textContent = "Your Adam session was rejected — sign in again."; show($("enableDraftErr")); $("enableDraftBtn").disabled = false; return; }
     var data = await r.json();
     if (data.ok) { show($("draftDoneBox")); }
     else { $("enableDraftErr").textContent = "Couldn't save: " + (data.error || "unknown error") + "."; show($("enableDraftErr")); $("enableDraftBtn").disabled = false; }
   } catch (e) {
     $("enableDraftStatus").textContent = "";
-    $("enableDraftErr").textContent = "Could not reach your Jarvis server to save the setting.";
+    $("enableDraftErr").textContent = "Could not reach your Adam server to save the setting.";
     show($("enableDraftErr")); $("enableDraftBtn").disabled = false;
   }
 }
@@ -378,13 +378,13 @@ async function enableApi() {
       body: JSON.stringify({ api_enabled: true, access_token: token, client_id: clientId, client_secret: clientSecret })
     });
     $("enableStatus").textContent = "";
-    if (r.status === 403) { $("enableErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
+    if (r.status === 403) { $("enableErr").textContent = "Your Adam session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
     var data = await r.json();
     if (data.ok) { hide($("finishSec")); show($("doneSec")); }
     else { $("enableErr").textContent = "Couldn't save: " + (data.error || "unknown error") + ". You can use the by-hand steps instead."; show($("enableErr")); $("enableBtn").disabled = false; }
   } catch (e) {
     $("enableStatus").textContent = "";
-    $("enableErr").textContent = "Could not reach your Jarvis server to save the setting.";
+    $("enableErr").textContent = "Could not reach your Adam server to save the setting.";
     show($("enableErr")); $("enableBtn").disabled = false;
   }
 }

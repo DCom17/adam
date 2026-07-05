@@ -1,4 +1,4 @@
-# Setting up JARVIS Kit
+# Setting up Adam Kit
 
 Full install guide. For most people this is ~10 minutes to a working core, plus
 optional module setup later.
@@ -20,30 +20,30 @@ Google Drive or OneDrive (sync + live files don't mix well, and it's how secrets
 leak). For example:
 
 ```
-git clone <your-repo-url> C:\Users\you\jarvis
+git clone <your-repo-url> C:\Users\you\adam
 ```
 
-Cloning (rather than downloading a zip) is what lets **"Update JARVIS"** pull
+Cloning (rather than downloading a zip) is what lets **"Update Adam"** pull
 future framework updates while leaving your data untouched. A zip install works
 too, but can't auto-update.
 
 ## 2. Create your config
 
 ```
-copy config\jarvis.config.example.json config\jarvis.config.json
+copy config\adam.config.example.json config\adam.config.json
 copy .env.example .env
 ```
 
 You can leave both mostly blank — **Bootstrap fills them in** in the next step.
-`config/jarvis.config.json` and `.env` are gitignored; they never get committed.
+`config/adam.config.json` and `.env` are gitignored; they never get committed.
 
 ## 3. Open in Claude Code and bootstrap
 
 Open the kit folder in Claude Code and say:
 
-> **Bootstrap JARVIS**
+> **Bootstrap Adam**
 
-JARVIS interviews you (name, work, school, goals, preferences, which modules you
+Adam interviews you (name, work, school, goals, preferences, which modules you
 want) and writes your profile, preferences, config, and first goals ("bosses").
 See `BOOTSTRAP.md` for what it does.
 
@@ -65,14 +65,14 @@ The full command set and operating rules are in `CLAUDE.md`.
 
 ## Updating
 
-Say **"Update JARVIS"** to pull the latest framework. Your personal data
+Say **"Update Adam"** to pull the latest framework. Your personal data
 (profile, memory, logs, dashboard state, tasks) is never overwritten — see
 `core_manifest.txt` for exactly what an update can touch.
 
 ## Troubleshooting
 
-- *"config/jarvis.config.json not found"* — you skipped step 2.
+- *"config/adam.config.json not found"* — you skipped step 2.
 - *Sync token errors* — the token in `.env` must match the one in your Apps
   Script. Re-check `setup_dashboard.md` / `setup_calendar.md`.
 - *A module command is declined* — that module isn't enabled in
-  `config/jarvis.config.json` (`modules` block) or isn't set up yet.
+  `config/adam.config.json` (`modules` block) or isn't set up yet.

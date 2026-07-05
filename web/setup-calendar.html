@@ -10,7 +10,7 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Jarvis Voice Local — Calendar Setup</title>
+<title>Adam — Calendar Setup</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -61,7 +61,7 @@
 <body>
 
 <header>
-  <h1>Calendar Setup <span class="muted">— Jarvis Voice Local</span></h1>
+  <h1>Calendar Setup <span class="muted">— Adam</span></h1>
   <span class="spacer"></span>
   <a href="/console">Operator Console</a>
   <button id="signOut" class="hidden">Sign out</button>
@@ -73,13 +73,13 @@
     <div class="head">Sign in</div>
     <div class="body">
       <p class="muted">This page talks to your local server with your bearer token (the same
-        JARVIS_TOKEN the Operator Console uses). It is stored on this device only.</p>
-      <p class="muted">Easiest way in: on your computer, start Jarvis with the <b>Start Jarvis</b>
-        launcher (<code>scripts\start-jarvis.ps1</code>) — it opens you already signed in, so you
+        ADAM_TOKEN the Operator Console uses). It is stored on this device only.</p>
+      <p class="muted">Easiest way in: on your computer, start Adam with the <b>Start Adam</b>
+        launcher (<code>scripts\start-adam.ps1</code>) — it opens you already signed in, so you
         won't see this box. On a phone, open the Operator Console's <b>Connect phone</b> and scan the
         sign-in QR. To copy the token by hand, run <code>scripts\copy-token.ps1</code> and paste it above.</p>
       <div class="row">
-        <input id="tokenInput" type="password" placeholder="Paste JARVIS_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
+        <input id="tokenInput" type="password" placeholder="Paste ADAM_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
         <button class="primary" id="signIn">Sign in</button>
       </div>
       <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
@@ -95,7 +95,7 @@
     <div class="body">
       <div class="warnbox">This calendar integration is <b>opt-in</b> and stays <b>disabled</b> until
 you finish setup. It runs entirely in <b>your own</b> Google account through a small script you
-deploy — Jarvis never holds your Google password. It can read and create events, and edit an
+deploy — Adam never holds your Google password. It can read and create events, and edit an
 event after you confirm. It <b>cannot delete</b> events.</div>
     </div>
   </section>
@@ -129,7 +129,7 @@ event after you confirm. It <b>cannot delete</b> events.</div>
             click the <b>floppy-disk Save icon</b> (<span class="ui">&#128190; Save project</span>), or just press
             <span class="ui">Ctrl</span>+<span class="ui">S</span>.</p>
           <ul class="fine">
-            <li>If Apps Script asks you to name the project, type anything (e.g. <i>Jarvis Calendar</i>) and save.</li>
+            <li>If Apps Script asks you to name the project, type anything (e.g. <i>Adam Calendar</i>) and save.</li>
             <li>After saving, the function name shows up in the function picker in the next step. If it's
               greyed out, you haven't saved yet.</li>
           </ul>
@@ -152,7 +152,7 @@ event after you confirm. It <b>cannot delete</b> events.</div>
           </ul>
           <p class="muted">When it finishes, the <b>Execution log</b> opens at the bottom of the screen with a
             line like <code>GOOGLE_CALENDAR_TOKEN=abc123…</code>. <b>Copy just the long value after the
-            <code>=</code> sign</b> — that's your bridge token. You'll paste it below in a moment (Jarvis saves
+            <code>=</code> sign</b> — that's your bridge token. You'll paste it below in a moment (Adam saves
             it for you — you do <b>not</b> need to edit any file by hand).</p>
         </li>
         <li>
@@ -183,7 +183,7 @@ event after you confirm. It <b>cannot delete</b> events.</div>
             <input id="bridgeToken" type="password" placeholder="the GOOGLE_CALENDAR_TOKEN you generated" style="flex:1;min-width:260px;" autocomplete="off">
           </div>
           <p class="muted">Your token is sent only to your own bridge. When you click <b>Enable calendar</b>
-            below, Jarvis saves it to your local <code>.env</code> for you — you never edit a file by hand. It is
+            below, Adam saves it to your local <code>.env</code> for you — you never edit a file by hand. It is
             never put in a link and never logged.</p>
         </li>
         <li>
@@ -203,7 +203,7 @@ event after you confirm. It <b>cannot delete</b> events.</div>
   <section id="finishSec" class="hidden">
     <div class="head">&#10003; Verified — turn it on</div>
     <div class="body">
-      <p>Your bridge is live and your token works. One click and Jarvis writes its own settings for
+      <p>Your bridge is live and your token works. One click and Adam writes its own settings for
         you — no editing files, no copying JSON.</p>
       <div class="row">
         <button class="primary" id="enableBtn">Enable calendar</button>
@@ -216,8 +216,8 @@ event after you confirm. It <b>cannot delete</b> events.</div>
           rather edit the files yourself:</p>
         <p class="muted"><b>1. Add your token to <code>.env</code>:</b></p>
         <ul class="fine">
-          <li>Open <b>File Explorer</b> and go to your Jarvis folder
-            (<code>C:\Users\you\jarvis-voice-local</code>).</li>
+          <li>Open <b>File Explorer</b> and go to your Adam folder
+            (<code>C:\Users\you\adam-local</code>).</li>
           <li>Find the file named <code>.env</code> (about ten items down, it's just called
             <code>.env</code>) and double-click it. If Windows asks how to open it, choose
             <b>Notepad</b>.</li>
@@ -230,7 +230,7 @@ event after you confirm. It <b>cannot delete</b> events.</div>
         <pre class="snippet" id="settingsSnippet"></pre>
         <button id="copySettings">Copy settings block</button>
         <div class="warnbox" style="margin-top:10px;">Either way, calendar stays <b>off</b> until you
-          <b>restart Jarvis</b>.</div>
+          <b>restart Adam</b>.</div>
       </details>
     </div>
   </section>
@@ -239,16 +239,16 @@ event after you confirm. It <b>cannot delete</b> events.</div>
   <section id="doneSec" class="hidden">
     <div class="head">&#10003; Calendar enabled</div>
     <div class="body">
-      <div class="okbox">Saved. Jarvis wrote your settings and your token for you.</div>
-      <p><b>One more step:</b> restart Jarvis so it loads the new setting.</p>
+      <div class="okbox">Saved. Adam wrote your settings and your token for you.</div>
+      <p><b>One more step:</b> restart Adam so it loads the new setting.</p>
       <ul class="fine">
-        <li>Close the <b>black "Jarvis Voice Local" window</b> (closing just the app/browser tab is not
+        <li>Close the <b>black "Adam" window</b> (closing just the app/browser tab is not
           enough — the server runs in that black window).</li>
-        <li>Start Jarvis again with your usual launcher.</li>
+        <li>Start Adam again with your usual launcher.</li>
       </ul>
       <p style="margin-top:12px;">Then try saying or typing:</p>
-      <div class="example">"Jarvis, add lunch with Sam tomorrow at noon to my calendar."</div>
-      <p class="muted">Jarvis reads your calendar directly; creating or editing an event always asks you
+      <div class="example">"Adam, add lunch with Sam tomorrow at noon to my calendar."</div>
+      <p class="muted">Adam reads your calendar directly; creating or editing an event always asks you
         to confirm first. It can't delete events.</p>
     </div>
   </section>
@@ -283,7 +283,7 @@ function enterGate() { show($("gateView")); hide($("wizardView")); hide($("signO
 async function signIn() {
   var t = $("tokenInput").value.trim();
   var u = $("urlInput").value.trim();
-  if (!t) { $("gateErr").textContent = "Paste your JARVIS_TOKEN."; show($("gateErr")); return; }
+  if (!t) { $("gateErr").textContent = "Paste your ADAM_TOKEN."; show($("gateErr")); return; }
   LS.token = t;
   if (u) LS.url = u;
   // Verify the token against a cheap token-gated route before entering.
@@ -327,7 +327,7 @@ async function testConnection() {
       body: JSON.stringify({ bridge_url: url, token: token, calendar_id: "primary" })
     });
     $("testStatus").textContent = "";
-    if (r.status === 403) { $("testErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("testErr")); return; }
+    if (r.status === 403) { $("testErr").textContent = "Your Adam session was rejected — sign in again."; show($("testErr")); return; }
     var data = await r.json();
     if (data.ok) {
       $("testOk").textContent = "✓ Connected. Calendar: " + (data.calendar_id || "primary") + ".";
@@ -339,7 +339,7 @@ async function testConnection() {
     }
   } catch (e) {
     $("testStatus").textContent = "";
-    $("testErr").textContent = "Could not reach your Jarvis server to run the test.";
+    $("testErr").textContent = "Could not reach your Adam server to run the test.";
     show($("testErr"));
   }
 }
@@ -380,7 +380,7 @@ async function enableCalendar() {
       body: JSON.stringify({ bridge_url: url, token: token, calendar_id: "primary" })
     });
     $("enableStatus").textContent = "";
-    if (r.status === 403) { $("enableErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
+    if (r.status === 403) { $("enableErr").textContent = "Your Adam session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
     var data = await r.json();
     if (data.ok) {
       hide($("finishSec"));
@@ -392,7 +392,7 @@ async function enableCalendar() {
     }
   } catch (e) {
     $("enableStatus").textContent = "";
-    $("enableErr").textContent = "Could not reach your Jarvis server to save the setting.";
+    $("enableErr").textContent = "Could not reach your Adam server to save the setting.";
     show($("enableErr"));
     $("enableBtn").disabled = false;
   }

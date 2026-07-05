@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — apply a downloaded build over this install, three-way safe.
+Adam — apply a downloaded build over this install, three-way safe.
 
 update.ps1 downloads + extracts the new build, then calls this. It replaces the
 old blind robocopy: files the friend never touched are updated (and backed up
@@ -12,7 +12,7 @@ Usage:
 
 Exit codes:
     0   applied cleanly (no conflicts left for review)
-    10  applied, but N file(s) need your review in Jarvis (held conflicts)
+    10  applied, but N file(s) need your review in Adam (held conflicts)
     1   hard error (bad arguments, missing build)
 """
 
@@ -30,7 +30,7 @@ import update_engine as ue  # noqa: E402
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Apply a Jarvis build over this install.")
+    ap = argparse.ArgumentParser(description="Apply a Adam build over this install.")
     ap.add_argument("--new", required=True, help="extracted new-build directory")
     ap.add_argument("--root", default=str(_INSTALL_ROOT), help="install directory")
     ap.add_argument("--merge", dest="merge", action="store_true", default=True)
@@ -59,7 +59,7 @@ def main() -> int:
         for r in res.kept_local[:10]:
             print(f"    kept your version: {r}")
     if res.conflicts:
-        print("  These files were changed by BOTH you and the update — open Jarvis to review:")
+        print("  These files were changed by BOTH you and the update — open Adam to review:")
         for r in res.conflicts[:20]:
             print(f"    needs review: {r}")
         return 10

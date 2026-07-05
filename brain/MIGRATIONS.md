@@ -1,7 +1,7 @@
 # Migrations
 
 When a new kit version needs a one-time change to **existing user data** (not just
-new framework files), record it here. "Update JARVIS" reads this after copying
+new framework files), record it here. "Update Adam" reads this after copying
 core files and applies any migration whose version is newer than the user's
 previous VERSION.
 
@@ -15,7 +15,7 @@ copy handles them.
 ```
 ## <version>  (e.g. 0.2.0)
 - <what changed in user-data shape>
-- Migration: <exact steps JARVIS should take on the user's files>
+- Migration: <exact steps Adam should take on the user's files>
 - Safe/idempotent: <yes/no — can it run twice without harm?>
 ```
 

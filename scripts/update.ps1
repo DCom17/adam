@@ -1,4 +1,4 @@
-# Jarvis Voice Local - update in place from the latest published release.
+# Adam - update in place from the latest published release.
 #
 # Checks the maintainer's GitHub Releases for a newer version and, if there is one,
 # downloads it and applies the PROGRAM files over this install with the smart 3-way
@@ -15,7 +15,7 @@ $root = Split-Path -Parent $here
 
 function Say($m, $c = "Gray") { Write-Host $m -ForegroundColor $c }
 
-# Find the same Python 3.10+ Jarvis itself runs on (the updater needs it).
+# Find the same Python 3.10+ Adam itself runs on (the updater needs it).
 function Get-AppPython {
     $cands = @()
     $onPath = (Get-Command python -ErrorAction SilentlyContinue).Source
@@ -29,15 +29,15 @@ function Get-AppPython {
     return $null
 }
 
-Say "Jarvis Voice Local - Update" "Cyan"
+Say "Adam - Update" "Cyan"
 Say "Checking for a newer version..." "Gray"
 
 # The updater (check + download + smart apply) is Python - same module the in-app
 # button uses. If Python is missing we stop rather than risk clobbering your files
-# (Jarvis itself needs Python, so this should be rare).
+# (Adam itself needs Python, so this should be rare).
 $pyExe = Get-AppPython
 if (-not $pyExe) {
-    Say "Couldn't find the Python that runs Jarvis, so I can't update safely." "Red"
+    Say "Couldn't find the Python that runs Adam, so I can't update safely." "Red"
     Say "Run SETUP once (it can install Python), then try UPDATE again." "Yellow"
     Read-Host "Press Enter to close" | Out-Null; exit 1
 }
@@ -54,10 +54,10 @@ try {
     if ($m) { $ver = $m.Matches.Groups[1].Value }
 } catch {}
 Say ("Done." + $(if ($ver) { " You're on version $ver." } else { "" })) "Green"
-Say "If anything was updated, you must restart the SERVER to finish: fully close the BLACK Jarvis" "Yellow"
-Say "window (titled 'Jarvis Voice Local') - closing the browser app is NOT enough - then reopen Jarvis." "Yellow"
+Say "If anything was updated, you must restart the SERVER to finish: fully close the BLACK Adam" "Yellow"
+Say "window (titled 'Adam') - closing the browser app is NOT enough - then reopen Adam." "Yellow"
 if ($rc -eq 10) {
-    Say "A few files you'd customized were changed by this update too - Jarvis kept YOUR version and" "Cyan"
-    Say "saved the update's copy. Open Jarvis and say 'merge the update conflicts' to reconcile them." "Cyan"
+    Say "A few files you'd customized were changed by this update too - Adam kept YOUR version and" "Cyan"
+    Say "saved the update's copy. Open Adam and say 'merge the update conflicts' to reconcile them." "Cyan"
 }
 Read-Host "Press Enter to close" | Out-Null

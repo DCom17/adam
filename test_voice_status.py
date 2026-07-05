@@ -1,7 +1,7 @@
 """
-Jarvis Voice Local — /voice/status + real-voice nudge smoke tests.
+Adam — /voice/status + real-voice nudge smoke tests.
 
-Covers the step that makes the real Jarvis voice discoverable in-app (so a friend
+Covers the step that makes the real Adam voice discoverable in-app (so a friend
 still on the browser-fallback voice learns INSTALL-VOICE exists):
   * GET /voice/status is token-gated (missing/wrong -> 403, valid -> 200);
   * the body shape is stable ({"installed": <bool>}) and leaks no secret;
@@ -22,17 +22,17 @@ from pathlib import Path
 
 import config
 
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "a" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "a" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
 import server  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 AUTH = {"Authorization": "Bearer " + TOKEN}
-SECRETS = [s for s in (server.JARVIS_TOKEN,) if s]
+SECRETS = [s for s in (server.ADAM_TOKEN,) if s]
 
 client = TestClient(server.app)
 

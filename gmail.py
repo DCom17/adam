@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Gmail connector (opt-in, off by default).
+Adam — Gmail connector (opt-in, off by default).
 
 Server-side client for the user's OWN Google Apps Script Gmail bridge
 (gmail_bridge.gs), which runs inside the user's Google account. A thin,
@@ -16,7 +16,7 @@ Trust model (mirrors the calendar / Twilio / secret pattern):
 Capabilities, on purpose:
   * read  — list_messages(), get_message(), audit_inbox()   (safe; the server
             may call these directly, with or without Claude in the loop.
-            audit_inbox aggregates promotional senders so Jarvis can SUGGEST
+            audit_inbox aggregates promotional senders so Adam can SUGGEST
             Gmail filters — it counts, it never archives/deletes/filters.)
   * write — create_draft()                     (a DRAFT only; nothing is sent.
             The caller MUST route this through the approval flow — this module
@@ -189,7 +189,7 @@ def list_messages(query: str = "in:inbox", max: int = 20) -> list[dict]:
 
 def get_message(message_id: str) -> dict:
     """A single message by id, including its plain-text body. Read-only — used to
-    show the message Jarvis is drafting a reply to."""
+    show the message Adam is drafting a reply to."""
     if not message_id:
         raise GmailError("get_message requires a message_id.")
     res = _post("get", {"message_id": str(message_id)})
@@ -200,7 +200,7 @@ def audit_inbox(days: int = 90, query: str | None = None,
                 max_threads: int = 200, offset: int = 0) -> dict:
     """Read-only inbox audit for FILTER SUGGESTIONS. Aggregates promotional /
     marketing senders over a window (sender, domain, message count, an
-    unsubscribe-header marketing flag) so Jarvis can PROPOSE Gmail filters you
+    unsubscribe-header marketing flag) so Adam can PROPOSE Gmail filters you
     apply yourself. It NEVER archives, deletes, marks, or creates a filter — it
     only reads and counts.
 
@@ -264,7 +264,7 @@ def send_message(to: str, subject: str, body: str,
     if not _allow_send():
         raise GmailSendDisabled(
             "Sending is disabled. Set integrations.gmail.allow_send=true to enable "
-            "it; out of the box Jarvis can only draft, never send."
+            "it; out of the box Adam can only draft, never send."
         )
     if not to or not str(to).strip():
         raise GmailError("send_message requires at least one recipient (to).")
@@ -286,4 +286,4 @@ def send_message(to: str, subject: str, body: str,
 
 # NOTE: there is intentionally no delete_message()/archive()/trash(). Removing or
 # hiding mail is unsupported by design — both here and in the bridge — so it
-# cannot happen through Jarvis.
+# cannot happen through Adam.

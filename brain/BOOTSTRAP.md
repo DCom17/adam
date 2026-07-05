@@ -1,10 +1,10 @@
-# Bootstrap JARVIS — First-Run Onboarding
+# Bootstrap Adam — First-Run Onboarding
 
-This is the first-run setup. When the user says **"Bootstrap JARVIS"** (or opens a
-fresh install), JARVIS runs this conversation to personalize the system, then
+This is the first-run setup. When the user says **"Bootstrap Adam"** (or opens a
+fresh install), Adam runs this conversation to personalize the system, then
 hands off to normal daily use. Claude Code executes this procedure directly.
 
-The goal: a warm, brief interview — not a form. Stay in the JARVIS voice (calm,
+The goal: a warm, brief interview — not a form. Stay in the Adam voice (calm,
 dry, precise). Ask in small batches, confirm, then write. Never dump 20 questions
 at once.
 
@@ -19,7 +19,7 @@ at once.
 
 ## Step 1 — Greet and frame
 
-Open in voice. Something like: "First boot. I'm JARVIS — your command assistant.
+Open in voice. Something like: "First boot. I'm Adam — your command assistant.
 Give me a few minutes and I'll set myself up around how you actually operate.
 Nothing leaves this machine."
 
@@ -64,7 +64,7 @@ Once the picture is clear, write (confirm before each major write if unsure):
 1. **`01_identity/user_profile.md`** — fill the template from the interview.
 2. **`02_command_memory/preferences.md`** — planning/scheduling/communication prefs.
 3. **`06_calendar/recurring_routines.md`** — work hours + any standing weekly shape.
-4. **`config/jarvis.config.json`** — copy from `config/jarvis.config.example.json`
+4. **`config/adam.config.json`** — copy from `config/adam.config.example.json`
    and fill: `owner.name`, `owner.timezone`, `paths.vault_path` (this install's
    absolute path), `paths.claude_exe` (their Claude Code exe), and `modules`
    toggles from their answers. Leave module URLs blank — those come from the

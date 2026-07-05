@@ -1,9 +1,9 @@
-# JARVIS Kit
+# Adam Kit
 
 A personal command-assistant system that runs on **Claude Code** and a folder of
 markdown. It plans your days, keeps a durable shared-brain memory, tracks tasks,
 runs daily/weekly reviews, and (optionally) drives a gamified progress dashboard
-and your Google Calendar — all in the calm, dry JARVIS voice.
+and your Google Calendar — all in the calm, dry Adam voice.
 
 > **Status:** v0.1.0-dev — private build. Not for redistribution (see `LICENSE`).
 
@@ -25,10 +25,10 @@ nothing phones home. Your data stays in your folder on your machine.
 ## Install (5 steps)
 
 1. Clone or unzip this kit to a local folder (not inside a cloud-synced drive).
-2. Copy `config/jarvis.config.example.json` → `config/jarvis.config.json`.
+2. Copy `config/adam.config.example.json` → `config/adam.config.json`.
 3. Copy `.env.example` → `.env` (only needed if you enable a module).
 4. Open the folder in Claude Code.
-5. Say **"Bootstrap JARVIS"** — it interviews you and sets up the rest.
+5. Say **"Bootstrap Adam"** — it interviews you and sets up the rest.
 
 ## Modules (all optional, off by default)
 
@@ -41,7 +41,7 @@ nothing phones home. Your data stays in your folder on your machine.
 
 ## Updating
 
-Say **"Update JARVIS"**. It pulls the latest framework files and leaves all your
+Say **"Update Adam"**. It pulls the latest framework files and leaves all your
 personal data untouched. (See `core_manifest.txt` for exactly what an update
 can and can't overwrite.)
 

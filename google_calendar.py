@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Google Calendar connector (opt-in, off by default).
+Adam — Google Calendar connector (opt-in, off by default).
 
 This is the server-side client for the user's own Google Apps Script calendar
 bridge (calendar_bridge.gs). It is a thin, dependency-free HTTP client over the
@@ -216,4 +216,4 @@ def update_event(event_id: str, changes: dict, calendar_id: str | None = None) -
     return res.get("result", {}) or {}
 
 # NOTE: there is intentionally no delete_event(). Deletion is unsupported by
-# design — both here and in the bridge — so it cannot happen through Jarvis.
+# design — both here and in the bridge — so it cannot happen through Adam.

@@ -1,10 +1,10 @@
-// Jarvis Voice Local — Google Calendar Bridge (v2)
+// Adam — Google Calendar Bridge (v2)
 // Paste this whole file into a NEW Apps Script project's Code.gs, run
 // setCalendarSyncToken() once, copy the logged token into your .env as
 // GOOGLE_CALENDAR_TOKEN, then Deploy as a Web app (Execute as: Me,
 // Access: Anyone). The setup wizard walks you through every step.
 //
-// This bridge runs entirely in YOUR Google account. Jarvis never sees your
+// This bridge runs entirely in YOUR Google account. Adam never sees your
 // Google password and never holds a Google credential — the bridge only
 // trusts requests that carry the random token YOU generated below.
 //
@@ -13,7 +13,7 @@
  *   read  : list events in a time window, get one event   (action: list / get)
  *   write : create events, edit an existing event          (action: create / update)
  *   DELETE: NOT SUPPORTED. There is deliberately no delete code path here, so
- *           nothing — not Jarvis, not Claude, not a stray request — can delete
+ *           nothing — not Adam, not Claude, not a stray request — can delete
  *           a calendar event through this bridge. Removing events stays a manual
  *           action you take in Google Calendar yourself.
  ****************************************************/
@@ -36,7 +36,7 @@ function setCalendarSyncToken() {
 function doGet(e) {
   return jsonResponse_({
     ok: true,
-    service: 'jarvis-calendar-bridge',
+    service: 'adam-calendar-bridge',
     version: 2,
     capabilities: ['list', 'get', 'create', 'update'],
     delete_supported: false,
@@ -246,12 +246,12 @@ function testCalendarBridgeLocal() {
   const start = new Date(now.getTime() + 10 * 60 * 1000);
   const end = new Date(now.getTime() + 20 * 60 * 1000);
   const made = createCalendarEvents_({
-    events: [{ title: 'Jarvis Bridge Self-Test', start: start.toISOString(),
+    events: [{ title: 'Adam Bridge Self-Test', start: start.toISOString(),
                end: end.toISOString(), calendar_id: 'primary',
                description: 'Local bridge test. Delete manually.' }]
   });
   const id = made.created[0].event_id;
   const listed = listCalendarEvents_({ time_min: now.toISOString(), time_max: end.toISOString() });
-  const edited = updateCalendarEvent_({ event_id: id, changes: { title: 'Jarvis Bridge Self-Test (edited)' } });
+  const edited = updateCalendarEvent_({ event_id: id, changes: { title: 'Adam Bridge Self-Test (edited)' } });
   Logger.log(JSON.stringify({ made: made, listed_count: listed.count, edited: edited.updated }, null, 2));
 }

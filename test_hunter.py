@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Hunter Tracker connector tests.
+Adam — Hunter Tracker connector tests.
 
 Self-contained (no network, no Google): monkeypatches config flags and the
 connector's transport to prove:
@@ -134,7 +134,7 @@ def main() -> int:
         body = sent[-1]["body"]
         check("sync used a POST", sent[-1]["method"] == "POST")
         check("token sent in POST body", body["token"] == TOKEN)
-        check("source stamped in POST body", body["source"] == "jarvis-voice-local")
+        check("source stamped in POST body", body["source"] == "adam-local")
         check("token NOT in the POST URL", TOKEN not in sent[-1]["url"])
         # The canonical quest keys must survive untouched — renaming blanks the board.
         q = body["daily_quests"][0]

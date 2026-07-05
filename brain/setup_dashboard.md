@@ -1,12 +1,12 @@
 # Setup: Hunter Dashboard add-on
 
 The dashboard is the gamified XP/stats/quests/bosses board, rendered in your own Google
-Sheet (a full desktop view + a phone view). Optional — everything else in JARVIS works
+Sheet (a full desktop view + a phone view). Optional — everything else in Adam works
 without it.
 
 ## How to set it up — in the app, not here
 
-In Jarvis Voice Local you connect the dashboard through the built-in wizard, which sets up
+In Adam you connect the dashboard through the built-in wizard, which sets up
 the Sheet bridge and token for you. You do **not** edit any config file or run a script.
 
 1. Open the **gear menu → Settings → Add-ons** (or go to **/settings**).
@@ -15,9 +15,9 @@ the Sheet bridge and token for you. You do **not** edit any config file or run a
    (best done on a computer).
 3. When the wizard shows **Enabled**, you're done — it takes effect immediately, no restart.
 
-## How JARVIS uses it once connected
+## How Adam uses it once connected
 
-JARVIS keeps your real state in `11_dashboard/dashboard_state.json` (the single source of
+Adam keeps your real state in `11_dashboard/dashboard_state.json` (the single source of
 truth). When it's time to update the board — daily shutdown, "Give me credit," weekly
 review, or sign-off — it builds a payload from that file and emits a `hunter.sync` action.
 The server sends it to your own Sheet after you approve it. There is no `sheet_sync.json`

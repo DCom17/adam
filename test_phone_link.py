@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — phone-reachable URL detection tests.
+Adam — phone-reachable URL detection tests.
 
 Covers the Tailscale JSON parsing (serve mapping matched to THIS app's port, and the
 MagicDNS fallback), localhost exclusion, and candidate ordering (HTTPS preferred).
@@ -37,9 +37,9 @@ SERVE_JSON = json.dumps({
         }
     },
 })
-# a serve config for a DIFFERENT app (Morrow on 8849) — must NOT match app 8010
+# a serve config for a DIFFERENT app (on 9100) — must NOT match app 8010
 SERVE_JSON_OTHER = json.dumps({
-    "Web": {"chainforge.tail4a86a8.ts.net:443": {"Handlers": {"/": {"Proxy": "http://127.0.0.1:8849"}}}}
+    "Web": {"chainforge.tail4a86a8.ts.net:443": {"Handlers": {"/": {"Proxy": "http://127.0.0.1:9100"}}}}
 })
 STATUS_JSON = json.dumps({"Self": {"DNSName": "chainforge.tail4a86a8.ts.net."}})
 
@@ -75,9 +75,9 @@ def main() -> int:
               best and best["url"] == "https://chainforge.tail4a86a8.ts.net:8443" and best["secure"])
 
         # configured public_base_url wins and is offered first
-        cands2 = pl.phone_urls(8010, public_base_url="https://jarvis.example.com")
+        cands2 = pl.phone_urls(8010, public_base_url="https://adam.example.com")
         check("configured public_base_url is first",
-              cands2 and cands2[0]["url"] == "https://jarvis.example.com")
+              cands2 and cands2[0]["url"] == "https://adam.example.com")
 
         # No Tailscale at all -> only LAN, and best is the LAN url (insecure)
         pl._run_ts = lambda args, timeout=4: None

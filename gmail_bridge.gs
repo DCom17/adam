@@ -1,17 +1,17 @@
-// Jarvis Voice Local — Gmail Bridge (v1)
+// Adam — Gmail Bridge (v1)
 // Paste this whole file into a NEW Apps Script project's Code.gs, run
 // setGmailBridgeToken() once, copy the logged token into your .env as
 // GMAIL_BRIDGE_TOKEN, then Deploy as a Web app (Execute as: Me,
 // Access: Anyone). The setup wizard walks you through every step.
 //
-// This bridge runs entirely in YOUR Google account. Jarvis never sees your
+// This bridge runs entirely in YOUR Google account. Adam never sees your
 // Google password and never holds a Google credential — the bridge only
 // trusts requests that carry the random token YOU generated below.
 //
 /****************************************************
  * WHAT THIS BRIDGE CAN AND CANNOT DO
  *   read  : list inbox/search results, get one message   (action: list / get)
- *   audit : aggregate promotional senders so JARVIS can SUGGEST Gmail filters
+ *   audit : aggregate promotional senders so Adam can SUGGEST Gmail filters
  *           (action: audit) — read-only; it counts senders, it never archives,
  *           deletes, or creates a filter. You apply any suggested filter in
  *           Gmail yourself. Paginated, because a multi-month inbox can exceed the
@@ -20,10 +20,10 @@
  *   send  : send an email                                 (action: send)
  *           — but the SERVER refuses to send unless YOU set allow_send=true,
  *             and even then only after you approve the specific message. Out of
- *             the box Jarvis can only draft.
+ *             the box Adam can only draft.
  *   DELETE / ARCHIVE / TRASH: NOT SUPPORTED. There is deliberately no code path
  *           here that deletes, archives, trashes, or marks mail — so nothing
- *           (not Jarvis, not Claude, not a stray request) can remove or hide a
+ *           (not Adam, not Claude, not a stray request) can remove or hide a
  *           message through this bridge. Those stay manual actions you take in
  *           Gmail yourself.
  ****************************************************/
@@ -49,7 +49,7 @@ function setGmailBridgeToken() {
 function doGet(e) {
   return jsonResponse_({
     ok: true,
-    service: 'jarvis-gmail-bridge',
+    service: 'adam-gmail-bridge',
     version: 1,
     capabilities: ['list', 'get', 'audit', 'create_draft', 'send'],
     delete_supported: false,
@@ -129,7 +129,7 @@ function getMessage_(payload) {
 }
 
 // ---- READ: audit promotional senders (for filter SUGGESTIONS) -------------
-// Aggregates senders over a window so JARVIS can PROPOSE Gmail filters. Strictly
+// Aggregates senders over a window so Adam can PROPOSE Gmail filters. Strictly
 // read-only — it counts and flags, it never archives, deletes, marks, or creates
 // a filter. You apply any suggested filter yourself in Gmail. Paginated via
 // `offset`: a busy multi-month inbox can exceed the Apps Script run limit in one
@@ -217,7 +217,7 @@ function createDraft_(payload) {
 }
 
 // ---- SEND -----------------------------------------------------------------
-// The bridge can technically send, but the JARVIS SERVER refuses to call this
+// The bridge can technically send, but the Adam SERVER refuses to call this
 // unless the user set allow_send=true AND approved the specific message. There
 // is no auto-send path on the client side.
 
@@ -318,7 +318,7 @@ function testGmailBridgeLocal() {
   const listed = listMessages_({ query: 'in:inbox', max: 1 });
   const drafted = createDraft_({
     to: me,
-    subject: 'Jarvis Bridge Self-Test (draft only)',
+    subject: 'Adam Bridge Self-Test (draft only)',
     body: 'Local bridge test draft. Nothing was sent. Delete me manually.'
   });
   Logger.log(JSON.stringify({ account: me, listed_count: listed.count, drafted: drafted }, null, 2));

@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — self-edit auto-rollback tests (Phase 2 self-edit hardening).
+Adam — self-edit auto-rollback tests (Phase 2 self-edit hardening).
 
 Proves the 4th always-on rail (self_edit_guard) end to end, entirely inside a temp
 sandbox (no real app file is ever written, no live data touched):
@@ -207,13 +207,13 @@ def main() -> int:
         seg.health_probe = _orig_probe
 
     # ---------------------------------------------------------- [7] real probe smoke
-    # `import server` runs config.validate(), which needs a configured JARVIS_TOKEN +
+    # `import server` runs config.validate(), which needs a configured ADAM_TOKEN +
     # CLAUDE_EXE. On a real install both are present (the app is running), so the probe
     # is meaningful there. In a bare checkout with no .env we can't boot, so skip rather
     # than report a spurious failure — the stubbed cases above already prove the wiring.
     print("\n[7] The real health probe boots the current tree cleanly")
-    if not getattr(config, "JARVIS_TOKEN", ""):
-        print("  SKIP  real probe (no JARVIS_TOKEN configured in this environment)")
+    if not getattr(config, "ADAM_TOKEN", ""):
+        print("  SKIP  real probe (no ADAM_TOKEN configured in this environment)")
     else:
         healthy, why = seg.health_probe(config.ROOT)
         check("real `import server` probe reports healthy", healthy)

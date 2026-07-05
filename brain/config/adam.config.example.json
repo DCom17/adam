@@ -1,5 +1,5 @@
 {
-  "_comment": "Copy this file to jarvis.config.json and fill in your values. The onboarding flow (BOOTSTRAP.md) fills most of this for you. Secrets do NOT go here — they go in .env (see .env.example).",
+  "_comment": "Copy this file to adam.config.json and fill in your values. The onboarding flow (BOOTSTRAP.md) fills most of this for you. Secrets do NOT go here — they go in .env (see .env.example).",
 
   "owner": {
     "name": "",
@@ -7,7 +7,7 @@
   },
 
   "update": {
-    "_comment": "'Update JARVIS' git-fetches this remote/branch and refreshes only core_manifest.txt files. Defaults are fine for a normal clone; override only if your remote/branch differ.",
+    "_comment": "'Update Adam' git-fetches this remote/branch and refreshes only core_manifest.txt files. Defaults are fine for a normal clone; override only if your remote/branch differ.",
     "remote": "origin",
     "branch": "main"
   },

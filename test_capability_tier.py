@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — capability tier tests (Safe / Powerful / Unrestricted).
+Adam — capability tier tests (Safe / Powerful / Unrestricted).
 
 Proves the front-door capability dial:
   * each tier maps to the right agent mode + permission posture;
@@ -63,7 +63,7 @@ def main() -> int:
     check("powerful STILL confirms destructive", config.PERM_REQUIRE_APPROVAL_DESTRUCTIVE is True)
     check("powerful shell off", config.PERM_ALLOW_SHELL is False)
     check("powerful self-edit off", config.PERM_ALLOW_APP_SELF_EDIT is False)
-    check("powerful can write the vault", any("JARVIS" in d or config.VAULT_PATH == d for d in config.PERM_WRITE_DIRS))
+    check("powerful can write the vault", any("Adam" in d or config.VAULT_PATH == d for d in config.PERM_WRITE_DIRS))
 
     _apply("unrestricted")
     check("unrestricted -> controlled_write (NOT legacy_direct)", config.AGENT_MODE == "controlled_write")

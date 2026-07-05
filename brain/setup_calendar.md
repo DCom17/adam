@@ -1,11 +1,11 @@
 # Setup: Calendar add-on
 
-This lets JARVIS put events on your Google Calendar (creates only — the product has no
-delete or edit-on-sign-off). Optional; the rest of JARVIS works without it.
+This lets Adam put events on your Google Calendar (creates only — the product has no
+delete or edit-on-sign-off). Optional; the rest of Adam works without it.
 
 ## How to set it up — in the app, not here
 
-In Jarvis Voice Local you connect Calendar through the built-in wizard, which creates the
+In Adam you connect Calendar through the built-in wizard, which creates the
 bridge and handles the token for you. You do **not** edit any config file or run a script.
 
 1. Open the **gear menu → Settings → Add-ons** (or go to **/settings**).
@@ -14,9 +14,9 @@ bridge and handles the token for you. You do **not** edit any config file or run
    token — best done on a computer).
 3. When the wizard shows **Enabled**, you're done — it takes effect immediately, no restart.
 
-## How JARVIS uses it once connected
+## How Adam uses it once connected
 
-JARVIS stages your day in `06_calendar/` (packet → preview) and, on sign-off, emits a
+Adam stages your day in `06_calendar/` (packet → preview) and, on sign-off, emits a
 `calendar.create` action. By default that waits for your one-tap approval on screen; if you
 turn on **auto-create on sign-off** (the calendar auto-run toggle in Settings), creates run
 immediately. Mechanism details: `INTEGRATION_EXECUTION.md`.

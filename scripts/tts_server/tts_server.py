@@ -1,7 +1,7 @@
 """
-Jarvis Kokoro TTS service.
+Adam Kokoro TTS service.
 
-Local-only FastAPI service that turns text into Jarvis's voice using the Kokoro
+Local-only FastAPI service that turns text into Adam's voice using the Kokoro
 ONNX model (no PyTorch, no GPU required — real-time on CPU). The main voice
 server proxies to this on 127.0.0.1:8001; it is never exposed to the network.
 
@@ -28,7 +28,7 @@ HERE = Path(__file__).resolve().parent
 MODEL = HERE / "kokoro-v1.0.onnx"
 VOICES = HERE / "voices-v1.0.bin"
 
-# Jarvis register: British male. bm_daniel is the Jarvis voice.
+# Adam register: British male. bm_daniel is the Adam voice.
 DEFAULT_VOICE = "bm_daniel"
 DEFAULT_LANG = "en-gb"
 DEFAULT_SPEED = 1.0
@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Jarvis Kokoro TTS", lifespan=lifespan)
+app = FastAPI(title="Adam Kokoro TTS", lifespan=lifespan)
 
 
 class TTSRequest(BaseModel):

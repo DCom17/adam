@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — proposed-change / safe-agent-mode tests (Phase 3).
+Adam — proposed-change / safe-agent-mode tests (Phase 3).
 
 Self-contained: redirects the policy at a temp sandbox and proves the
 controlled-write flow is the real enforcement boundary:

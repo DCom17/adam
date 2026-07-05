@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for testing! Two rules before you paste anything:
-        - **Never share your `.env`, your `JARVIS_TOKEN`, or your `settings.json`.** No support question requires them.
+        - **Never share your `.env`, your `ADAM_TOKEN`, or your `settings.json`.** No support question requires them.
         - The output of `python scripts/doctor.py` prints no secrets and is safe to share — please include it below.
   - type: input
     id: version
@@ -37,7 +37,7 @@ body:
         - Claude sign-in
         - Generating the token / writing .env
         - The doctor check (scripts/doctor.py)
-        - First launch (START.cmd / start-jarvis.ps1)
+        - First launch (START.cmd / start-adam.ps1)
         - The browser opened but the app didn't work
         - Somewhere else
     validations:

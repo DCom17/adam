@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#030712">
 <meta name="robots" content="noindex, nofollow">
-<title>Operating System — Jarvis</title>
+<title>Operating System — Adam</title>
 <!-- In-app Hunter dashboard. Identical to the Apps Script ?view=mobile screen,
      but rendered here from the live board (GET /integrations/hunter/board) instead
      of being served by Google. Read-only. The bearer token is read from
@@ -1545,12 +1545,12 @@ function finishBoot(floorMs, cb) {
 }
 
 async function loadBoard() {
-  if (!LS.token) { finishBoot(ERR_BOOT_MS, function () { stateMsg("Sign in to Jarvis first."); }); return; }
+  if (!LS.token) { finishBoot(ERR_BOOT_MS, function () { stateMsg("Sign in to Adam first."); }); return; }
   try {
     var r = await fetch(LS.url + "/integrations/hunter/board", {
       headers: { "Authorization": "Bearer " + LS.token }
     });
-    if (r.status === 403) { finishBoot(ERR_BOOT_MS, function () { stateMsg("Your Jarvis session was rejected — sign in again."); }); return; }
+    if (r.status === 403) { finishBoot(ERR_BOOT_MS, function () { stateMsg("Your Adam session was rejected — sign in again."); }); return; }
     var data = await r.json();
     if (!data.ok) {
       finishBoot(ERR_BOOT_MS, function () {
@@ -1562,7 +1562,7 @@ async function loadBoard() {
     }
     finishBoot(MIN_BOOT_MS, function () { render(shape(data.board || {})); });
   } catch (e) {
-    finishBoot(ERR_BOOT_MS, function () { stateMsg("Could not reach your Jarvis server."); });
+    finishBoot(ERR_BOOT_MS, function () { stateMsg("Could not reach your Adam server."); });
   }
 }
 
@@ -1970,7 +1970,7 @@ function render(data) {
       '<div class="section">How To Use This</div>' +
       '<div class="expand-card help-card" onclick="toggleCardV4(this)">' +
         '<div class="card-title">📖 Commands &amp; daily flow</div>' +
-        '<div class="card-sub">New here? Tap to see what to SAY to Jarvis to run your system. ' +
+        '<div class="card-sub">New here? Tap to see what to SAY to Adam to run your system. ' +
           'The board only fills in when you use these.</div>' +
         '<div class="expand-body">' +
           '<div class="detail-line"><strong>☀ Morning:</strong> say <strong>"Good morning"</strong> for your ' +

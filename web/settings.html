@@ -10,7 +10,7 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Jarvis Voice Local — Add-ons</title>
+<title>Adam — Add-ons</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -55,7 +55,7 @@
 <body>
 
 <header>
-  <h1>Add-ons <span class="muted">— Jarvis Voice Local</span></h1>
+  <h1>Add-ons <span class="muted">— Adam</span></h1>
   <span class="spacer"></span>
   <a href="/console" onclick="if(window.parent&&window.parent!==window){event.preventDefault();window.parent.postMessage({jvl:'open-console',hash:''},'*');}">Operator Console</a>
   <button id="refresh" class="hidden">Refresh</button>
@@ -68,9 +68,9 @@
     <div class="head">Sign in</div>
     <div class="body">
       <p class="muted">This page talks to your local server with your bearer token (the same
-        JARVIS_TOKEN the Operator Console uses). It is stored on this device only.</p>
+        ADAM_TOKEN the Operator Console uses). It is stored on this device only.</p>
       <div class="row">
-        <input id="tokenInput" type="password" placeholder="Paste JARVIS_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
+        <input id="tokenInput" type="password" placeholder="Paste ADAM_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
         <button class="primary" id="signIn">Sign in</button>
       </div>
       <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
@@ -82,14 +82,14 @@
 <!-- Add-on cards -->
 <main id="cardsView" class="hidden">
   <p class="muted">Optional capabilities. All are off by default and the core assistant never needs
-    them. Each one is set up with your own account — Jarvis holds no maintainer credentials.</p>
+    them. Each one is set up with your own account — Adam holds no maintainer credentials.</p>
   <section id="phoneCard">
     <div class="head">
       <span>Connect a phone</span>
       <span class="pill available">phone access</span>
     </div>
     <div class="body">
-      <p class="desc">Use Jarvis from your phone over your own private Tailscale network. Opens the
+      <p class="desc">Use Adam from your phone over your own private Tailscale network. Opens the
         Connect-phone tool — scan one code to sign your phone in.</p>
       <div class="cardftr">
         <a class="btn primary" href="/console#connectPhoneSec"
@@ -131,7 +131,7 @@ function enterGate() { show($("gateView")); hide($("cardsView")); hide($("signOu
 async function signIn() {
   var t = $("tokenInput").value.trim();
   var u = $("urlInput").value.trim();
-  if (!t) { $("gateErr").textContent = "Paste your JARVIS_TOKEN."; show($("gateErr")); return; }
+  if (!t) { $("gateErr").textContent = "Paste your ADAM_TOKEN."; show($("gateErr")); return; }
   LS.token = t;
   if (u) LS.url = u;
   try {
@@ -199,7 +199,7 @@ async function loadAddons() {
     list.forEach(function (a) { box.appendChild(renderCard(a)); });
   } catch (e) {
     box.textContent = "";
-    $("loadErr").textContent = "Could not reach your Jarvis server.";
+    $("loadErr").textContent = "Could not reach your Adam server.";
     show($("loadErr"));
   }
 }

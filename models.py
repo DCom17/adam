@@ -1,4 +1,4 @@
-"""Request models for the Jarvis Voice Local API.
+"""Request models for the Adam API.
 
 Split out of server.py so the router modules can import them without pulling
 in the whole app. server.py re-exports every name for back-compat."""
@@ -224,7 +224,7 @@ class VoicemailWireRequest(BaseModel):
 
 
 class VoicemailGreetingRequest(BaseModel):
-    """A wizard 'Hear my greeting' action: render the greeting in Jarvis's Kokoro
+    """A wizard 'Hear my greeting' action: render the greeting in Adam's Kokoro
     voice (bm_daniel) via the local tts_server and return the audio to preview. No
     credentials involved; nothing is saved or enabled."""
     text: str | None = ""

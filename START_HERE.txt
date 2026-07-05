@@ -1,5 +1,5 @@
 ===========================================================
-  JARVIS VOICE LOCAL  -  START HERE
+  ADAM LOCAL  -  START HERE
 ===========================================================
 
 Welcome! Setting this up is easy. You do not need to be technical.
@@ -9,14 +9,14 @@ FIRST - GET IT ONTO YOUR COMPUTER
 ---------------------------------
 
   You were sent a link to a download page. Here is how to get
-  Jarvis from it and open it up:
+  Adam from it and open it up:
 
   1. DOWNLOAD it. On the page you were sent, find the section
      called  Assets  (click it if it's collapsed). Click the file
-     named  jarvis-voice-local-... .zip  to download it. Your
+     named  adam-local-... .zip  to download it. Your
      browser saves it to your  Downloads  folder.
 
-     IMPORTANT: download the  jarvis-voice-local-....zip  file -
+     IMPORTANT: download the  adam-local-....zip  file -
      NOT the one labeled "Source code (zip)". Only the first one
      is the actual app.
 
@@ -53,57 +53,57 @@ HOW TO SET IT UP
        - Copy the code the website gives you and paste it back
          into the black window, then press Enter.
        - If it asks whether you trust the files in this folder,
-         choose YES - it's your own copy of Jarvis.
+         choose YES - it's your own copy of Adam.
      (This is the one part only you can do - it's your own
      account. No Claude account yet? You can create one here.)
 
-  4. When it finishes, Windows may ask whether to allow Jarvis
+  4. When it finishes, Windows may ask whether to allow Adam
      (or "Python") to make changes or access the network - click
-     Allow / Yes. Then Jarvis opens in your web browser, already
+     Allow / Yes. Then Adam opens in your web browser, already
      signed in.
 
-  5. KEEP THE JARVIS WINDOW OPEN. Jarvis runs inside a separate
+  5. KEEP THE Adam WINDOW OPEN. Adam runs inside a separate
      window that opened during setup. You can MINIMIZE it, but
-     DON'T CLOSE it - closing that window turns Jarvis off.
-     (To stop Jarvis on purpose, just close that window.)
+     DON'T CLOSE it - closing that window turns Adam off.
+     (To stop Adam on purpose, just close that window.)
 
 
 OPENING IT AGAIN LATER
 ----------------------
 
-  Setup added a "Jarvis Voice Local" icon to your Desktop and
+  Setup added a "Adam" icon to your Desktop and
   Start Menu - open it from there, like any app. (Double-clicking
   START in this folder still works too.)
 
-  Tip: while Jarvis is open in your browser, click the Install
+  Tip: while Adam is open in your browser, click the Install
   icon in the address bar (or the browser menu -> "Install
-  Jarvis") to give it its own app window you can pin to the
+  Adam") to give it its own app window you can pin to the
   taskbar.
 
 
-THE REAL JARVIS VOICE (OPTIONAL)
+THE REAL ADAM (OPTIONAL)
 --------------------------------
 
-  Jarvis starts out using your browser's built-in (robotic) voice.
-  For the real, natural Jarvis voice, double-click  INSTALL-VOICE
+  Adam starts out using your browser's built-in (robotic) voice.
+  For the real, natural Adam voice, double-click  INSTALL-VOICE
   - a one-time ~340 MB download that runs on your PC. Restart
-  Jarvis afterward to hear it. Setup also offers this at the end.
+  Adam afterward to hear it. Setup also offers this at the end.
 
 
 KEEPING IT UPDATED
 ------------------
 
-  Jarvis updates itself - you do NOT re-download or reinstall.
+  Adam updates itself - you do NOT re-download or reinstall.
 
-  When a newer version is available, Jarvis shows a green
+  When a newer version is available, Adam shows a green
   "Update available" bar at the top with an  Update now  button.
-  Click it; Jarvis downloads the update and keeps your token,
+  Click it; Adam downloads the update and keeps your token,
   settings, files, AND any customizations you've made.
 
   IMPORTANT to finish: you must restart the SERVER. Fully close
-  the BLACK window titled "Jarvis Voice Local" (that's the server)
-  - closing the Jarvis browser app is NOT enough - then reopen
-  Jarvis from your desktop icon. The new version isn't active
+  the BLACK window titled "Adam" (that's the server)
+  - closing the Adam browser app is NOT enough - then reopen
+  Adam from your desktop icon. The new version isn't active
   until you do.
 
   (Prefer to do it by hand? Double-clicking  UPDATE  in this
@@ -136,6 +136,6 @@ IF SOMETHING GOES WRONG
     SETUP again.
 
 
-Your data stays on YOUR computer. Jarvis runs locally and uses
+Your data stays on YOUR computer. Adam runs locally and uses
 your own Claude account. Nothing is shared or sent to anyone else.
 ===========================================================

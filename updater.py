@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — GitHub Releases update channel.
+Adam — GitHub Releases update channel.
 
 The old model pinned every install to ONE Google Drive file and made the build BE
 that file, so publishing meant swapping the file's bytes in place ("Manage
@@ -29,7 +29,7 @@ import config
 import update_engine
 
 _API = "https://api.github.com/repos/{repo}/releases/latest"
-_UA = "jarvis-voice-local-updater"
+_UA = "adam-local-updater"
 
 # A short cache so the banner check doesn't hammer GitHub's unauthenticated rate
 # limit (60/hr/IP) on every page load.

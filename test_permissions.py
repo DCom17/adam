@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — permission-system tests.
+Adam — permission-system tests.
 
 Self-contained: it redirects the permission policy at a temporary sandbox (so it
 never touches your real data/ tree), then exercises every layer:

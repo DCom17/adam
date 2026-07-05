@@ -10,7 +10,7 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Jarvis Voice Local — Operating System Setup</title>
+<title>Adam — Operating System Setup</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -61,7 +61,7 @@
 <body>
 
 <header>
-  <h1>Operating System Setup <span class="muted">— Jarvis Voice Local</span></h1>
+  <h1>Operating System Setup <span class="muted">— Adam</span></h1>
   <span class="spacer"></span>
   <a href="/console">Operator Console</a>
   <button id="signOut" class="hidden">Sign out</button>
@@ -73,13 +73,13 @@
     <div class="head">Sign in</div>
     <div class="body">
       <p class="muted">This page talks to your local server with your bearer token (the same
-        JARVIS_TOKEN the Operator Console uses). It is stored on this device only.</p>
-      <p class="muted">Easiest way in: on your computer, start Jarvis with the <b>Start Jarvis</b>
-        launcher (<code>scripts\start-jarvis.ps1</code>) — it opens you already signed in, so you
+        ADAM_TOKEN the Operator Console uses). It is stored on this device only.</p>
+      <p class="muted">Easiest way in: on your computer, start Adam with the <b>Start Adam</b>
+        launcher (<code>scripts\start-adam.ps1</code>) — it opens you already signed in, so you
         won't see this box. On a phone, open the Operator Console's <b>Connect phone</b> and scan the
         sign-in QR. To copy the token by hand, run <code>scripts\copy-token.ps1</code> and paste it above.</p>
       <div class="row">
-        <input id="tokenInput" type="password" placeholder="Paste JARVIS_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
+        <input id="tokenInput" type="password" placeholder="Paste ADAM_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
         <button class="primary" id="signIn">Sign in</button>
       </div>
       <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
@@ -95,7 +95,7 @@
     <div class="body">
       <div class="warnbox">The Operating System is <b>opt-in</b> and stays <b>disabled</b> until you
 finish setup. It runs entirely in <b>your own</b> Google account, in a Google Sheet <b>you</b> create.
-Jarvis never holds your Google password. It can read your board, and write the XP, quests, and stats you
+Adam never holds your Google password. It can read your board, and write the XP, quests, and stats you
 approve. It <b>cannot delete</b> rows or tabs through the bridge.</div>
     </div>
   </section>
@@ -155,7 +155,7 @@ approve. It <b>cannot delete</b> rows or tabs through the bridge.</div>
             function — <code>setHunterToken</code> — then click <b><span class="ui">&#9654; Run</span></b>.</p>
           <p class="muted">The <b>Execution log</b> opens at the bottom and prints a line like
             <code>HUNTER_TOKEN=abc123…</code>. <b>Copy everything after the <code>=</code> sign</b> — that long
-            value is your bridge token. (Jarvis saves it for you below — you don't edit any file by hand.)</p>
+            value is your bridge token. (Adam saves it for you below — you don't edit any file by hand.)</p>
         </li>
         <li>
           <h3>Deploy as a Web app</h3>
@@ -185,7 +185,7 @@ approve. It <b>cannot delete</b> rows or tabs through the bridge.</div>
             <input id="bridgeToken" type="password" placeholder="the HUNTER_TOKEN you generated" style="flex:1;min-width:260px;" autocomplete="off">
           </div>
           <p class="muted">Your token is sent only to your own bridge. When you click <b>Enable Operating System</b>
-            below, Jarvis saves it to your local <code>.env</code> for you — you never edit a file by hand. It is
+            below, Adam saves it to your local <code>.env</code> for you — you never edit a file by hand. It is
             never put in a link and never logged.</p>
         </li>
         <li>
@@ -205,7 +205,7 @@ approve. It <b>cannot delete</b> rows or tabs through the bridge.</div>
   <section id="finishSec" class="hidden">
     <div class="head">&#10003; Verified — turn it on</div>
     <div class="body">
-      <p>Your bridge is live and your token works. One click and Jarvis writes its own settings for
+      <p>Your bridge is live and your token works. One click and Adam writes its own settings for
         you — no editing files, no copying JSON.</p>
       <div class="row">
         <button class="primary" id="enableBtn">Enable Operating System</button>
@@ -218,8 +218,8 @@ approve. It <b>cannot delete</b> rows or tabs through the bridge.</div>
           rather edit the files yourself:</p>
         <p class="muted"><b>1. Add your token to <code>.env</code>:</b></p>
         <ul class="fine">
-          <li>Open <b>File Explorer</b> and go to your Jarvis folder
-            (<code>C:\Users\you\jarvis-voice-local</code>).</li>
+          <li>Open <b>File Explorer</b> and go to your Adam folder
+            (<code>C:\Users\you\adam-local</code>).</li>
           <li>Find the file named <code>.env</code> and double-click it. If Windows asks how to open it,
             choose <b>Notepad</b>.</li>
           <li>Scroll to the <b>Hunter dashboard bridge</b> line and put your token right after the
@@ -231,7 +231,7 @@ approve. It <b>cannot delete</b> rows or tabs through the bridge.</div>
         <pre class="snippet" id="settingsSnippet"></pre>
         <button id="copySettings">Copy settings block</button>
         <div class="warnbox" style="margin-top:10px;">Either way, the Operating System stays <b>off</b> until you
-          <b>restart Jarvis</b>.</div>
+          <b>restart Adam</b>.</div>
       </details>
     </div>
   </section>
@@ -240,16 +240,16 @@ approve. It <b>cannot delete</b> rows or tabs through the bridge.</div>
   <section id="doneSec" class="hidden">
     <div class="head">&#10003; Operating System enabled</div>
     <div class="body">
-      <div class="okbox">Saved. Jarvis wrote your settings and your token for you.</div>
-      <p><b>One more step:</b> restart Jarvis so it loads the new setting.</p>
+      <div class="okbox">Saved. Adam wrote your settings and your token for you.</div>
+      <p><b>One more step:</b> restart Adam so it loads the new setting.</p>
       <ul class="fine">
-        <li>Close the <b>black "Jarvis Voice Local" window</b> (closing just the app/browser tab is not
+        <li>Close the <b>black "Adam" window</b> (closing just the app/browser tab is not
           enough — the server runs in that black window).</li>
-        <li>Start Jarvis again with your usual launcher.</li>
+        <li>Start Adam again with your usual launcher.</li>
       </ul>
       <p style="margin-top:12px;">Then try saying or typing:</p>
-      <div class="example">"Jarvis, show me my Operating System."</div>
-      <p class="muted">Jarvis reads your board directly; writing XP, quests, or stats always asks you to
+      <div class="example">"Adam, show me my Operating System."</div>
+      <p class="muted">Adam reads your board directly; writing XP, quests, or stats always asks you to
         confirm first. It can't delete rows or tabs.</p>
     </div>
   </section>
@@ -284,7 +284,7 @@ function enterGate() { show($("gateView")); hide($("wizardView")); hide($("signO
 async function signIn() {
   var t = $("tokenInput").value.trim();
   var u = $("urlInput").value.trim();
-  if (!t) { $("gateErr").textContent = "Paste your JARVIS_TOKEN."; show($("gateErr")); return; }
+  if (!t) { $("gateErr").textContent = "Paste your ADAM_TOKEN."; show($("gateErr")); return; }
   LS.token = t;
   if (u) LS.url = u;
   // Verify the token against a cheap token-gated route before entering.
@@ -328,7 +328,7 @@ async function testConnection() {
       body: JSON.stringify({ bridge_url: url, token: token })
     });
     $("testStatus").textContent = "";
-    if (r.status === 403) { $("testErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("testErr")); return; }
+    if (r.status === 403) { $("testErr").textContent = "Your Adam session was rejected — sign in again."; show($("testErr")); return; }
     var data = await r.json();
     if (data.ok) {
       var q = (typeof data.quest_count === "number") ? data.quest_count : "?";
@@ -342,7 +342,7 @@ async function testConnection() {
     }
   } catch (e) {
     $("testStatus").textContent = "";
-    $("testErr").textContent = "Could not reach your Jarvis server to run the test.";
+    $("testErr").textContent = "Could not reach your Adam server to run the test.";
     show($("testErr"));
   }
 }
@@ -381,7 +381,7 @@ async function enableHunter() {
       body: JSON.stringify({ bridge_url: url, token: token })
     });
     $("enableStatus").textContent = "";
-    if (r.status === 403) { $("enableErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
+    if (r.status === 403) { $("enableErr").textContent = "Your Adam session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
     var data = await r.json();
     if (data.ok) {
       hide($("finishSec"));
@@ -393,7 +393,7 @@ async function enableHunter() {
     }
   } catch (e) {
     $("enableStatus").textContent = "";
-    $("enableErr").textContent = "Could not reach your Jarvis server to save the setting.";
+    $("enableErr").textContent = "Could not reach your Adam server to save the setting.";
     show($("enableErr"));
     $("enableBtn").disabled = false;
   }

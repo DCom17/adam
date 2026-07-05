@@ -1,4 +1,4 @@
-/* JARVIS service worker — offline shell + Web Push delivery.
+/* Adam service worker — offline shell + Web Push delivery.
  *
  * Two jobs:
  *   1. Offline shell: precache the tiny app shell so a launch with no network
@@ -14,7 +14,7 @@
  * fall back to cache only when the network fails), so a redeploy is picked up on
  * the next online launch. Only the static icon/manifest are served cache-first.
  */
-const CACHE = "jarvis-shell-v1";
+const CACHE = "adam-shell-v1";
 const SHELL = ["/", "/manifest.json", "/icon.png"];
 
 self.addEventListener("install", (event) => {
@@ -73,8 +73,8 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch (_) {}
-  // iOS already shows "from JARVIS" as the source line, so use the reply itself
-  // as the title instead of a redundant "JARVIS" — no body line needed.
+  // iOS already shows "from Adam" as the source line, so use the reply itself
+  // as the title instead of a redundant "Adam" — no body line needed.
   const title = data.body || data.title || "Done, sir.";
 
   // Always show — iOS requires a notification per push, and the SERVER already
@@ -84,7 +84,7 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(title, {
       icon: "/icon.png",
       badge: "/icon.png",
-      tag: "jarvis-result",   // collapse to one standing notification
+      tag: "adam-result",   // collapse to one standing notification
       renotify: true,
       data: { ts: data.ts || 0, session_id: data.session_id || "" },
     })
@@ -97,7 +97,7 @@ self.addEventListener("notificationclick", (event) => {
     const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     for (const c of wins) {
       if ("focus" in c) {
-        c.postMessage({ type: "jarvis-open-play" });
+        c.postMessage({ type: "adam-open-play" });
         return c.focus();
       }
     }

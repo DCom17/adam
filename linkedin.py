@@ -1,11 +1,11 @@
 """
-Jarvis Voice Local — LinkedIn connector (opt-in, off by default).
+Adam — LinkedIn connector (opt-in, off by default).
 
 This is the server-side client for the user's OWN LinkedIn presence. It has two
 lanes, both opt-in:
 
   Lane 1 — DRAFT (default, the real product):
-    Jarvis writes a post (or profile text) and packages it as a draft. The draft
+    Adam writes a post (or profile text) and packages it as a draft. The draft
     routes through the normal approval/drafts flow and the user copies it into
     LinkedIn by hand. NO network, NO credentials, NO automation. draft_post()
     is the whole surface — it just shapes text.
@@ -28,11 +28,11 @@ Trust model (mirrors the calendar/secret pattern):
 
 Honest constraints (surfaced in the wizard, not oversold):
   * No useful READ surface — the self-serve API will not return the user's feed
-    or other people's posts. Jarvis cannot "read your LinkedIn."
+    or other people's posts. Adam cannot "read your LinkedIn."
   * The member token is short-lived (~60 days, no long-lived PAT). The user
     re-pastes it when it expires.
   * Account/profile *creation* is NOT automated (it violates LinkedIn's User
-    Agreement). "Profile text" here means Jarvis drafting copy the user pastes in
+    Agreement). "Profile text" here means Adam drafting copy the user pastes in
     manually — same draft lane, no automation, no scraping, no headless browser,
     no cookie automation, ever.
 
@@ -134,7 +134,7 @@ def draft_post(topic: str, tone: str = "professional", length: str = "medium") -
     """Shape a LinkedIn post draft from a topic. NO network, NO credential — this
     only packages text for the draft-file / approval path. The returned dict is a
     spec the caller writes into data/drafts/; the user copies the body into
-    LinkedIn by hand. (Profile-text drafting uses this same path — Jarvis never
+    LinkedIn by hand. (Profile-text drafting uses this same path — Adam never
     writes a LinkedIn profile.)"""
     topic = (topic or "").strip()
     if not topic:
@@ -270,4 +270,4 @@ def create_post(text: str, author_urn: str | None = None) -> dict:
     return {"ok": True, "post_id": res.get("_post_id") or res.get("id", "")}
 
 # NOTE: there is intentionally no delete_post()/unpost(). Removing a post is
-# unsupported by design, so it cannot happen through Jarvis.
+# unsupported by design, so it cannot happen through Adam.

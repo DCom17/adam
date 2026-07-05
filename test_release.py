@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — release packaging tests (v0.9.0, Slice 3).
+Adam — release packaging tests (v0.9.0, Slice 3).
 
 Proves the allow-list release builder is secret-safe:
   * the staged set INCLUDES the core product files, templates, user-facing docs, and
@@ -86,7 +86,7 @@ def main() -> int:
               "web/icon.png"):
         check(f"includes {f}", f in relset)
     for f in ("scripts/setup.py", "scripts/doctor.py", "scripts/make_release.py",
-              "scripts/make_release.ps1", "scripts/start-jarvis.ps1",
+              "scripts/make_release.ps1", "scripts/start-adam.ps1",
               "scripts/connect-phone.py", "scripts/connect-phone.ps1",
               "scripts/copy-token.ps1"):
         check(f"includes {f}", f in relset)
@@ -134,7 +134,7 @@ def main() -> int:
             return True
 
     for bad in (".env", "settings.json", "server.py.pre-v0.9.bak",
-                "data/state/jarvis.db", "scripts/__pycache__/x.pyc",
+                "data/state/adam.db", "scripts/__pycache__/x.pyc",
                 "vapid_private.pem", "config.py.pre-v0.8.2-bump.bak"):
         check(f"guard raises on {bad!r}", _guard_raises(bad))
     # And it must NOT trip on the legitimately-shippable exceptions.
@@ -151,7 +151,7 @@ def main() -> int:
         # lands SETUP directly in the extracted folder, not one level deeper.
         members = [n for n in names if not n.endswith("/")]
         check("zip has NO internal wrapper folder (files at root)",
-              not any(n.startswith("jarvis-voice-local-v") for n in names))
+              not any(n.startswith("adam-local-v") for n in names))
         check("consumer entry points sit at the zip root",
               "SETUP.cmd" in members and "START_HERE.txt" in members)
         offenders = [m for m in members if _excluded_member(m)]
@@ -181,7 +181,7 @@ def main() -> int:
         if produced:
             name = produced[0].name
             check(f"default zip name carries v{expected} (not v0.0.0)",
-                  name == f"jarvis-voice-local-v{expected}.zip")
+                  name == f"adam-local-v{expected}.zip")
             with zipfile.ZipFile(produced[0]) as z:
                 cli_members = [n for n in z.namelist() if not n.endswith("/")]
             check("CLI-built zip is still secret-free",
@@ -195,7 +195,7 @@ def main() -> int:
         check("override build exits 0", r.returncode == 0)
         produced = list(Path(td).glob("*.zip"))
         check("override zip name uses the supplied version",
-              len(produced) == 1 and produced[0].name == "jarvis-voice-local-v9.9.9-test.zip")
+              len(produced) == 1 and produced[0].name == "adam-local-v9.9.9-test.zip")
 
     print("\n[9] Brain bundle ships and is content-guarded")
     brain_rels = [r for r in rels if r.startswith("brain/")]
@@ -209,7 +209,7 @@ def main() -> int:
         check("clean brain passes the content guard", False)
     check("no real brain .env shipped", "brain/.env" not in relset)
     check("no real brain config.json shipped",
-          not any(r.startswith("brain/") and r.endswith("config/jarvis.config.json") for r in rels))
+          not any(r.startswith("brain/") and r.endswith("config/adam.config.json") for r in rels))
     _blic = ROOT / "brain" / "LICENSE"
     check("brain LICENSE carries no forbidden content",
           (not mr._BRAIN_FORBIDDEN.search(_blic.read_text("utf-8", errors="ignore")))

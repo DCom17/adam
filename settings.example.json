@@ -3,15 +3,15 @@
 
   "claude_exe": "",
 
-  "_ai_plan_comment": "How Claude usage is paid for. auth_mode 'subscription' (default) = your Claude Pro/Max login covers usage at the plan's flat rate; recommended model: Opus. auth_mode 'api_key' = pay-as-you-go on your own Anthropic API key (stored in .env as ANTHROPIC_API_KEY, reaches only the spawned claude.exe); recommended model: Sonnet. api_budget_monthly_usd is the pay-as-you-go monthly ceiling — Jarvis pauses (never overspends) when the month's metered cost reaches it; 0 disables the ceiling. Change all of this from Settings -> AI plan in the app.",
+  "_ai_plan_comment": "How Claude usage is paid for. auth_mode 'subscription' (default) = your Claude Pro/Max login covers usage at the plan's flat rate; recommended model: Opus. auth_mode 'api_key' = pay-as-you-go on your own Anthropic API key (stored in .env as ANTHROPIC_API_KEY, reaches only the spawned claude.exe); recommended model: Sonnet. api_budget_monthly_usd is the pay-as-you-go monthly ceiling — Adam pauses (never overspends) when the month's metered cost reaches it; 0 disables the ceiling. Change all of this from Settings -> AI plan in the app.",
   "auth_mode": "subscription",
   "voice_model": "claude-opus-4-8",
   "api_budget_monthly_usd": 10,
 
-  "_capability_tier_comment": "How much Jarvis may do on its own. 'safe' (default) = proposes changes, you approve. 'powerful' = auto-applies non-destructive changes across your vault (destructive still confirmed), connectors on. 'unrestricted' = full power: self-edit, shell, write across vault+app, auto-approve everything. Backup-before-write, the audit log, and secret-file protection stay ON at EVERY tier (full power stays recoverable). Leave blank to hand-tune the granular agent_safety/permissions blocks instead.",
+  "_capability_tier_comment": "How much Adam may do on its own. 'safe' (default) = proposes changes, you approve. 'powerful' = auto-applies non-destructive changes across your vault (destructive still confirmed), connectors on. 'unrestricted' = full power: self-edit, shell, write across vault+app, auto-approve everything. Backup-before-write, the audit log, and secret-file protection stay ON at EVERY tier (full power stays recoverable). Leave blank to hand-tune the granular agent_safety/permissions blocks instead.",
   "capability_tier": "safe",
 
-  "_vault_path_comment": "Default = the bundled Jarvis brain (de-personalized OS that ships with the app). Point elsewhere only to run Jarvis against a different folder of your own files.",
+  "_vault_path_comment": "Default = the bundled Adam brain (de-personalized OS that ships with the app). Point elsewhere only to run Adam against a different folder of your own files.",
   "vault_path": "brain",
   "work_extra_dirs": [],
 

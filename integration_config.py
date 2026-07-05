@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — first-party integration config writer.
+Adam — first-party integration config writer.
 
 Turning an add-on ON means writing two of the app's OWN config files: the
 non-secret block in settings.json and the secret token in .env. Doing that by

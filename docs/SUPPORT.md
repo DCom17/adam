@@ -1,7 +1,7 @@
 # Support & Scope (v0.9 friends-&-family beta)
 
 What this beta supports, what it requires, and what it deliberately does **not** do
-yet. Jarvis Voice Local is **local-first**: you run the backend on your own machine,
+yet. Adam is **local-first**: you run the backend on your own machine,
 with your own Claude Code credentials, against your own files. There is no hosted
 service and nothing is routed through anyone else's account.
 

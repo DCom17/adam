@@ -32,10 +32,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="JARVIS" />
+<meta name="apple-mobile-web-app-title" content="Adam" />
 <link rel="manifest" href="/manifest.json" />
 <link rel="apple-touch-icon" href="/icon.png" />
-<title>JARVIS</title>
+<title>Adam</title>
 <style>
   :root {
     --bg: #05070d;
@@ -73,7 +73,7 @@
   header > .gear { grid-column: 1; justify-self: start; }
   .hdr-right { grid-column: 3; display: flex; align-items: center; justify-self: end; }
   /* Absolutely center the brand on the viewport. The right cluster has two buttons
-     vs. one on the left, so on narrow mobile its wider grid track pushed "JARVIS"
+     vs. one on the left, so on narrow mobile its wider grid track pushed "Adam"
      left. Anchoring it to 50% keeps it centered regardless of side-button width. */
   .brand { position: absolute; left: 50%; transform: translateX(-50%); font-size: 18px; letter-spacing: 6px; color: var(--cyan); font-weight: 600; }
   .gear {
@@ -97,7 +97,7 @@
   .transcript .you:not(:first-child) {
     margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(92,107,133,.25);
   }
-  .transcript .jarvis { color: var(--cyan); }
+  .transcript .adam { color: var(--cyan); }
   .transcript .interim { color: var(--dim); font-style: italic; opacity: .65; margin-top: 8px; }
   .err { color: var(--danger); font-size: 13px; min-height: 18px; }
   /* Stop the running turn — appears under the label only while the ACTIVE chat is
@@ -270,7 +270,7 @@
     background: var(--cyan); color: #03121a; font-weight: 700; font-size: 15px; cursor: pointer;
   }
   .hint { font-size: 11px; color: var(--dim); margin-top: 10px; line-height: 1.4; }
-  /* --- Text composer (type / paste, same pipeline + JARVIS voice) --- */
+  /* --- Text composer (type / paste, same pipeline + Adam voice) --- */
   .composer { width: 100%; display: flex; gap: 8px; align-items: flex-end; }
   .composer textarea {
     flex: 1; resize: none; height: 46px; max-height: 120px; padding: 12px 14px;
@@ -294,7 +294,7 @@
   .composer.has-text .send {
     border-color: var(--cyan); background: rgba(33,230,255,.1); color: var(--cyan);
   }
-  /* Until JARVIS is engaged, show only ACTIVATE + MUTE. The composer, work/replay
+  /* Until Adam is engaged, show only ACTIVATE + MUTE. The composer, work/replay
      row, and attachment chips appear once activated — so a typed turn can't be fired
      into a dead (non-polling) state. Mute stays so the mic can be pre-muted. */
   body:not(.engaged) #attachChips,
@@ -343,7 +343,7 @@
       </div>
     </header>
 
-    <!-- View switcher (tap the JARVIS brand) + full-screen Hunter dashboard overlay -->
+    <!-- View switcher (tap the Adam brand) + full-screen Hunter dashboard overlay -->
     <style>
       .brand { cursor: pointer; }
       #viewMenu, #gearMenu { position: fixed; top: 52px; left: 50%; transform: translateX(-50%);
@@ -378,15 +378,15 @@
     <div id="gearMenu" role="menu" aria-label="Settings menu">
       <button id="gearSettings" role="menuitem"><span class="mi">⚙</span>Sign in</button>
       <button id="gearAddons" role="menuitem"><span class="mi">✚</span>Add-ons</button>
-      <button id="gearCapability" role="menuitem" title="How much Jarvis can do on its own. Safe = proposes only, you approve. Powerful = acts on your vault automatically (destructive changes still confirmed). Unrestricted = full power incl. shell + editing its own code, auto-approves everything. Backups, audit log, and secret-file protection stay ON at every level — full power stays recoverable."><span class="mi">⚡</span>Capability: <span id="capTierState">…</span></button>
-      <button id="gearAiPlan" role="menuitem" title="How Jarvis's AI time is paid for. Sign in with Claude = your Claude Pro/Max plan covers it, flat rate. Pay as you go = your own prepaid Anthropic API key, with a monthly budget Jarvis will not exceed and a live cost meter."><span class="mi">💳</span>AI plan: <span id="aiPlanState">…</span></button>
+      <button id="gearCapability" role="menuitem" title="How much Adam can do on its own. Safe = proposes only, you approve. Powerful = acts on your vault automatically (destructive changes still confirmed). Unrestricted = full power incl. shell + editing its own code, auto-approves everything. Backups, audit log, and secret-file protection stay ON at every level — full power stays recoverable."><span class="mi">⚡</span>Capability: <span id="capTierState">…</span></button>
+      <button id="gearAiPlan" role="menuitem" title="How Adam's AI time is paid for. Sign in with Claude = your Claude Pro/Max plan covers it, flat rate. Pay as you go = your own prepaid Anthropic API key, with a monthly budget Adam will not exceed and a live cost meter."><span class="mi">💳</span>AI plan: <span id="aiPlanState">…</span></button>
       <button id="gearAutoCal" role="menuitem" title="Calendar add/edit requests are approved automatically and run immediately instead of waiting for you to tap Approve. Code changes still need approval."><span class="mi">🗓</span>Auto-approve calendar: <span id="autoCalState">…</span></button>
       <button id="gearAutoHunter" role="menuitem" title="Dashboard syncs are pushed automatically and run immediately instead of waiting for you to tap Approve, so daily planning and shutdown update your Operating System board hands-free. The board has no delete path, so this is safe; code changes still need approval."><span class="mi">📊</span>Auto-sync dashboard: <span id="autoHunterState">…</span></button>
       <button id="gearNotify" role="menuitem" title="Turn on push notifications on THIS device — SMS replies, briefings and reminders arrive even with the app closed. On iPhone, Add to Home Screen first, then enable from the app icon."><span class="mi">🔔</span>Notifications: <span id="notifState">…</span></button>
       <button id="gearSound" role="menuitem" title="Interface sounds — the boot cue, send/reply chimes, operator toggle, thinking pulse and fault tone. All synthesized on-device; turn off for silence."><span class="mi">🎚</span>Interface sound: <span id="soundState">…</span></button>
-      <button id="gearVoice" role="menuitem" style="display:none" title="You're on your browser's built-in robotic voice. For the real Jarvis voice (a natural on-device voice), double-click INSTALL-VOICE in your Jarvis folder (a one-time ~340 MB download), then restart Jarvis. This row disappears once the real voice is installed."><span class="mi">🔊</span>Real voice: <span id="voiceState">…</span></button>
+      <button id="gearVoice" role="menuitem" style="display:none" title="You're on your browser's built-in robotic voice. For the real Adam voice (a natural on-device voice), double-click INSTALL-VOICE in your Adam folder (a one-time ~340 MB download), then restart Adam. This row disappears once the real voice is installed."><span class="mi">🔊</span>Real voice: <span id="voiceState">…</span></button>
       <button id="gearConsole" role="menuitem"><span class="mi">▦</span>Operator Console</button>
-      <div id="gearVersion" style="padding:9px 16px 10px;font-size:11px;letter-spacing:1px;color:#5f8a96;border-top:1px solid rgba(33,230,255,.14);">Jarvis Voice Local <span id="gearVersionNum">—</span></div>
+      <div id="gearVersion" style="padding:9px 16px 10px;font-size:11px;letter-spacing:1px;color:#5f8a96;border-top:1px solid rgba(33,230,255,.14);">Adam <span id="gearVersionNum">—</span></div>
     </div>
     <div id="dashOverlay" aria-hidden="true">
       <div class="dash-bar">
@@ -449,7 +449,7 @@
         <button class="replay half" id="replayBtn" title="Speak the last reply again" disabled>🔊 REPLAY</button>
       </div>
       <button class="mute" id="mute">MUTE MIC</button>
-      <button class="activate" id="activate">ACTIVATE JARVIS</button>
+      <button class="activate" id="activate">ACTIVATE Adam</button>
     </div>
   </div>
 
@@ -464,7 +464,7 @@
       <button type="button" class="adv" id="advToggle">Advanced ▾</button>
       <div class="adv-fields" id="advFields">
         <label for="url">Server URL</label>
-        <input id="url" type="url" inputmode="url" placeholder="https://jarvis.example.com"
+        <input id="url" type="url" inputmode="url" placeholder="https://adam.example.com"
                autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
       </div>
       <button class="save" id="save">SAVE</button>
@@ -489,15 +489,15 @@
   <div class="modal" id="aiPlanModal">
     <div class="card" style="max-width:416px; text-align:left;">
       <h2 style="margin:0 0 6px;">AI PLAN</h2>
-      <div style="font-size:12.5px;color:#7fb6c4;margin-bottom:12px;">How Jarvis's AI time is paid for. Pick a door — you can switch anytime.</div>
+      <div style="font-size:12.5px;color:#7fb6c4;margin-bottom:12px;">How Adam's AI time is paid for. Pick a door — you can switch anytime.</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button type="button" class="plan-door" id="doorSub">
           <b>Sign in with Claude <span class="pd-badge" id="doorSubBadge"></span></b>
-          <small>Already have a Claude plan (Pro or Max)? Jarvis runs on it — flat rate, no meter, nothing extra to pay. Recommended for regular daily use.</small>
+          <small>Already have a Claude plan (Pro or Max)? Adam runs on it — flat rate, no meter, nothing extra to pay. Recommended for regular daily use.</small>
         </button>
         <button type="button" class="plan-door" id="doorKey">
           <b>Pay as you go <span class="pd-badge" id="doorKeyBadge"></span></b>
-          <small>No subscription needed. Load prepaid credit onto an Anthropic API key — like an arcade card: $5 is roughly 200–300 conversations, and it only reloads when you say so. Jarvis can never spend past your credit, and the monthly budget below adds its own hard stop.</small>
+          <small>No subscription needed. Load prepaid credit onto an Anthropic API key — like an arcade card: $5 is roughly 200–300 conversations, and it only reloads when you say so. Adam can never spend past your credit, and the monthly budget below adds its own hard stop.</small>
         </button>
       </div>
       <div id="keyFields" style="display:none;margin-top:12px;">
@@ -526,7 +526,7 @@
     <div class="card" style="max-width:416px; text-align:left; position:relative;">
       <h2 style="margin:0 0 18px;padding-right:132px;position:relative;top:-3px;">APPROVALS</h2>
       <span style="position:absolute;top:18px;right:20px;display:inline-flex;gap:4px;">
-        <button type="button" class="pbtn undo" id="undoLastBtn" title="Undo the most recent change Jarvis applied (restore from backup)">↩ Undo</button>
+        <button type="button" class="pbtn undo" id="undoLastBtn" title="Undo the most recent change Adam applied (restore from backup)">↩ Undo</button>
         <button type="button" class="pbtn refresh" id="approvalsRefresh" title="Reload the pending list">⟳ Refresh</button>
         <button type="button" class="pbtn close" id="approvalsClose" title="Close this panel">✕ Close</button>
       </span>
@@ -535,7 +535,7 @@
         <input type="checkbox" id="autoApplyToggle" style="width:12px;height:12px;flex:none;transform:scale(0.75);transform-origin:left center;">
         <span style="white-space:nowrap;">Auto-apply changes <span style="color:var(--amber);">(incl. overwrites/deletes)</span></span>
       </label>
-      <div id="autoApplyHint" style="display:none;font-size:11px;color:var(--amber);margin:6px 0 0;">On — JARVIS's file changes apply automatically. Backup + audit still run and protected paths are still refused; you just won't be asked to approve. Turn off to review each change first.</div>
+      <div id="autoApplyHint" style="display:none;font-size:11px;color:var(--amber);margin:6px 0 0;">On — Adam's file changes apply automatically. Backup + audit still run and protected paths are still refused; you just won't be asked to approve. Turn off to review each change first.</div>
     </div>
   </div>
 
@@ -1084,7 +1084,7 @@
   let firstListenSinceActivate = false;  // show the "Waking…" boot cue ONLY for the
                                          // first listen after activating; later turns
                                          // go straight to "Listening" (mic is warm)
-  // After JARVIS speaks, ignore recognition results for this window so trailing
+  // After Adam speaks, ignore recognition results for this window so trailing
   // speaker audio or echo doesn't get submitted as user input. Two timings, kept
   // separate so a snappy reply doesn't cost echo safety:
   //   • MIC_RESTART_AFTER_SPEAK_MS — how soon the recognizer is (re)started. Kept
@@ -1106,17 +1106,17 @@
   // user who already waited isn't delayed further.
   const bootAt = Date.now();
   const BOOT_SETTLE_MS = 3500;
-  // Echo rejection: remember what JARVIS just said so a transcript that arrives
+  // Echo rejection: remember what Adam just said so a transcript that arrives
   // AFTER the speaking guard lifts (recognizer latency) can be matched against it
   // and dropped, instead of being submitted as a brand-new user turn.
-  let lastSpokenText = "";     // normalized text of JARVIS's most recent reply
+  let lastSpokenText = "";     // normalized text of Adam's most recent reply
   let lastSpokenAt = 0;        // when that reply finished playing
   const ECHO_WINDOW_MS = 6000; // only treat transcripts as echo this long after speech
   let pendingPlay = false;     // notification opened the app; audio waits for a tap (iOS gesture rule)
   // iPhone (the primary device) keeps the mic continuously live through TTS:
   // glasses sit at the ears, recognition is on-device, and the result guards
   // handle it — tearing the recognizer down per turn would need a gesture iOS may
-  // block. On desktop the mic hears the SPEAKERS, so JARVIS's own reply gets
+  // block. On desktop the mic hears the SPEAKERS, so Adam's own reply gets
   // transcribed as the next turn (echo loop). There we fully pause capture during
   // TTS instead of just guarding results.
   const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -1124,7 +1124,7 @@
 
   // iOS 16.4+ lets the page choose its audio session. Two phases, two needs:
   //  • "playback"        — full-quality media route that IGNORES the silent switch.
-  //                        Used while JARVIS speaks (the mic is aborted then anyway),
+  //                        Used while Adam speaks (the mic is aborted then anyway),
   //                        so audio plays on silent mode AND without the phone-call
   //                        voice processing (echo-cancel + band-pass) that play-and-
   //                        record applies, which made the voice sound tinny/earpiece.
@@ -1154,7 +1154,7 @@
                         : (s === "speaking") ? "tap to interrupt"
                         : (s === "warming") ? "starting microphone…"
                         : (s === "muted") ? "mic is off — tap mute to resume"
-                        : (active && !sttSupported) ? "voice input unavailable here — type to JARVIS" : "";
+                        : (active && !sttSupported) ? "voice input unavailable here — type to Adam" : "";
     // A typed turn shares the one in-flight pipeline; lock SEND while busy.
     if (sendBtn) sendBtn.disabled = (s === "processing" || s === "speaking");
   }
@@ -1195,11 +1195,11 @@
     } else setState("listening");
   }
 
-  // --- Voice selection (JARVIS register: British male) -------------------
+  // --- Voice selection (Adam register: British male) -------------------
   // Web Speech API only — picks the best built-in en-GB male voice available.
   let chosenVoice = null;
   const VOICE_PREFS = [
-    "Daniel",                                                   // iOS / macOS en-GB male — closest to JARVIS
+    "Daniel",                                                   // iOS / macOS en-GB male — closest to Adam
     "Arthur", "Oliver",                                         // newer iOS en-GB males
     "Google UK English Male",                                   // Chrome / Android
     "Microsoft Ryan Online (Natural) - English (United Kingdom)",
@@ -1223,7 +1223,7 @@
     window.speechSynthesis.onvoiceschanged = pickVoice;
   }
 
-  // --- JARVIS voice playback (Kokoro via server, via AudioContext) ----------
+  // --- Adam voice playback (Kokoro via server, via AudioContext) ----------
   // AudioContext uses iOS's PlayAndRecord audio session, which coexists with
   // SpeechRecognition. The old <audio> element used PlaybackOnly, which conflicts
   // with the mic and caused a ~30-second wait before each second input.
@@ -1318,7 +1318,7 @@
     else { try { ka.osc.onended = release; } catch (_) { release(); } }
   }
 
-  // --- JARVIS UI sound engine (v0.9.20) ------------------------------------
+  // --- Adam UI sound engine (v0.9.20) ------------------------------------
   // One instrument, not a soundboard. Every cue is synthesized live on the SAME
   // AudioContext that TTS uses — the one already unlocked on the Activate tap and
   // held warm by the keepalive oscillator. So: zero asset load, zero latency, and
@@ -1347,7 +1347,7 @@
       try { const g = audioCtx.createGain(); g.connect(audioCtx.destination); _sfxBusNode = g; }
       catch (_) { return null; }
     }
-    // Duck the whole bus while JARVIS is actually speaking so a stray tap never
+    // Duck the whole bus while Adam is actually speaking so a stray tap never
     // steps on the voice. The reply ping fires AS we enter "speaking", so it too
     // lands softened — which is exactly the restrained bloom we want under the TTS.
     try {
@@ -1435,7 +1435,7 @@
     // A settings row tapped — the smallest sound in the app, a dry high tick. Barely
     // there on purpose; it just confirms the finger landed.
     option(b) { _v(b, { f: _N.E5, dur: 0.05, peak: 0.07, atk: 0.004 }); },
-    // Backing out of a tab into JARVIS — a soft descending return (A5→E5), the mirror
+    // Backing out of a tab into Adam — a soft descending return (A5→E5), the mirror
     // of the panel "open" tick.
     back(b) { _v(b, { f: _N.A5, f2: _N.E5, dur: 0.16, peak: 0.10, atk: 0.008, harm: 2, harmGain: 0.12 }); },
     // Switching chats — a quick lateral step (E5→D5), neutral, no resolution. "Moved."
@@ -1481,7 +1481,7 @@
   }
   function closeSettings() { modal.classList.remove("show"); }
   // ⚙ gear opens a small menu: Sign-in & settings, Operator Console, Add-ons.
-  // (Console and Add-ons used to live under the JARVIS-word menu; they live here now.)
+  // (Console and Add-ons used to live under the Adam-word menu; they live here now.)
   (function () {
     var gear = $("gear"), gm = $("gearMenu");
     if (!gear || !gm) { if (gear) gear.onclick = openSettings; return; }
@@ -1528,7 +1528,7 @@
       var next = CAP_TIERS[(CAP_TIERS.indexOf(cur) + 1) % CAP_TIERS.length];  // custom -> safe
       var confirmFlag = false;
       if (next === "unrestricted") {
-        var ok = window.confirm("Unrestricted mode\n\nJarvis will be able to edit its own code, run shell commands, and write across your files — and it auto-approves everything, with no taps to confirm.\n\nBackups, the audit log, and secret-file protection stay ON, so changes remain recoverable and your keys are never touched. But Jarvis will act on its own.\n\nTurn on Unrestricted?");
+        var ok = window.confirm("Unrestricted mode\n\nAdam will be able to edit its own code, run shell commands, and write across your files — and it auto-approves everything, with no taps to confirm.\n\nBackups, the audit log, and secret-file protection stay ON, so changes remain recoverable and your keys are never touched. But Adam will act on its own.\n\nTurn on Unrestricted?");
         if (!ok) return;  // declined — keep the current tier, change nothing
         confirmFlag = true;
       }
@@ -1558,7 +1558,7 @@
       var status = await enablePush({ ask: true });
       setNS(notifLabel(status));
       if (status === "needs-homescreen") {
-        showErr("On iPhone: tap Share → Add to Home Screen, then open JARVIS from that icon and enable notifications there.");
+        showErr("On iPhone: tap Share → Add to Home Screen, then open Adam from that icon and enable notifications there.");
       } else if (status === "denied") {
         showErr("Notifications are blocked for this site in your browser settings — re-allow them there, then tap again.");
       }
@@ -1741,7 +1741,7 @@
   function normalizeForEcho(s) {
     return s.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
   }
-  // True if a just-heard transcript is really JARVIS's own voice echoing back.
+  // True if a just-heard transcript is really Adam's own voice echoing back.
   // Checked only inside a short window after speech, by containment or heavy word
   // overlap — so genuine user speech is essentially never swallowed.
   function isLikelyEcho(text) {
@@ -1776,9 +1776,9 @@
     r.onstart = () => { listening = true; showErr(""); };
 
     r.onresult = (e) => {
-      // Ignore anything that arrives while JARVIS is speaking or thinking, or
+      // Ignore anything that arrives while Adam is speaking or thinking, or
       // during the post-speech echo window. With continuous=true the mic stays
-      // live through TTS — this guard prevents JARVIS's own voice being submitted.
+      // live through TTS — this guard prevents Adam's own voice being submitted.
       if (speaking || busy || muted || Date.now() < postSpeakIgnoreUntil) return;
 
       // First real (post-echo-mute) transcription = proof the mic is ACTUALLY
@@ -1799,7 +1799,7 @@
       if (interim) showInterim((sttBuffer + " " + interim).trim());
       finalText = finalText.trim();
       if (finalText) {
-        if (isLikelyEcho(finalText)) return;   // JARVIS heard itself — drop the fragment
+        if (isLikelyEcho(finalText)) return;   // Adam heard itself — drop the fragment
         sttBuffer = (sttBuffer + " " + finalText).trim();
         showInterim(sttBuffer);
       }
@@ -1857,7 +1857,7 @@
     handleUtterance(text);
   }
 
-  // Drop any pending dictation (mic torn down, muted, JARVIS about to speak, etc.)
+  // Drop any pending dictation (mic torn down, muted, Adam about to speak, etc.)
   function resetSttBuffer() {
     clearTimeout(sttCommitTimer); sttCommitTimer = null;
     sttBuffer = "";
@@ -2121,10 +2121,10 @@
   // back shows it — it's no longer lost to the notification-only path. `LS.spokenTs`
   // is the cross-path dedupe high-water mark (the last delivered result's ts).
   // `result` is shown on screen (full reply); work mode's `spoken` summary is read aloud.
-  function jarvisBubble(text) {
+  function adamBubble(text) {
     const reply = (text || "").trim() || "No response, sir.";
     // pre-wrap preserves the line breaks in long work-mode replies; harmless for voice.
-    return `<div class="jarvis" style="white-space:pre-wrap">${escapeHtml(reply)}</div>`;
+    return `<div class="adam" style="white-space:pre-wrap">${escapeHtml(reply)}</div>`;
   }
   function deliverTurnReply(key, isActive, job) {
     const ts = job.ts || 0;
@@ -2134,7 +2134,7 @@
     const reply = (job.result || "").trim() || "No response, sir.";
     const spokenText = (job.spoken && job.spoken.trim()) ? job.spoken.trim() : reply;
     Sessions.setLastSpoken(key, spokenText);   // so the Resume button can replay THIS chat later
-    const bubble = jarvisBubble(reply);
+    const bubble = adamBubble(reply);
     if (isActive) {
       transcript.insertAdjacentHTML("beforeend", bubble);
       transcript.scrollTop = transcript.scrollHeight;
@@ -2150,7 +2150,7 @@
     SessionSync.schedule();   // propagate this turn's reply to the user's other devices
   }
 
-  // JARVIS asked to organize the conversation: rename this chat, or (on the user's
+  // Adam asked to organize the conversation: rename this chat, or (on the user's
   // spoken yes) open a fresh one. The reply already landed in the originating chat,
   // so the old conversation is always preserved. A rename targets the chat that owns
   // the turn even if you've switched away; new_chat only pulls you into a new chat
@@ -2221,7 +2221,7 @@
       // Deterministic key so BOTH devices converge on ONE chat for the same reply
       // (otherwise each would mint its own and sync would show duplicates).
       const detKey = d.session_id ? ("srv-" + d.session_id) : (ts ? ("srv-" + ts) : null);
-      const s = Sessions.create({ title: reply.replace(/\s+/g, " ").slice(0, 40) || "JARVIS", key: detKey });
+      const s = Sessions.create({ title: reply.replace(/\s+/g, " ").slice(0, 40) || "Adam", key: detKey });
       key = s.key;
       if (d.session_id) Sessions.setSidFor(key, d.session_id);
     }
@@ -2238,7 +2238,7 @@
       if (youText && !transcript.innerHTML.trim()) {
         transcript.insertAdjacentHTML("beforeend", `<div class="you">“${escapeHtml(youText)}”</div>`);
       }
-      transcript.insertAdjacentHTML("beforeend", jarvisBubble(reply));
+      transcript.insertAdjacentHTML("beforeend", adamBubble(reply));
       transcript.scrollTop = transcript.scrollHeight;
       Sessions.saveTx(transcript.innerHTML);
     }                                 // else: loadActiveSession already repainted it from storage
@@ -2519,7 +2519,7 @@
     return audioCtx.decodeAudioData(arrayBuf);
   }
 
-  // Primary path: JARVIS's Kokoro voice, rendered server-side, decoded via
+  // Primary path: Adam's Kokoro voice, rendered server-side, decoded via
   // AudioContext (uses iOS PlayAndRecord session — coexists with mic; eliminates
   // the ~30s audio-session conflict caused by the old <audio> element).
   // Streams sentence-by-sentence with one-ahead prefetch, scheduling each clip
@@ -2541,7 +2541,7 @@
     lastSpokenText = normalizeForEcho(text);   // arm echo rejection for the post-speech tail (cleaned text)
     try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (_) {}
 
-    // Echo guard: stop the mic from capturing JARVIS's own voice — off the
+    // Echo guard: stop the mic from capturing Adam's own voice — off the
     // speakers on desktop, or the phone's own output on iPhone. We ABORT the
     // recognizer (not just drop results) so no buffered TTS audio survives in the
     // continuous session to be finalized AFTER the post-speech ignore window — the
@@ -2556,7 +2556,7 @@
       listening = false;
       needsRebuild = true;
     }
-    resetSttBuffer();   // JARVIS is speaking — abandon any half-dictated query
+    resetSttBuffer();   // Adam is speaking — abandon any half-dictated query
     // Mic is now off for this readout — switch to the full-quality, silent-switch-
     // ignoring media route so the voice plays cleanly (and even on silent mode).
     setAudioSession("playback");
@@ -2689,7 +2689,7 @@
     resetSttBuffer();
   }
 
-  // Barge-in. Tap the orb WHILE JARVIS is speaking to cut the readout short and
+  // Barge-in. Tap the orb WHILE Adam is speaking to cut the readout short and
   // jump straight back to listening — for when you've heard enough and want to
   // reply now. Runs INSIDE the orb tap (a user gesture), which is exactly what
   // lets iOS grant the mic on the synchronous restart. Hard-stops the readout
@@ -2710,7 +2710,7 @@
     lastSpokenText = "";        // don't let the text-match echo guard reject the user's reply
     needsRebuild = true;        // recognizer was aborted when speech began; startListeningNow rebuilds
     try { sfx("back"); } catch (_) {}   // soft descending "return" tick confirms the cut
-    // Mic muted mid-speech (mute was tapped while JARVIS talked): cut the readout
+    // Mic muted mid-speech (mute was tapped while Adam talked): cut the readout
     // but don't force a listen — settle to the muted resting state instead.
     if (muted) { setState(active ? "muted" : "idle"); return; }
     startListeningNow();        // synchronous rebuild + start inside the gesture → iOS grants the mic
@@ -3102,7 +3102,7 @@
       // unlockAudio() just started a near-silent keepalive tone to hold it open — give
       // it a beat to actually open before the greeting (the first real clip) plays,
       // instead of racing it. Guard in case the user deactivates within the window.
-      setTimeout(() => { if (active && !pendingPlay) speak("JARVIS online, sir."); }, 300);
+      setTimeout(() => { if (active && !pendingPlay) speak("Adam online, sir."); }, 300);
     }
     // Subscribe to push after speech is underway so it can't interfere.
     setTimeout(enablePush, 2500);
@@ -3112,7 +3112,7 @@
     reconcileChats(!playPending);
     // Recognition starts after the greeting via scheduleListen in afterSpeak —
     // same timing as before. Starting it during the greeting causes the mic to
-    // pick up JARVIS's own voice, which can kill the session before the user speaks.
+    // pick up Adam's own voice, which can kill the session before the user speaks.
   }
 
   function deactivate() {
@@ -3135,7 +3135,7 @@
     stopTtsSources();
     stopAudioKeepalive();
     clearInterim();
-    activateBtn.textContent = "ACTIVATE JARVIS";
+    activateBtn.textContent = "ACTIVATE Adam";
     activateBtn.classList.remove("on");
     setMuted(false);  // fresh session starts unmuted (no restart — active is already false)
     setState("idle");
@@ -3195,7 +3195,7 @@
     paintModeBtn();
   }
   // The one warning shown before a chat crosses INTO Claude Code mode — from EITHER
-  // entry point (the hold gesture, or a spoken "switch to code mode" that JARVIS relays
+  // entry point (the hold gesture, or a spoken "switch to code mode" that Adam relays
   // via <<SET_MODE: code>>). Code runs in its own workspace, so the current chat's
   // context can't carry over; Claude Code starts fresh. Returns true to proceed.
   function confirmEnterCodeMode() {
@@ -3206,7 +3206,7 @@
       "history.\n\n" +
       "Your existing chat is preserved; you just start clean in code mode.");
   }
-  // Change the chat's mode on JARVIS's spoken request (<<SET_MODE: ...>>). Operator and
+  // Change the chat's mode on Adam's spoken request (<<SET_MODE: ...>>). Operator and
   // voice switch instantly (same workspace, no context loss); code goes through the
   // same confirm as the hold gesture and is refused when the flag is off. Only ever
   // acts on the on-screen chat — the mode toggle is bound to the active chat.
@@ -3551,7 +3551,7 @@
     startListeningNow();
   };
 
-  // --- Text composer (type / paste → same pipeline + JARVIS voice) -------
+  // --- Text composer (type / paste → same pipeline + Adam voice) -------
   // Feeds typed/pasted text straight into handleUtterance(), so it gets the same
   // session continuity and the same spoken Kokoro reply as a voice turn. Works
   // with the mic loop off — the SEND tap is a user gesture, so we unlock the
@@ -3660,7 +3660,10 @@
     navigator.serviceWorker.register("/sw.js").catch(() => {});
     // A notification tap focuses the app and asks the page to speak the result.
     navigator.serviceWorker.addEventListener("message", (e) => {
-      if (e.data && e.data.type === "jarvis-open-play") promptPendingPlay();
+      // "jarvis-open-play" accepted too: right after an update the OLD service
+      // worker can still be active against this new page for one load.
+      const t = e.data && e.data.type;
+      if (t === "adam-open-play" || t === "jarvis-open-play") promptPendingPlay();
     });
   }
 
@@ -3782,7 +3785,7 @@
     // actually takes you to the new conversation; the tap below is only to HEAR it.
     surfaceLastResultSilently();
     pendingPlay = true;
-    activateBtn.textContent = "▶ TAP TO HEAR JARVIS";
+    activateBtn.textContent = "▶ TAP TO HEAR Adam";
     if (!active) setState("idle");
     label.textContent = "Reply ready";
     subhint.textContent = "tap to play";
@@ -3812,7 +3815,7 @@
 
 // --- Real-voice nudge ----------------------------------------------------------
 // Friends who skip INSTALL-VOICE hear the browser's robotic fallback and may never
-// learn the real Jarvis voice exists. This surfaces it — a one-time dismissible banner
+// learn the real Adam voice exists. This surfaces it — a one-time dismissible banner
 // plus a gear-menu row — but ONLY while the real voice is missing. The moment
 // /voice/status reports it installed, both the row and the banner disappear; there's
 // nothing to act on, so nothing takes up space. Read-only: a browser can't run the
@@ -3824,9 +3827,9 @@ window.JVLVoice = (function () {
   function token() { return localStorage.getItem("jarvis_token") || ""; }
   var banner = $("voiceBanner"), msg = $("voiceMsg"), dismiss = $("voiceDismissBtn");
   var installed = null;   // null = unknown until checked
-  var HELP = "You're using the basic browser voice. For the real Jarvis voice, "
-    + "double-click INSTALL-VOICE in your Jarvis folder (a one-time ~340 MB download), "
-    + "then fully restart Jarvis.";
+  var HELP = "You're using the basic browser voice. For the real Adam voice, "
+    + "double-click INSTALL-VOICE in your Adam folder (a one-time ~340 MB download), "
+    + "then fully restart Adam.";
 
   // The gear row exists only to point at INSTALL-VOICE, so it's shown only when the
   // real voice is absent (installed === false) and hidden otherwise — including the
@@ -3871,7 +3874,7 @@ window.JVLVoice = (function () {
 })();
 </script>
 <script>
-// --- View switcher: tap the JARVIS brand to open the Hunter dashboard overlay.
+// --- View switcher: tap the Adam brand to open the Hunter dashboard overlay.
 // Self-contained; reuses the same base()/token the rest of the app uses. The
 // dashboard is its own same-origin page (/hunter-dashboard) loaded in an iframe,
 // so it shares localStorage (token) and keeps its V4 styling fully isolated. ---
@@ -4011,11 +4014,11 @@ window.JVLVoice = (function () {
       var d = await r.json().catch(function () { return {}; });
       if (r.ok && d.applied) {
         var note = "Updated to v" + (d.version || "") + ". To finish, you must restart the SERVER: "
-          + "fully close the BLACK Jarvis window (the one titled 'Jarvis Voice Local') — closing "
-          + "this browser app is NOT enough — then reopen Jarvis from your desktop icon. The new "
+          + "fully close the BLACK Adam window (the one titled 'Adam') — closing "
+          + "this browser app is NOT enough — then reopen Adam from your desktop icon. The new "
           + "version isn't active until you do.";
         if (d.conflicts && d.conflicts.length) {
-          note += " (" + d.conflicts.length + " file(s) you customized need a quick merge — after restarting, tell Jarvis 'merge the update conflicts'.)";
+          note += " (" + d.conflicts.length + " file(s) you customized need a quick merge — after restarting, tell Adam 'merge the update conflicts'.)";
         }
         show(note, true);
       } else {

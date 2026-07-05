@@ -18,15 +18,15 @@ sys.path.insert(0, str(REPO_ROOT))
 
 # Sandbox config BEFORE anything imports it: clean example defaults, no live
 # settings.json/.env from the dev machine.
-os.environ.setdefault("JARVIS_CONFIG_ROOT", tempfile.mkdtemp(prefix="jvl_diag_cfg_"))
+os.environ.setdefault("ADAM_CONFIG_ROOT", tempfile.mkdtemp(prefix="jvl_diag_cfg_"))
 
 import config  # noqa: E402
 
 SECRET = "diag-secret-token-" + "x" * 32
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = SECRET
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = SECRET
 else:  # pragma: no cover — sandboxed config should have no token
-    SECRET = config.JARVIS_TOKEN
+    SECRET = config.ADAM_TOKEN
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -34,7 +34,7 @@ import server  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 client = TestClient(server.app, raise_server_exceptions=False)
-AUTH = {"Authorization": f"Bearer {config.JARVIS_TOKEN}"}
+AUTH = {"Authorization": f"Bearer {config.ADAM_TOKEN}"}
 
 
 def test_diagnostics_requires_token():
@@ -58,10 +58,10 @@ def test_diagnostics_bundle_shape():
 
 def test_diagnostics_redacts_secrets():
     # Simulate a buggy future log line that embeds the bearer token.
-    server.log.warning("oops leaked %s in a log line", config.JARVIS_TOKEN)
+    server.log.warning("oops leaked %s in a log line", config.ADAM_TOKEN)
     r = client.get("/diagnostics", headers=AUTH)
     assert r.status_code == 200
-    assert config.JARVIS_TOKEN not in r.text
+    assert config.ADAM_TOKEN not in r.text
     assert any("***" in line for line in r.json()["log_tail"])
 
 

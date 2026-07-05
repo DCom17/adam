@@ -14,12 +14,12 @@ The `graph_linker.py` script reads this table.
 
 | Alias | Canonical Node | Notes |
 |---|---|---|
-| JARVIS | [[JARVIS Command System]] | safe — specific acronym |
-| Jarvis | [[JARVIS Command System]] | safe — name reference |
-| JARVIS system | [[JARVIS Command System]] | safe |
+| Adam | [[Adam Command System]] | safe — specific acronym |
+| Adam | [[Adam Command System]] | safe — name reference |
+| Adam system | [[Adam Command System]] | safe |
 | shared brain | [[Shared Brain]] | safe |
 | Shared-Brain | [[Shared Brain]] | safe — hyphenated variant |
-| JARVIS vault | [[Obsidian Vault]] | safe — specific term |
+| Adam vault | [[Obsidian Vault]] | safe — specific term |
 | the vault | [[Obsidian Vault]] | manual only — too generic alone |
 | vault | [[Obsidian Vault]] | manual only — too generic alone |
 | Claude Code CLI | [[Claude Code]] | safe |
@@ -64,7 +64,7 @@ The `graph_linker.py` script reads this table.
 | sheet sync | [[Dashboard Sync Bridge]] | safe |
 | sync bridge | [[Dashboard Sync Bridge]] | safe |
 | dashboard sync | [[Dashboard Sync Bridge]] | safe |
-| quest eligibility | [[Daily Quests]] | safe — specific JARVIS term |
+| quest eligibility | [[Daily Quests]] | safe — specific Adam term |
 | Quest Eligibility Filter | [[Daily Quests]] | safe |
 | stat gate | [[XP System]] | safe |
 | boss gate | [[Boss System]] | safe |

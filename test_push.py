@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Web Push activation tests (Phase 1: notifications).
+Adam — Web Push activation tests (Phase 1: notifications).
 
 Covers the fix for pushes silently no-op'ing on a fresh install: the server now
 auto-generates a *matched* VAPID keypair on startup and serves the matching public
@@ -29,8 +29,8 @@ from pathlib import Path
 import config
 
 # Make the app importable on any machine (server.validate() needs a token + Claude).
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "a" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "a" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -41,7 +41,7 @@ _SANDBOX = Path(tempfile.mkdtemp(prefix="jvl_push_test_"))
 _STATE = _SANDBOX / "state"
 _STATE.mkdir(parents=True, exist_ok=True)
 config.STATE_DIR = _STATE
-config.JOBS_DB = _STATE / "jarvis.db"
+config.JOBS_DB = _STATE / "adam.db"
 config.PUSH_SUB_FILE = _STATE / "push_sub.json"
 config.LAST_RESULT_FILE = _STATE / "last_result.json"
 config.VAPID_PRIVATE_PEM = _STATE / "vapid_private.pem"
@@ -51,7 +51,7 @@ import server  # noqa: E402  (import after the sandbox is wired)
 from fastapi.testclient import TestClient  # noqa: E402
 
 client = TestClient(server.app)
-AUTH = {"Authorization": "Bearer " + config.JARVIS_TOKEN}
+AUTH = {"Authorization": "Bearer " + config.ADAM_TOKEN}
 
 _passed = 0
 

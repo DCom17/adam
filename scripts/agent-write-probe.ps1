@@ -1,4 +1,4 @@
-# Jarvis Voice Local - manual safety probe.
+# Adam - manual safety probe.
 # Empirically checks whether Claude Code can still write files directly, in both
 # the unrestricted (legacy) and restricted (safe-mode) spawns. Runs the real
 # claude CLI in a throwaway temp dir - never your vault. Costs a couple of small

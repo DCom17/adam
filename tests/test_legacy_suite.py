@@ -41,8 +41,8 @@ def test_legacy(script: str, tmp_path: Path) -> None:
     # defaults, never this machine's live settings.json / .env. Scripts that
     # need specific values already stub config after import.
     env = dict(os.environ)
-    env["JARVIS_CONFIG_ROOT"] = str(tmp_path)
-    env.pop("JARVIS_TOKEN", None)
+    env["ADAM_CONFIG_ROOT"] = str(tmp_path)
+    env.pop("ADAM_TOKEN", None)
 
     proc = subprocess.run(
         [sys.executable, script],

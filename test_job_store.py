@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — persistent job-store tests (Phase 5).
+Adam — persistent job-store tests (Phase 5).
 
 Proves the SQLite job store does what the in-memory dict could not:
 
@@ -46,7 +46,7 @@ def _reopen(db: Path) -> None:
 
 def main() -> int:
     sandbox = Path(tempfile.mkdtemp(prefix="jvl_jobs_test_"))
-    db = sandbox / "jarvis.db"
+    db = sandbox / "adam.db"
     config.JOBS_DB = db
     config.JOB_INPUT_SUMMARY_MAX = 200
 

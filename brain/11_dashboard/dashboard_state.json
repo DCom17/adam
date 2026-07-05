@@ -1,5 +1,5 @@
 {
-  "_comment": "Fresh level-1 starting state. 'Bootstrap JARVIS' personalizes the bosses, main_quest, and directive by interviewing you. The 8 stats are the default life-stat set (see stat_definitions.md).",
+  "_comment": "Fresh level-1 starting state. 'Bootstrap Adam' personalizes the bosses, main_quest, and directive by interviewing you. The 8 stats are the default life-stat set (see stat_definitions.md).",
   "date": "",
   "character_level": 1,
   "rank": "E",
@@ -8,8 +8,8 @@
   "consistency_bonus": 0,
   "fatigue": 20,
   "momentum": "Stable",
-  "system_directive": "Welcome. Run 'Bootstrap JARVIS' to set up your profile, then 'Start my day' to plan.",
-  "next_best_action": "Run Bootstrap JARVIS.",
+  "system_directive": "Welcome. Run 'Bootstrap Adam' to set up your profile, then 'Start my day' to plan.",
+  "next_best_action": "Run Bootstrap Adam.",
   "last_updated": "",
   "active_boss": "",
   "main_quest": "",
@@ -34,7 +34,7 @@
   "notifications": [
     {
       "type": "info",
-      "message": "Fresh install. Run 'Bootstrap JARVIS' to personalize your system.",
+      "message": "Fresh install. Run 'Bootstrap Adam' to personalize your system.",
       "date": ""
     }
   ]

@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — onboarding / setup-doctor tests (v0.7.0, Slice 1).
+Adam — onboarding / setup-doctor tests (v0.7.0, Slice 1).
 
 Proves the safety-critical setup behavior:
   * .env token bootstrap is idempotent and never overwrites a real token;
@@ -38,7 +38,7 @@ def main() -> int:
     example = sandbox / ".env.example"
     example.write_text(
         "# comment line\n"
-        "JARVIS_TOKEN=" + onboarding.TOKEN_PLACEHOLDER + "\n"
+        "ADAM_TOKEN=" + onboarding.TOKEN_PLACEHOLDER + "\n"
         "VAPID_PUBLIC_KEY=\n"
         "# trailing note\n",
         encoding="utf-8",
@@ -68,7 +68,7 @@ def main() -> int:
     env3 = sandbox / "envdir3" / ".env"
     env3.parent.mkdir(parents=True)
     env3.write_text(
-        "JARVIS_TOKEN=" + onboarding.TOKEN_PLACEHOLDER + "\n"
+        "ADAM_TOKEN=" + onboarding.TOKEN_PLACEHOLDER + "\n"
         "OWNER_PHONE=+15555550123\n",
         encoding="utf-8",
     )
@@ -83,7 +83,7 @@ def main() -> int:
     print("\n[4] Empty token value is treated as missing")
     env4 = sandbox / "envdir4" / ".env"
     env4.parent.mkdir(parents=True)
-    env4.write_text("JARVIS_TOKEN=\n", encoding="utf-8")
+    env4.write_text("ADAM_TOKEN=\n", encoding="utf-8")
     res4 = onboarding.ensure_env_token(env4, example)
     check("empty token replaced", res4["action"] == "token_generated")
     check("token now real",
@@ -120,7 +120,7 @@ def main() -> int:
     checks = onboarding.run_doctor(reload_config=False)
     names = {c["name"] for c in checks}
     expected = {
-        "JARVIS_TOKEN present", "Claude executable resolved", "settings.json",
+        "ADAM_TOKEN present", "Claude executable resolved", "settings.json",
         "agent_safety.mode", "vault_path", "Write directories",
         "Protected file patterns", "data/state path", "Server reachable",
         "Python dependencies", "No secret leakage in /health",
@@ -132,15 +132,15 @@ def main() -> int:
     check("live /health summary does not leak secrets", leak["status"] == "PASS")
 
     print("\n[8] run_doctor scenarios (monkeypatched config, no reload)")
-    _saved_token = config.JARVIS_TOKEN
+    _saved_token = config.ADAM_TOKEN
     _saved_mode = config.AGENT_MODE
     try:
-        config.JARVIS_TOKEN = ""
+        config.ADAM_TOKEN = ""
         c = onboarding.run_doctor(reload_config=False)
-        tok = next(x for x in c if x["name"] == "JARVIS_TOKEN present")
+        tok = next(x for x in c if x["name"] == "ADAM_TOKEN present")
         check("missing token -> FAIL", tok["status"] == "FAIL")
 
-        config.JARVIS_TOKEN = "x" * 64
+        config.ADAM_TOKEN = "x" * 64
         config.AGENT_MODE = "legacy_direct"
         c = onboarding.run_doctor(reload_config=False)
         mode = next(x for x in c if x["name"] == "agent_safety.mode")
@@ -151,7 +151,7 @@ def main() -> int:
         mode = next(x for x in c if x["name"] == "agent_safety.mode")
         check("draft_only -> PASS", mode["status"] == "PASS")
     finally:
-        config.JARVIS_TOKEN = _saved_token
+        config.ADAM_TOKEN = _saved_token
         config.AGENT_MODE = _saved_mode
 
     print("\n[9] Config-file validation is BOM-tolerant + friendly on malformed")
@@ -180,9 +180,9 @@ def main() -> int:
 
     print("\n[10] run_doctor degrades cleanly when config can't load (no crash, no leak)")
     _saved_reload = onboarding._reload_config
-    _saved_tok2 = config.JARVIS_TOKEN
+    _saved_tok2 = config.ADAM_TOKEN
     try:
-        config.JARVIS_TOKEN = "LEAKSENTINEL_TOKEN_VALUE"
+        config.ADAM_TOKEN = "LEAKSENTINEL_TOKEN_VALUE"
         onboarding._reload_config = lambda: (
             None, "settings.json is not valid JSON (line 1, column 5): "
                   "Expecting value. Fix the JSON syntax, or restore it from settings.example.json.")
@@ -198,7 +198,7 @@ def main() -> int:
               "LEAKSENTINEL_TOKEN_VALUE" not in _json.dumps(dchecks))
     finally:
         onboarding._reload_config = _saved_reload
-        config.JARVIS_TOKEN = _saved_tok2
+        config.ADAM_TOKEN = _saved_tok2
 
     print("\n[11] Mobile-access diagnostics (v0.9, intent-gated, advisory, never FAIL)")
     import types as _types

@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — voicemail answer provisioning (the "how Twilio answers" side).
+Adam — voicemail answer provisioning (the "how Twilio answers" side).
 
 The voicemail add-on polls Twilio for recordings (twilio_voicemail.py), but SOMETHING
 has to make Twilio *answer* a forwarded call and record a message in the first place.
@@ -14,14 +14,14 @@ This module owns three jobs:
   1. build_answer_twiml()  — generate the exact TwiML the user pastes into a Bin.
      Default greeting voice is Amazon Polly's British male neural voice (Polly.Brian),
      which Twilio renders server-side with NO audio hosting — a deep British voice
-     that always works. If the user hosts a Jarvis/Kokoro greeting clip somewhere
+     that always works. If the user hosts a Adam/Kokoro greeting clip somewhere
      publicly reachable, the TwiML <Play>s that instead (the voice upgrade).
 
   2. set_number_voice_url() — the automatable slice. Once the user has a Bin URL,
      this wires their Twilio number's Voice webhook to it via the REST API, so the
      wizard offers a one-click "wire my number" instead of another console hunt.
 
-  3. render_greeting_clip() — render the greeting in Jarvis's own Kokoro voice
+  3. render_greeting_clip() — render the greeting in Adam's own Kokoro voice
      (bm_daniel, deep British male) via the local tts_server, so the user can hear
      and save the upgrade greeting. Hosting it publicly stays the user's choice; the
      shipped default remains the no-hosting Polly voice.
@@ -177,7 +177,7 @@ def set_number_voice_url(account_sid: str, auth_token: str, pn_sid: str,
 
 def render_greeting_clip(text: str | None = None, *, voice: str = "bm_daniel",
                          timeout: int = 30) -> bytes | None:
-    """Render the greeting in Jarvis's own Kokoro voice (bm_daniel, deep British
+    """Render the greeting in Adam's own Kokoro voice (bm_daniel, deep British
     male) via the local tts_server. Returns WAV bytes, or None on any failure (the
     caller keeps the no-hosting Polly default). Dependency-free (urllib)."""
     text = (text if text is not None else _greeting_text()).strip()

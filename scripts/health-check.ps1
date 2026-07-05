@@ -1,4 +1,4 @@
-# Jarvis Voice Local - check the backend is up and report its config sanity.
+# Adam - check the backend is up and report its config sanity.
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location -Path $root
@@ -8,7 +8,7 @@ $url = "http://127.0.0.1:$port/health"
 
 try {
     $r = Invoke-RestMethod -Uri $url -TimeoutSec 5
-    Write-Host "Jarvis is UP at $url" -ForegroundColor Green
+    Write-Host "Adam is UP at $url" -ForegroundColor Green
     Write-Host ("  app:               {0} v{1}" -f $r.app, $r.version)
     Write-Host ("  claude_configured: {0}" -f $r.claude_configured)
     Write-Host ("  vault_configured:  {0}" -f $r.vault_configured)
@@ -22,7 +22,7 @@ try {
         Write-Host "  WARNING: vault_path does not exist - set vault_path in settings.json." -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "Jarvis is DOWN (no response at $url)." -ForegroundColor Red
+    Write-Host "Adam is DOWN (no response at $url)." -ForegroundColor Red
     Write-Host "  Start it with scripts\start-dev.ps1" -ForegroundColor DarkGray
     exit 1
 }

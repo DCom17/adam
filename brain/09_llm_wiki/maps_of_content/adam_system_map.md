@@ -1,18 +1,18 @@
-# JARVIS System Map
+# Adam System Map
 
 **Type:** Map of Content
 **Status:** Active
 **Last reviewed:** 2026-05-26
 
-This MOC links the core operating components of the [[JARVIS Command System]].
+This MOC links the core operating components of the [[Adam Command System]].
 
 Use this map to navigate how the system's pieces connect.
 
 ---
 
-## What JARVIS Is
+## What Adam Is
 
-[[JARVIS Command System]] is a personal AI command center built on a [[Shared Brain]] vault.
+[[Adam Command System]] is a personal AI command center built on a [[Shared Brain]] vault.
 
 The [[Shared Brain]] is a set of markdown files that persist memory, context, tasks, and plans across AI sessions. The AI model ([[Claude Code]]) may be stateless, but the vault is not.
 
@@ -77,7 +77,7 @@ Graph linking: `10_graph_schema/` → `scripts/graph_linker.py`
 
 ## Hunter Tracker
 
-The gamification layer of [[JARVIS Command System|JARVIS]]. See: [[hunter_dashboard_map]]
+The gamification layer of [[Adam Command System|Adam]]. See: [[hunter_dashboard_map]]
 
 [[Hunter Progression Dashboard]] integrates with [[Daily Planning]], [[Daily Shutdown]], and [[Weekly Review]].
 
@@ -85,7 +85,7 @@ The gamification layer of [[JARVIS Command System|JARVIS]]. See: [[hunter_dashbo
 
 ## Relationship Triples
 
-- [[JARVIS Command System]] -- runs_on --> [[Claude Code]]
+- [[Adam Command System]] -- runs_on --> [[Claude Code]]
 - [[Claude Code]] -- reads_and_writes --> [[Shared Brain]]
 - [[Shared Brain]] -- stored_in --> [[Google Drive]]
 - [[Shared Brain]] -- viewed_in --> [[Obsidian Vault]]

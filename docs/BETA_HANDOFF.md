@@ -7,7 +7,7 @@ how to report problems. For the full setup details see the [README](../README.md
 
 ## What this is, in one line
 
-Jarvis Voice Local is a small assistant **backend you run on your own Windows PC**,
+Adam is a small assistant **backend you run on your own Windows PC**,
 driven by **your own Claude Code**, against **your own files** — with a phone web app
 (PWA) and a desktop operator console on top. Nothing is hosted by anyone else; the
 maintainer never sees your data, your files, or your keys.
@@ -27,12 +27,12 @@ maintainer never sees your data, your files, or your keys.
 it walks you through everything). The wizard installs Python and Claude Code if they're
 missing, walks you through the one-time Claude sign-in, lets you pick your AI plan
 (Claude subscription or pay-as-you-go API key), configures everything, adds a desktop
-icon, and opens Jarvis in your browser **already signed in** — no token to copy. To
-open Jarvis again later, use the desktop icon or double-click `START.cmd`.
+icon, and opens Adam in your browser **already signed in** — no token to copy. To
+open Adam again later, use the desktop icon or double-click `START.cmd`.
 
-The server runs in a **visible** black window titled "Jarvis Voice Local" (nothing runs
+The server runs in a **visible** black window titled "Adam" (nothing runs
 hidden — no service, no autostart). **Minimize it, don't close it** — closing it turns
-Jarvis off. To stop on purpose: close that window or run `.\scripts\stop-dev.ps1`.
+Adam off. To stop on purpose: close that window or run `.\scripts\stop-dev.ps1`.
 
 The app opens at **`http://localhost:8000`** on the **same PC** (check the port in
 `/health` or the launcher output if it differs). On the PC, `localhost` is a secure
@@ -46,7 +46,7 @@ networking — see the voice note below for what the spoken reply sounds like).
 python -m pip install -r requirements.txt
 python scripts/setup.py      # generates your token, finds Claude, sets your files path
 python scripts/doctor.py     # health check — aim for 0 FAIL
-.\scripts\start-jarvis.ps1   # starts the server + opens your browser, already signed in
+.\scripts\start-adam.ps1   # starts the server + opens your browser, already signed in
 ```
 
 The launcher signs the browser in for you. If you ever need the raw token (e.g. for a
@@ -75,12 +75,12 @@ PASS / WARN / FAIL guidance.
 Out of the box, **spoken replies use your device's built-in (browser/OS)
 text-to-speech** — a generic, somewhat robotic voice. That's the fallback, not a bug.
 
-For the **real, natural Jarvis voice**, double-click **`INSTALL-VOICE.cmd`** in the app
+For the **real, natural Adam voice**, double-click **`INSTALL-VOICE.cmd`** in the app
 folder (setup also offers it at the end) — a one-time ~340 MB download that runs
-entirely on your PC and speaks on both desktop and phone. Restart Jarvis afterward to
+entirely on your PC and speaks on both desktop and phone. Restart Adam afterward to
 hear it.
 
-If replies still sound robotic after installing, restart Jarvis (close the black server
+If replies still sound robotic after installing, restart Adam (close the black server
 window, reopen from the desktop icon) — the app quietly falls back to the browser voice
 whenever the voice service isn't running.
 
@@ -123,13 +123,13 @@ the loop.
 
 ## Where the app comes from / updating
 
-You received a **release ZIP** (e.g. `jarvis-voice-local-v0.9.34.zip`). It contains the
+You received a **release ZIP** (e.g. `adam-local-v0.9.35.zip`). It contains the
 app, templates (`.env.example`, `settings.example.json`), and docs — but **never** real
 secrets or anyone's data.
 
 **Updating is one click.** When a newer version is available, the app shows a green
 **"Update available"** bar — click **Update now**, then restart the server (close the
-black "Jarvis Voice Local" window and reopen Jarvis from the desktop icon; the new
+black "Adam" window and reopen Adam from the desktop icon; the new
 version isn't active until you do). Your `.env`, `settings.json`, `data/`, and even
 your own code customizations survive updates — the updater does a three-way merge and
 backs everything up first. Double-clicking `UPDATE.cmd` in the app folder does the same
@@ -149,7 +149,7 @@ report, include:
 - Whether the **insecure-connection banner** was showing (that means you're on http,
   not the HTTPS Tailscale URL).
 
-**Never share your `.env`, your `JARVIS_TOKEN`, or your `settings.json`.** No support
+**Never share your `.env`, your `ADAM_TOKEN`, or your `settings.json`.** No support
 question requires them.
 
 ## Safety recap

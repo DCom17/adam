@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Never share your `.env`, your `JARVIS_TOKEN`, or your `settings.json`.**
+        **Never share your `.env`, your `ADAM_TOKEN`, or your `settings.json`.**
         Run `python scripts/doctor.py` first — it often names the fix, and its output is safe to paste.
   - type: input
     id: version

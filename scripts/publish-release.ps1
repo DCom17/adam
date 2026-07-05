@@ -1,4 +1,4 @@
-# Jarvis Voice Local - publish a release (maintainer only).
+# Adam - publish a release (maintainer only).
 #
 # Builds the versioned release zip and publishes it to your PUBLIC releases repo as a
 # GitHub Release. Installs pick it up automatically (in-app "Update now" or UPDATE.cmd)
@@ -38,7 +38,7 @@ if (-not $Repo) {
     $cm = Select-String -Path (Join-Path $root "config.py") -Pattern 'update_repo\D+"([^"]+)"' | Select-Object -First 1
     if ($cm) { $Repo = $cm.Matches.Groups[1].Value }
 }
-if (-not $Repo) { $Repo = "DCom17/jarvis-voice-releases" }
+if (-not $Repo) { $Repo = "DCom17/adam-releases" }
 
 # Find Python to build the zip
 $py = (Get-Command python -ErrorAction SilentlyContinue).Source
@@ -46,13 +46,13 @@ if (-not $py) { Say "Python not found on PATH - needed to build the release zip.
 
 Say "Building release zip for $tag ..." "Cyan"
 & $py (Join-Path $here "make_release.py") | Write-Host
-$zip = Join-Path $root ("dist\jarvis-voice-local-$tag.zip")
+$zip = Join-Path $root ("dist\adam-local-$tag.zip")
 if (-not (Test-Path $zip)) { Say "Build did not produce $zip" "Red"; exit 1 }
 Say "Built: $zip" "Green"
 
 $gh = (Get-Command gh -ErrorAction SilentlyContinue).Source
 if ($gh) {
-    if (-not $Notes) { $Notes = "Jarvis Voice Local $tag" }
+    if (-not $Notes) { $Notes = "Adam $tag" }
     Say "Publishing $tag to $Repo via gh ..." "Cyan"
     # Create the release (or, if the tag already exists, upload/replace the asset).
     $exists = $false

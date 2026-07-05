@@ -1,6 +1,6 @@
 # Operating Patterns
 
-JARVIS's learned read on how you run best. Entries are written here **only** on
+Adam's learned read on how you run best. Entries are written here **only** on
 your approval at weekly review. Every entry is time-stamped and expires (~90-day
 re-check). Evidence lives in `11_dashboard/performance_log.csv`.
 

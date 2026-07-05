@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — server-side chat-session store (cross-device sync).
+Adam — server-side chat-session store (cross-device sync).
 
 Chats ("sessions") and their transcripts used to live only in each device's
 browser localStorage, so a chat started on the PC never appeared on the phone.

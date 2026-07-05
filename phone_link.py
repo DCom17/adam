@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — phone-reachable URL detection for the Connect-phone QR.
+Adam — phone-reachable URL detection for the Connect-phone QR.
 
 The Connect-phone QR used to encode whatever URL you signed in with — which on the
 PC is `localhost`, useless to a phone. This figures out URLs a phone can actually

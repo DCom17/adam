@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Hunter Tracker connector (opt-in, off by default).
+Adam — Hunter Tracker connector (opt-in, off by default).
 
 This is the server-side client for the user's OWN Hunter dashboard: a Google
 Sheet they copied from a template, with a bound Apps Script that (a) accepts a
@@ -140,7 +140,7 @@ def _post(bridge_url: str, token: str, payload: dict[str, Any], timeout: int | N
         raise HunterNotConfigured("hunter bridge url and token are required.")
     body = dict(payload or {})
     body["token"] = token
-    body["source"] = "jarvis-voice-local"
+    body["source"] = "adam-local"
     data = json.dumps(body).encode("utf-8")
     req = urllib.request.Request(
         bridge_url, data=data,
@@ -220,4 +220,4 @@ def sync(payload: dict) -> dict:
     return res.get("result", {}) or res
 
 # NOTE: there is intentionally no delete()/clear(). Deletion is unsupported by
-# design — both here and in the verify endpoint — so it cannot happen through Jarvis.
+# design — both here and in the verify endpoint — so it cannot happen through Adam.

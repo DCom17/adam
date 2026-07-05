@@ -1,7 +1,7 @@
 """
-Jarvis Voice Local — hands-free chat management (rename / new chat) tests.
+Adam — hands-free chat management (rename / new chat) tests.
 
-Covers the two chat-control directives JARVIS can emit in a reply so the user can
+Covers the two chat-control directives Adam can emit in a reply so the user can
 organize the conversation by voice:
   * _extract_chat_control: pulls <<RENAME_CHAT: ...>> and <<NEW_CHAT[: title]>> out
     of a reply, returns the control dict, and always strips the markers; last
@@ -32,8 +32,8 @@ from pathlib import Path
 
 import config
 
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "a" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "a" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -128,7 +128,7 @@ def main() -> int:
     real_allow_code = config.AGENT_ALLOW_CODE_MODE
     sandbox = Path(tempfile.mkdtemp(prefix="jvl_chatctrl_test_"))
     job_store.close()
-    config.JOBS_DB = sandbox / "jarvis.db"
+    config.JOBS_DB = sandbox / "adam.db"
     job_store.init(config.JOBS_DB)
 
     print("\n[1] _extract_chat_control")

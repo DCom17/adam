@@ -2,7 +2,7 @@
 .env
 *.env
 !.env.example
-config/jarvis.config.json
+config/adam.config.json
 *.pem
 *_keys.json
 config/*.local.json

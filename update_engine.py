@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Phase 2 smart-update engine.
+Adam — Phase 2 smart-update engine.
 
 The old update path (scripts/update.ps1) blind-robocopied the maintainer's new
 build over the install and did NOT back anything up. That was safe only while no

@@ -1,6 +1,6 @@
 # Linking Rules
 
-Rules governing the [[Obsidian Vault|JARVIS vault]] knowledge graph auto-linker.
+Rules governing the [[Obsidian Vault|Adam vault]] knowledge graph auto-linker.
 
 Related: `canonical_nodes.md`, `aliases.md`, `scripts/graph_linker.py`
 

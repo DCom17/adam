@@ -1,7 +1,7 @@
 """
-Jarvis Voice Local — self-edit transaction guard (Phase 2 self-edit hardening).
+Adam — self-edit transaction guard (Phase 2 self-edit hardening).
 
-When JARVIS edits its OWN application source (the self-edit lane, unlocked by the
+When Adam edits its OWN application source (the self-edit lane, unlocked by the
 Unrestricted capability tier), a bad change can stop the
 server from ever starting again: a syntax error, a missing import, a removed
 symbol another module still needs. Backup-before-write means the BYTES are always
@@ -113,7 +113,7 @@ def health_probe(install_root: str | os.PathLike | None = None,
     `import server` transitively imports every module the running app uses, so a
     syntax error / missing module / bad import ANYWHERE fails the import — while
     uvicorn.run and the startup handlers stay gated, so nothing binds a port or
-    starts a watcher. The probe runs with JARVIS_SELF_EDIT_PROBE=1 so server.py
+    starts a watcher. The probe runs with ADAM_SELF_EDIT_PROBE=1 so server.py
     keeps its logging off the live rotating file (another process owns it).
 
     Never raises: a spawn failure or timeout is reported as UNHEALTHY, so the
@@ -122,7 +122,7 @@ def health_probe(install_root: str | os.PathLike | None = None,
     root = Path(install_root or config.ROOT)
     env = dict(os.environ)
     env["PYTHONIOENCODING"] = "utf-8"
-    env["JARVIS_SELF_EDIT_PROBE"] = "1"
+    env["ADAM_SELF_EDIT_PROBE"] = "1"
     try:
         proc = subprocess.run(
             [sys.executable, "-c", "import server"],

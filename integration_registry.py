@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — add-on (integration) registry.
+Adam — add-on (integration) registry.
 
 ONE source of truth for the optional add-ons the product can offer: Calendar,
 Hunter, Email, SMS, LinkedIn, ... Each add-on is opt-in, off by default, BYO
@@ -11,7 +11,7 @@ This module is the contract every add-on conforms to. It powers three things:
   * the Settings "add-on cards" UI                (name + description + status)
   * the `GET /integrations/status` API            (booleans only, no secrets)
   * the brain's add-on awareness                  (which add-ons are enabled, so
-                                                   Jarvis redirects to Settings
+                                                   Adam redirects to Settings
                                                    instead of faking a capability)
 
 Design rules (do NOT break — the parallel add-on builds depend on them):
@@ -146,7 +146,7 @@ _ADDONS: list[dict] = [
     {
         "id": "google_calendar",
         "name": "Calendar",
-        "short_description": "Let Jarvis read your schedule and add events you approve.",
+        "short_description": "Let Adam read your schedule and add events you approve.",
         "category": "calendar",
         "setup_path": "/setup-calendar",
         "requires": ["bridge_url", "GOOGLE_CALENDAR_TOKEN"],
@@ -157,7 +157,7 @@ _ADDONS: list[dict] = [
     {
         "id": "linkedin",
         "name": "LinkedIn",
-        "short_description": "Let Jarvis draft LinkedIn posts you approve before they go out.",
+        "short_description": "Let Adam draft LinkedIn posts you approve before they go out.",
         "category": "social",
         "setup_path": "/setup-linkedin",
         "requires": ["LINKEDIN_ACCESS_TOKEN", "LINKEDIN_CLIENT_SECRET"],
@@ -168,7 +168,7 @@ _ADDONS: list[dict] = [
     {
         "id": "gmail",
         "name": "Email",
-        "short_description": "Let Jarvis read your inbox and draft replies you approve before sending.",
+        "short_description": "Let Adam read your inbox and draft replies you approve before sending.",
         "category": "email",
         "setup_path": "/setup-email",
         "requires": ["bridge_url", "GMAIL_BRIDGE_TOKEN"],
@@ -179,7 +179,7 @@ _ADDONS: list[dict] = [
     {
         "id": "sms",
         "name": "SMS",
-        "short_description": "Text Jarvis hands-free; it acts on the message and replies.",
+        "short_description": "Text Adam hands-free; it acts on the message and replies.",
         "category": "messaging",
         "setup_path": "/setup-sms",
         "requires": ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_NUMBER"],
@@ -190,7 +190,7 @@ _ADDONS: list[dict] = [
     {
         "id": "voicemail",
         "name": "Voicemail",
-        "short_description": "When a call goes unanswered, Jarvis answers in a British voice, takes a message, and texts you the transcript.",
+        "short_description": "When a call goes unanswered, Adam answers in a British voice, takes a message, and texts you the transcript.",
         "category": "messaging",
         "setup_path": "/setup-voicemail",
         "requires": ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_NUMBER"],
@@ -201,7 +201,7 @@ _ADDONS: list[dict] = [
     {
         "id": "hunter",
         "name": "Operating System",
-        "short_description": "Let Jarvis track your XP, quests, stats, and rank on your own Operating System dashboard.",
+        "short_description": "Let Adam track your XP, quests, stats, and rank on your own Operating System dashboard.",
         "category": "gamification",
         "setup_path": "/setup-hunter",
         "requires": ["bridge_url", "HUNTER_TOKEN"],

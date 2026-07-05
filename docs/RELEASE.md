@@ -1,6 +1,6 @@
 # Building & Shipping a Release
 
-How to cut a Jarvis Voice Local release ZIP for the friends-&-family beta. The goal is
+How to cut a Adam release ZIP for the friends-&-family beta. The goal is
 a download that contains the **product and its docs — and never your secrets, your
 files, or rollback backups**.
 
@@ -8,7 +8,7 @@ files, or rollback backups**.
 
 ```powershell
 # From the product folder:
-python scripts/make_release.py            # writes dist\jarvis-voice-local-vX.Y.Z.zip
+python scripts/make_release.py            # writes dist\adam-local-vX.Y.Z.zip
 # or, the wrapper:
 .\scripts\make_release.ps1
 ```
@@ -64,7 +64,7 @@ files and all the expected ones. Run the suite, or spot-check by hand:
 ```powershell
 python test_release.py
 # manual peek:
-python -c "import zipfile; print('\n'.join(zipfile.ZipFile(r'dist\jarvis-voice-local-vX.Y.Z.zip').namelist()))"
+python -c "import zipfile; print('\n'.join(zipfile.ZipFile(r'dist\adam-local-vX.Y.Z.zip').namelist()))"
 ```
 
 Confirm there is **no** `.env`, `settings.json`, `data/` runtime file, or `*.bak` in
@@ -73,7 +73,7 @@ the listing.
 ## Publishing a release (this is how updates ship)
 
 Updates are delivered through **GitHub Releases** on the public releases repo — the
-`update_repo` setting, default `DCom17/jarvis-voice-releases`. Every install checks its
+`update_repo` setting, default `DCom17/adam-releases`. Every install checks its
 `releases/latest` endpoint, so **publishing a release ships the update**:
 
 1. Bump `APP_VERSION` in `config.py` and build: `python scripts/make_release.py`.

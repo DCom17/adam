@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Claude Code mode (opt-in, long-press escalation) tests.
+Adam — Claude Code mode (opt-in, long-press escalation) tests.
 
 Covers the flag-gated 'code' chat mode and its supervision rig:
   * config: agent_safety.allow_code_mode default-off + code_mode_dirs +
@@ -40,8 +40,8 @@ from pathlib import Path
 
 import config
 
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "a" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "a" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -51,7 +51,7 @@ import permissions  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 AUTH = {"Authorization": "Bearer " + TOKEN}
 ROOT = Path(__file__).resolve().parent
 
@@ -162,7 +162,7 @@ def main() -> int:
     # (per the isolate-data-in-destructive-tests rule).
     sandbox = Path(tempfile.mkdtemp(prefix="jvl_codemode_test_"))
     job_store.close()
-    config.JOBS_DB = sandbox / "jarvis.db"
+    config.JOBS_DB = sandbox / "adam.db"
     job_store.init(config.JOBS_DB)
 
     print("\n[1] config surface")

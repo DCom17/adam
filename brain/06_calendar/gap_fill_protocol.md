@@ -1,6 +1,6 @@
 # Adaptive Gap-Fill Protocol
 
-JARVIS does not just schedule what the user says. On free space, it proposes what the user *should* be doing — tuned to that day's state and to the learned model in `02_command_memory/operating_patterns.md`.
+Adam does not just schedule what the user says. On free space, it proposes what the user *should* be doing — tuned to that day's state and to the learned model in `02_command_memory/operating_patterns.md`.
 
 This runs inside **Daily Planning Phase 1** (proposed live, user reacts) and the fills ride the normal sign-off chain onto the calendar.
 

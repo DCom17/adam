@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Hunter setup wizard + routes tests.
+Adam — Hunter setup wizard + routes tests.
 
 Covers the visible /setup-hunter slice end-to-end with a TestClient and the
 static wizard HTML, proving:
@@ -34,8 +34,8 @@ from pathlib import Path
 import config
 
 # Import-time stand-ins so server.py's config.validate() passes off the real box.
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "c" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "c" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -52,7 +52,7 @@ from fastapi.testclient import TestClient   # noqa: E402
 job_store.init(_SANDBOX / "jobs.db")
 
 ROOT = Path(__file__).resolve().parent
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 client = TestClient(server.app)
 AUTH = {"Authorization": "Bearer " + TOKEN}
 
@@ -158,7 +158,7 @@ def main() -> int:
     for cdn in ("cdnjs", "unpkg", "jsdelivr", "googleapis.com/ajax"):
         check(f"no CDN reference ({cdn})", cdn not in html)
     check("no token ever placed in a query string", "?token=" not in html)
-    check("JARVIS_TOKEN input is a password field", 'id="tokenInput" type="password"' in html)
+    check("ADAM_TOKEN input is a password field", 'id="tokenInput" type="password"' in html)
     check("bridge token input is a password field", 'id="bridgeToken" type="password"' in html)
     check("copy-code button + route present",
           'id="copyCode"' in html and "/integrations/hunter/bridge-code" in html)
@@ -167,7 +167,7 @@ def main() -> int:
     check("one-click enable button + route present",
           'id="enableBtn"' in html and "/integrations/hunter/enable" in html)
     check("done section shows the restart step",
-          'id="doneSec"' in html and "restart Jarvis" in html)
+          'id="doneSec"' in html and "restart Adam" in html)
     check("detailed auth-flow guidance present (Review permissions / Advanced)",
           "Review permissions" in html and "Advanced" in html)
     check("guidance to copy everything after the = sign",
@@ -183,7 +183,7 @@ def main() -> int:
     (_SANDBOX / "settings.json").write_text(
         '{\n  "port": 8010,\n  "integrations": {"google_calendar": {"enabled": false}}\n}\n', "utf-8")
     (_SANDBOX / ".env").write_text(
-        "JARVIS_TOKEN=keep\n# --- Hunter dashboard bridge ---\nHUNTER_TOKEN=\n", "utf-8")
+        "ADAM_TOKEN=keep\n# --- Hunter dashboard bridge ---\nHUNTER_TOKEN=\n", "utf-8")
 
     check("enable without token -> 403",
           client.post("/integrations/hunter/enable",
@@ -220,7 +220,7 @@ def main() -> int:
           ENABLE_SECRET not in (_SANDBOX / "settings.json").read_text("utf-8"))
     envtxt = (_SANDBOX / ".env").read_text("utf-8")
     check("token written to .env", ("HUNTER_TOKEN=" + ENABLE_SECRET) in envtxt)
-    check(".env preserved JARVIS_TOKEN", "JARVIS_TOKEN=keep" in envtxt)
+    check(".env preserved ADAM_TOKEN", "ADAM_TOKEN=keep" in envtxt)
 
     hunter.probe_bridge = _real_probe
     ic.ROOT = _ic_root

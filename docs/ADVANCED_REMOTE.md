@@ -8,7 +8,7 @@
 ## What this is
 
 A **cloudflared named tunnel** bound to a domain you own gives the backend a public
-`https://jarvis.yourdomain.com` address. It works anywhere, but it puts an endpoint on
+`https://adam.yourdomain.com` address. It works anywhere, but it puts an endpoint on
 the public internet — so it must be locked down.
 
 ## Hard requirement: Cloudflare Access
@@ -19,8 +19,8 @@ email allow-list) in front of it.
 - A public URL protected by **only the bearer token is NOT acceptable.** The token is a
   single shared secret with no per-device identity, no rotation, and no MFA; a public
   endpoint guarded by it alone is a standing risk.
-- Cloudflare Access authenticates the **person** before any request reaches Jarvis. The
-  Jarvis token then remains as a second factor behind it.
+- Cloudflare Access authenticates the **person** before any request reaches Adam. The
+  Adam token then remains as a second factor behind it.
 
 ## Your responsibilities (you own the exposure)
 
@@ -49,7 +49,7 @@ By choosing this path you take on:
 - `python scripts/doctor.py` should reflect your configuration (it warns on a non-HTTPS
   public base URL and on `*` CORS with a public base URL).
 - Confirm Cloudflare Access actually challenges you in a fresh browser **before** the
-  Jarvis token prompt appears. If you can reach the token screen without an Access
+  Adam token prompt appears. If you can reach the token screen without an Access
   challenge, Access is not enforced — stop and fix it.
 
 If you don't have a strong reason for a public URL, use Tailscale instead — it gives you

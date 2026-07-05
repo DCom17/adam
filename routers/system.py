@@ -73,7 +73,7 @@ def _redact(text: str) -> str:
     in the first place, but a support bundle gets pasted into chats/issues, so
     it must be safe even if a future log line slips."""
     secrets = [
-        config.JARVIS_TOKEN, config.CALENDAR_TOKEN, config.HUNTER_TOKEN,
+        config.ADAM_TOKEN, config.CALENDAR_TOKEN, config.HUNTER_TOKEN,
         config.GMAIL_TOKEN, config.LINKEDIN_CLIENT_SECRET,
         config.LINKEDIN_ACCESS_TOKEN, config.TWILIO_AUTH_TOKEN,
         config.OWNER_PHONE,
@@ -278,5 +278,5 @@ async def index():
         # caches it aggressively, so edits wouldn't show without clearing data.
         return FileResponse(server.FRONTEND, headers={"Cache-Control": "no-store"})
     return JSONResponse(
-        {"status": "Jarvis Voice Local running. Frontend not found in web/."}
+        {"status": "Adam running. Frontend not found in web/."}
     )

@@ -10,7 +10,7 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Jarvis Voice Local — Voicemail Setup</title>
+<title>Adam — Voicemail Setup</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -54,7 +54,7 @@
 <body>
 
 <header>
-  <h1>Voicemail Setup <span class="muted">— Jarvis Voice Local</span></h1>
+  <h1>Voicemail Setup <span class="muted">— Adam</span></h1>
   <span class="spacer"></span>
   <a href="/console">Operator Console</a>
   <button id="signOut" class="hidden">Sign out</button>
@@ -66,13 +66,13 @@
     <div class="head">Sign in</div>
     <div class="body">
       <p class="muted">This page talks to your local server with your bearer token (the same
-        JARVIS_TOKEN the Operator Console uses). It is stored on this device only.</p>
-      <p class="muted">Easiest way in: on your computer, start Jarvis with the <b>Start Jarvis</b>
-        launcher (<code>scripts\start-jarvis.ps1</code>) — it opens you already signed in, so you
+        ADAM_TOKEN the Operator Console uses). It is stored on this device only.</p>
+      <p class="muted">Easiest way in: on your computer, start Adam with the <b>Start Adam</b>
+        launcher (<code>scripts\start-adam.ps1</code>) — it opens you already signed in, so you
         won't see this box. On a phone, open the Operator Console's <b>Connect phone</b> and scan the
         sign-in QR. To copy the token by hand, run <code>scripts\copy-token.ps1</code> and paste it above.</p>
       <div class="row">
-        <input id="tokenInput" type="password" placeholder="Paste JARVIS_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
+        <input id="tokenInput" type="password" placeholder="Paste ADAM_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
         <button class="primary" id="signIn">Sign in</button>
       </div>
       <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
@@ -87,7 +87,7 @@
   <section>
     <div class="body">
       <div class="warnbox">This Voicemail integration is <b>opt-in</b> and stays <b>disabled</b> until you
-finish setup. When a call to you goes unanswered, your carrier forwards it to a Twilio number; Jarvis
+finish setup. When a call to you goes unanswered, your carrier forwards it to a Twilio number; Adam
 answers in a calm British voice, takes a message, and pushes you the caller's name and a transcript.
 It's a <b>message-taker, not a chatbot</b> — it never holds a conversation and never acts on anything
 the caller says. Nothing the caller says is ever run as a command.</div>
@@ -96,9 +96,9 @@ the caller says. Nothing the caller says is ever run as a command.</div>
 
   <!-- The good news: polling means NO public exposure, unlike a Twilio webhook. -->
   <section>
-    <div class="head">How it stays private — Jarvis polls Twilio</div>
+    <div class="head">How it stays private — Adam polls Twilio</div>
     <div class="body">
-      <div class="infobox">Jarvis does <b>not</b> expose anything to the internet for this. Twilio answers
+      <div class="infobox">Adam does <b>not</b> expose anything to the internet for this. Twilio answers
 and records the call on its own; then <b>your server quietly checks Twilio every few seconds</b> for new
 recordings, over an outbound, authenticated connection. Nothing inbound is published — this works on your
 private network or Tailscale, exactly like the rest of the app.
@@ -137,7 +137,7 @@ ending and the message landing on your phone.</div>
         <li>
           <h3>Enter your Twilio number</h3>
           <p class="muted">The number you bought, in E.164 form (e.g. <code>+15555550123</code>).
-            Jarvis polls Twilio for recordings of calls to <b>this</b> number.</p>
+            Adam polls Twilio for recordings of calls to <b>this</b> number.</p>
           <div class="row">
             <label style="min-width:96px;">Twilio number</label>
             <input id="twilioNumber" type="text" placeholder="+15555550123" style="flex:1;min-width:260px;" autocomplete="off">
@@ -179,11 +179,11 @@ Twilio — the same kind of one-time "deploy this" step the Calendar and Email a
             <button id="buildTwimlBtn">Build my greeting</button>
           </div>
           <div class="row">
-            <button id="hearBtn">&#9654; Hear it in Jarvis's voice</button>
+            <button id="hearBtn">&#9654; Hear it in Adam's voice</button>
             <span class="status" id="hearStatus"></span>
           </div>
           <audio id="greetingAudio" controls class="hidden" style="width:100%;margin-top:6px;"></audio>
-          <p class="muted" id="kokoroNote" style="margin-top:6px;">That preview is Jarvis's own Kokoro voice.
+          <p class="muted" id="kokoroNote" style="margin-top:6px;">That preview is Adam's own Kokoro voice.
             Using it on the actual call means hosting the clip somewhere public — optional and advanced. The
             shipped default (the British voice below) needs no hosting and always works.</p>
         </li>
@@ -191,14 +191,14 @@ Twilio — the same kind of one-time "deploy this" step the Calendar and Email a
           <h3>Create a TwiML Bin and paste this in</h3>
           <p class="muted">In the Twilio Console, go to <b>Develop &#8594; TwiML Bins</b>
             (<a href="https://console.twilio.com/us1/develop/twiml-bins/twiml-bins" target="_blank" rel="noopener">open &#8599;</a>),
-            click <b>Create new TwiML Bin</b>, give it a name like "Jarvis Voicemail", paste the code below,
+            click <b>Create new TwiML Bin</b>, give it a name like "Adammail", paste the code below,
             and <b>Save</b>. Then copy the Bin's <b>URL</b> (shown at the top after saving).</p>
           <pre class="snippet" id="twimlSnippet">Click "Build my greeting" above to generate this.</pre>
           <button id="copyTwiml">Copy TwiML</button>
         </li>
         <li>
           <h3>Point your number at the Bin</h3>
-          <p class="muted">Paste the Bin's URL here and Jarvis will wire your Twilio number's Voice webhook
+          <p class="muted">Paste the Bin's URL here and Adam will wire your Twilio number's Voice webhook
             to it for you. (Or do it by hand in the console: Phone Numbers &#8594; your number &#8594; Voice
             Configuration &#8594; "A call comes in" &#8594; TwiML Bin &#8594; your Bin.)</p>
           <div class="row">
@@ -221,7 +221,7 @@ AT&T (set each separately):
    *004* + number + #        → forward unanswered/busy/unreachable
 To turn it off later:  #21#   (or ##004#  on AT&T)</pre>
           <p class="muted">Exact codes vary by carrier and plan — if one doesn't take, search
-            "<i>[your carrier] conditional call forwarding code</i>". This is a free carrier setting; Jarvis
+            "<i>[your carrier] conditional call forwarding code</i>". This is a free carrier setting; Adam
             isn't involved in it.</p>
         </li>
       </ol>
@@ -232,7 +232,7 @@ To turn it off later:  #21#   (or ##004#  on AT&T)</pre>
   <section id="finishSec" class="hidden">
     <div class="head">Turn it on</div>
     <div class="body">
-      <p>One click and Jarvis writes its own settings and saves your Twilio values for you — no editing files.</p>
+      <p>One click and Adam writes its own settings and saves your Twilio values for you — no editing files.</p>
       <div class="row">
         <label style="min-width:96px;">Transcription</label>
         <select id="transcribeMode" style="min-width:200px;">
@@ -246,7 +246,7 @@ To turn it off later:  #21#   (or ##004#  on AT&T)</pre>
       </div>
       <div class="errbox hidden" id="enableErr"></div>
       <div class="warnbox" style="margin-top:10px;">Your Auth Token is saved to your local <code>.env</code>
-only — never shown, linked, or logged. Jarvis never deletes recordings and never calls anyone back.</div>
+only — never shown, linked, or logged. Adam never deletes recordings and never calls anyone back.</div>
       <details class="manual" style="margin-top:6px;">
         <summary style="cursor:pointer;color:#58a6ff;font-size:13px;">Prefer to set it up by hand?</summary>
         <p class="muted" style="margin-top:8px;">You don't need to — the button does it for you. But if you'd
@@ -262,13 +262,13 @@ only — never shown, linked, or logged. Jarvis never deletes recordings and nev
   <section id="doneSec" class="hidden">
     <div class="head">&#10003; Voicemail enabled</div>
     <div class="body">
-      <div class="okbox">Saved. Jarvis wrote your settings and Twilio values for you.</div>
-      <p><b>One more step:</b> restart Jarvis so the poller starts.</p>
-      <p class="muted">Close the black "Jarvis Voice Local" window (closing the app/browser tab isn't
-        enough — the server runs in that window), then start Jarvis again.</p>
+      <div class="okbox">Saved. Adam wrote your settings and Twilio values for you.</div>
+      <p><b>One more step:</b> restart Adam so the poller starts.</p>
+      <p class="muted">Close the black "Adam" window (closing the app/browser tab isn't
+        enough — the server runs in that window), then start Adam again.</p>
       <p style="margin-top:12px;">Then test it: from <b>another phone</b>, call your Twilio number directly
         (or call your own cell and let it ring out so forwarding kicks in), leave a short message, and hang up.</p>
-      <p class="muted">Give it up to a minute (Twilio transcribes, then Jarvis polls), then check for the push.</p>
+      <p class="muted">Give it up to a minute (Twilio transcribes, then Adam polls), then check for the push.</p>
     </div>
   </section>
 
@@ -302,7 +302,7 @@ function enterGate() { show($("gateView")); hide($("wizardView")); hide($("signO
 async function signIn() {
   var t = $("tokenInput").value.trim();
   var u = $("urlInput").value.trim();
-  if (!t) { $("gateErr").textContent = "Paste your JARVIS_TOKEN."; show($("gateErr")); return; }
+  if (!t) { $("gateErr").textContent = "Paste your ADAM_TOKEN."; show($("gateErr")); return; }
   LS.token = t;
   if (u) LS.url = u;
   try {
@@ -336,7 +336,7 @@ async function testConnection() {
       body: JSON.stringify({ account_sid: sid, auth_token: token, number: number })
     });
     $("testStatus").textContent = "";
-    if (r.status === 403) { $("testErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("testErr")); return; }
+    if (r.status === 403) { $("testErr").textContent = "Your Adam session was rejected — sign in again."; show($("testErr")); return; }
     var data = await r.json();
     if (data.ok) {
       var owned = data.number_owned ? "" : " (note: that number wasn't found on the account — double-check it)";
@@ -352,7 +352,7 @@ async function testConnection() {
     }
   } catch (e) {
     $("testStatus").textContent = "";
-    $("testErr").textContent = "Could not reach your Jarvis server to run the test.";
+    $("testErr").textContent = "Could not reach your Adam server to run the test.";
     show($("testErr"));
   }
 }
@@ -373,7 +373,7 @@ async function copyTwiml() {
   try { await navigator.clipboard.writeText($("twimlSnippet").textContent); } catch (e) {}
 }
 
-// --- hear the greeting in Jarvis's Kokoro voice (preview only) ---
+// --- hear the greeting in Adam's Kokoro voice (preview only) ---
 async function hearGreeting() {
   var owner = $("ownerName").value.trim();
   $("hearStatus").textContent = "Rendering…";
@@ -411,10 +411,10 @@ async function wireNumber() {
       body: JSON.stringify({ account_sid: sid, auth_token: token, number: number, voice_url: binUrl })
     });
     $("wireStatus").textContent = "";
-    if (r.status === 403) { $("wireErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("wireErr")); return; }
+    if (r.status === 403) { $("wireErr").textContent = "Your Adam session was rejected — sign in again."; show($("wireErr")); return; }
     var data = await r.json();
     if (data.ok) {
-      $("wireOk").textContent = "✓ Your number now answers with Jarvis voicemail.";
+      $("wireOk").textContent = "✓ Your number now answers with Adam voicemail.";
       show($("wireOk"));
     } else {
       $("wireErr").textContent = "Couldn't wire the number: " + (data.error || "unknown error") +
@@ -423,7 +423,7 @@ async function wireNumber() {
     }
   } catch (e) {
     $("wireStatus").textContent = "";
-    $("wireErr").textContent = "Could not reach your Jarvis server.";
+    $("wireErr").textContent = "Could not reach your Adam server.";
     show($("wireErr"));
   }
 }
@@ -466,7 +466,7 @@ async function enableVoicemail() {
                              owner_name: owner, transcribe_mode: mode })
     });
     $("enableStatus").textContent = "";
-    if (r.status === 403) { $("enableErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
+    if (r.status === 403) { $("enableErr").textContent = "Your Adam session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
     var data = await r.json();
     if (data.ok) {
       hide($("finishSec"));
@@ -478,7 +478,7 @@ async function enableVoicemail() {
     }
   } catch (e) {
     $("enableStatus").textContent = "";
-    $("enableErr").textContent = "Could not reach your Jarvis server to save the setting.";
+    $("enableErr").textContent = "Could not reach your Adam server to save the setting.";
     show($("enableErr"));
     $("enableBtn").disabled = false;
   }

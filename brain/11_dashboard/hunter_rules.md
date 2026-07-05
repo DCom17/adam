@@ -1,6 +1,6 @@
 # Hunter Rules
 
-The [[Hunter Tracker]] is the gamified progression layer of the [[JARVIS Command System|JARVIS system]].
+The [[Hunter Tracker]] is the gamified progression layer of the [[Adam Command System|Adam system]].
 It tracks real-world personal development using stats, levels, ranks, and bosses.
 
 ## Core Principle

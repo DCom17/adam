@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Phase 2 three-way merge tests (M2 / the AI-merge core).
+Adam — Phase 2 three-way merge tests (M2 / the AI-merge core).
 
 Proves diff3 combines non-overlapping changes automatically and refuses to guess
 when both sides edit the same lines:

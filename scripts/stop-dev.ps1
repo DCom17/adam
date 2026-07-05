@@ -1,4 +1,4 @@
-# Jarvis Voice Local - stop the dev backend.
+# Adam - stop the dev backend.
 # Finds the process listening on the configured port and stops it.
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot

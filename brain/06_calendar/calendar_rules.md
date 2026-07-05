@@ -80,7 +80,7 @@ When the user says "COMMIT":
 
 ## Integration Model
 
-JARVIS handles staging and validation in the vault, then pushes calendar **creates**
+Adam handles staging and validation in the vault, then pushes calendar **creates**
 through the product's action lane — it never touches Google Calendar directly and never
 runs a script. Full mechanism: `INTEGRATION_EXECUTION.md`.
 
@@ -93,17 +93,17 @@ runs a script. Full mechanism: `INTEGRATION_EXECUTION.md`.
 
 ## Calendar Commit Workflow
 
-JARVIS commits to Google Calendar only through a `calendar.create` block, and only when
+Adam commits to Google Calendar only through a `calendar.create` block, and only when
 the **Calendar add-on is connected** (Settings → Add-ons). If it isn't connected, the
-plan stays staged in the packet and JARVIS tells the user to set it up.
+plan stays staged in the packet and Adam tells the user to set it up.
 
-1. JARVIS stages the plan in `latest_calendar_packet.md`.
-2. JARVIS validates the plan with `INPUT`.
-3. JARVIS writes the proposed actions to `commit_preview.md`.
-4. On sign-off, JARVIS emits a `calendar.create` block for the approved events.
+1. Adam stages the plan in `latest_calendar_packet.md`.
+2. Adam validates the plan with `INPUT`.
+3. Adam writes the proposed actions to `commit_preview.md`.
+4. On sign-off, Adam emits a `calendar.create` block for the approved events.
 5. The user approves it on screen (default) and the server creates the events — or, with
    auto-run on, it runs immediately.
-6. JARVIS records the result in `commit_log.md`, updates today's daily log, and archives the packet.
+6. Adam records the result in `commit_log.md`, updates today's daily log, and archives the packet.
 
 No event is considered committed until the server confirms it (or it auto-ran). Until
 then it is staged for approval, not done.

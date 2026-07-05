@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Google Calendar connector tests.
+Adam — Google Calendar connector tests.
 
 Self-contained (no network, no Google): monkeypatches config flags and the
 connector's transport to prove:

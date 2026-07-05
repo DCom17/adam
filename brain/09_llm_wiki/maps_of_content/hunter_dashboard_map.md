@@ -6,13 +6,13 @@
 
 This MOC links all components of the [[Hunter Progression Dashboard]].
 
-Use this map to navigate the gamification layer of the [[JARVIS Command System]].
+Use this map to navigate the gamification layer of the [[Adam Command System]].
 
 ---
 
 ## What the Hunter System Is
 
-The [[Hunter Progression Dashboard]] is a gamified progression tracker layered on top of [[JARVIS Command System|JARVIS]] operations.
+The [[Hunter Progression Dashboard]] is a gamified progression tracker layered on top of [[Adam Command System|Adam]] operations.
 
 It turns real-world actions into stats, XP, quests, and [[Milestones|boss milestones]]. The core idea: doing the actual work gives measurable, visible progress.
 
@@ -138,7 +138,7 @@ Common starter weaknesses (yours emerge from real evidence over time):
 
 ## Relationship Triples
 
-- [[Hunter Progression Dashboard]] -- is_part_of --> [[JARVIS Command System]]
+- [[Hunter Progression Dashboard]] -- is_part_of --> [[Adam Command System]]
 - [[Hunter Tracker]] -- tracks --> [[Character Level]]
 - [[XP System]] -- advances --> [[Character Level]]
 - [[Rank Gate]] -- gates --> [[Character Level]]
@@ -151,4 +151,4 @@ Common starter weaknesses (yours emerge from real evidence over time):
 
 ## Related Maps
 
-- [[jarvis_system_map]] — [[JARVIS Command System|JARVIS]] core system
+- [[adam_system_map]] — [[Adam Command System|Adam]] core system

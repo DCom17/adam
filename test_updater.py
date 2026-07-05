@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — GitHub Releases updater tests.
+Adam — GitHub Releases updater tests.
 
 Covers the version logic, release parsing, the (network-free, mocked) update check,
 and a full download-and-apply that runs the real 3-way engine on a temp install.
@@ -45,7 +45,7 @@ def main() -> int:
     print("\n[release parsing]")
     rel = {"tag_name": "v0.9.3", "body": "notes here",
            "assets": [{"name": "readme.txt", "browser_download_url": "u1"},
-                      {"name": "jarvis-voice-local-v0.9.3.zip", "browser_download_url": "u2"}]}
+                      {"name": "adam-local-v0.9.3.zip", "browser_download_url": "u2"}]}
     check("picks the .zip asset url", updater._zip_asset_url(rel) == "u2")
     check("no zip asset -> None", updater._zip_asset_url({"assets": []}) is None)
 

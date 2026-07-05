@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — permission manager (Level 3 controlled-action foundation).
+Adam — permission manager (Level 3 controlled-action foundation).
 
 A small, dependency-free, testable safety layer that sits in front of any write
 the server performs (and, in time, any tool action the agent requests). The

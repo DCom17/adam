@@ -1,10 +1,10 @@
 """
-Jarvis Voice Local — persistent job store (Phase 5: Persistent Runtime State).
+Adam — persistent job store (Phase 5: Persistent Runtime State).
 
 Before Phase 5 the async-job table lived in a plain in-process dict, so a server
 restart / crash / machine sleep vanished every in-flight and finished job: the
 phone's `/poll` got a 404 and the turn was lost. This module replaces that dict
-with a small SQLite database (`data/state/jarvis.db`, stdlib `sqlite3`, no new
+with a small SQLite database (`data/state/adam.db`, stdlib `sqlite3`, no new
 deps) so jobs — and their history — survive the process.
 
 Design:
@@ -150,7 +150,7 @@ def _migrate(conn: sqlite3.Connection, from_version: int) -> int:
         version = 1
     if version < 2:
         # v2 adds jobs.chat_control (JSON chat-management directive relayed to the
-        # client so JARVIS can rename the current chat / open a new one hands-free).
+        # client so Adam can rename the current chat / open a new one hands-free).
         # CREATE TABLE IF NOT EXISTS won't add it to an existing DB, so alter in place.
         cols = {r[1] for r in conn.execute("PRAGMA table_info(jobs)").fetchall()}
         if "chat_control" not in cols:

@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — pending-approval store (Level 3 approval flow foundation).
+Adam — pending-approval store (Level 3 approval flow foundation).
 
 When the permission layer decides an action needs a human yes/no before it runs,
 it parks a record here. The owner can list pending approvals and approve/deny

@@ -1,5 +1,5 @@
 """
-Jarvis Voice Local — Voicemail (missed-call message-taker) wizard + connector tests.
+Adam — Voicemail (missed-call message-taker) wizard + connector tests.
 
 Covers the /setup-voicemail slice end-to-end with a TestClient + the static wizard
 HTML, plus unit tests for the polling connector (twilio_voicemail.py) and the answer
@@ -42,8 +42,8 @@ from pathlib import Path
 import config
 
 # Import-time stand-ins so server.py's config.validate() passes off the real box.
-if not config.JARVIS_TOKEN:
-    config.JARVIS_TOKEN = "test-token-" + "c" * 48
+if not config.ADAM_TOKEN:
+    config.ADAM_TOKEN = "test-token-" + "c" * 48
 if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
@@ -63,7 +63,7 @@ from fastapi.testclient import TestClient   # noqa: E402
 job_store.init(_SANDBOX / "jobs.db")
 
 ROOT = Path(__file__).resolve().parent
-TOKEN = server.JARVIS_TOKEN
+TOKEN = server.ADAM_TOKEN
 client = TestClient(server.app)
 AUTH = {"Authorization": "Bearer " + TOKEN}
 SECRET = "TWILIO_AUTH_SECRET_should_never_echo"
@@ -141,7 +141,7 @@ def main() -> int:
     (_SANDBOX / "settings.json").write_text(
         '{\n  "port": 8010,\n  "integrations": {"sms": {"enabled": false}}\n}\n', "utf-8")
     (_SANDBOX / ".env").write_text(
-        "JARVIS_TOKEN=keep\nTWILIO_AUTH_TOKEN=\nTWILIO_ACCOUNT_SID=\nTWILIO_NUMBER=\n", "utf-8")
+        "ADAM_TOKEN=keep\nTWILIO_AUTH_TOKEN=\nTWILIO_ACCOUNT_SID=\nTWILIO_NUMBER=\n", "utf-8")
 
     twilio_voicemail.probe = _raise("Twilio API HTTP 401: Unauthorized")
     before = (_SANDBOX / "settings.json").read_text("utf-8")
@@ -175,7 +175,7 @@ def main() -> int:
     check("auth token written to .env", ("TWILIO_AUTH_TOKEN=" + SECRET) in envtxt)
     check("account sid written to .env", "TWILIO_ACCOUNT_SID=ACgood" in envtxt)
     check("twilio number written to .env", "TWILIO_NUMBER=+15550000000" in envtxt)
-    check(".env preserved JARVIS_TOKEN", "JARVIS_TOKEN=keep" in envtxt)
+    check(".env preserved ADAM_TOKEN", "ADAM_TOKEN=keep" in envtxt)
 
     print("\n[6] /wire points the number's Voice webhook (bad number -> ok:false, token-safe)")
     _real_isid = twilio_voicemail.incoming_number_sid
@@ -341,7 +341,7 @@ def main() -> int:
     for cdn in ("cdnjs", "unpkg", "jsdelivr", "googleapis.com/ajax"):
         check(f"no CDN reference ({cdn})", cdn not in html)
     check("no token ever placed in a query string", "?token=" not in html)
-    check("JARVIS_TOKEN input is a password field", 'id="tokenInput" type="password"' in html)
+    check("ADAM_TOKEN input is a password field", 'id="tokenInput" type="password"' in html)
     check("Auth Token input is a password field", 'id="twilioAuthToken" type="password"' in html)
     check("test button + route present",
           'id="testBtn"' in html and "/integrations/voicemail/test" in html)

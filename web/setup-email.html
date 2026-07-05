@@ -10,7 +10,7 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Jarvis Voice Local — Email Setup</title>
+<title>Adam — Email Setup</title>
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -59,7 +59,7 @@
 <body>
 
 <header>
-  <h1>Email Setup <span class="muted">— Jarvis Voice Local</span></h1>
+  <h1>Email Setup <span class="muted">— Adam</span></h1>
   <span class="spacer"></span>
   <a href="/console">Operator Console</a>
   <button id="signOut" class="hidden">Sign out</button>
@@ -71,13 +71,13 @@
     <div class="head">Sign in</div>
     <div class="body">
       <p class="muted">This page talks to your local server with your bearer token (the same
-        JARVIS_TOKEN the Operator Console uses). It is stored on this device only.</p>
-      <p class="muted">Easiest way in: on your computer, start Jarvis with the <b>Start Jarvis</b>
-        launcher (<code>scripts\start-jarvis.ps1</code>) — it opens you already signed in, so you
+        ADAM_TOKEN the Operator Console uses). It is stored on this device only.</p>
+      <p class="muted">Easiest way in: on your computer, start Adam with the <b>Start Adam</b>
+        launcher (<code>scripts\start-adam.ps1</code>) — it opens you already signed in, so you
         won't see this box. On a phone, open the Operator Console's <b>Connect phone</b> and scan the
         sign-in QR. To copy the token by hand, run <code>scripts\copy-token.ps1</code> and paste it above.</p>
       <div class="row">
-        <input id="tokenInput" type="password" placeholder="Paste JARVIS_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
+        <input id="tokenInput" type="password" placeholder="Paste ADAM_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
         <button class="primary" id="signIn">Sign in</button>
       </div>
       <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
@@ -93,7 +93,7 @@
     <div class="body">
       <div class="warnbox">This email integration is <b>opt-in</b> and stays <b>disabled</b> until
 you finish setup. It runs entirely in <b>your own</b> Google account through a small script you
-deploy — Jarvis never holds your Google password. It can <b>read your mail and draft replies for
+deploy — Adam never holds your Google password. It can <b>read your mail and draft replies for
 your approval</b>. It <b>never sends without your approval</b>, and sending stays off entirely
 unless you deliberately turn it on. It <b>cannot delete, archive, or trash</b> any mail.</div>
     </div>
@@ -128,7 +128,7 @@ unless you deliberately turn it on. It <b>cannot delete, archive, or trash</b> a
             <b>floppy-disk Save icon</b> (<span class="ui">&#128190; Save project</span>) or press
             <span class="ui">Ctrl</span>+<span class="ui">S</span>.</p>
           <ul class="fine">
-            <li>If it asks you to name the project, type anything (e.g. <i>Jarvis Email</i>) and save.</li>
+            <li>If it asks you to name the project, type anything (e.g. <i>Adam Email</i>) and save.</li>
             <li>The function name only shows up in the picker (next step) <b>after</b> you save.</li>
           </ul>
         </li>
@@ -154,10 +154,10 @@ unless you deliberately turn it on. It <b>cannot delete, archive, or trash</b> a
               <b>bottom-right</b> again.</li>
           </ul>
           <div class="okbox">That permission text is Google's blanket Gmail wording — it's the only Gmail
-scope Google offers, so it always reads that way. <b>Jarvis does far less than it says.</b> It only reads
+scope Google offers, so it always reads that way. <b>Adam does far less than it says.</b> It only reads
 and writes <b>drafts</b>; it <b>cannot send, archive, trash, or delete</b> anything, and sending stays off
 entirely unless you deliberately turn it on later (and even then every message waits for your approval).
-The limits are built into Jarvis, not into this Google screen.</div>
+The limits are built into Adam, not into this Google screen.</div>
           <p class="muted">When it finishes, the <b>Execution log</b> opens at the bottom with a line like
             <code>GMAIL_BRIDGE_TOKEN=abc123…</code>. <b>Copy everything after the <code>=</code> sign</b> —
             that's your bridge token. <b>Paste it into the <i>Bridge token</i> box in step 8 below</b> (you
@@ -196,7 +196,7 @@ underneath.</div>
             <input id="bridgeToken" type="password" placeholder="the GMAIL_BRIDGE_TOKEN you generated" style="flex:1;min-width:260px;" autocomplete="off">
           </div>
           <p class="muted">Your token is sent only to your own bridge. When you click <b>Enable email</b>
-            below, Jarvis saves it to your local <code>.env</code> for you — you never edit a file by hand. It is
+            below, Adam saves it to your local <code>.env</code> for you — you never edit a file by hand. It is
             never put in a link and never logged.</p>
         </li>
         <li>
@@ -216,14 +216,14 @@ underneath.</div>
   <section id="finishSec" class="hidden">
     <div class="head">&#10003; Verified — turn it on</div>
     <div class="body">
-      <p>Your bridge is live and your token works. One click and Jarvis writes its own settings for
+      <p>Your bridge is live and your token works. One click and Adam writes its own settings for
         you — no editing files, no copying JSON.</p>
       <div class="row">
         <button class="primary" id="enableBtn">Enable email</button>
         <span class="status" id="enableStatus"></span>
       </div>
       <div class="errbox hidden" id="enableErr"></div>
-      <div class="warnbox" style="margin-top:10px;">Email turns on in <b>draft-only</b> mode: Jarvis can
+      <div class="warnbox" style="margin-top:10px;">Email turns on in <b>draft-only</b> mode: Adam can
 read and draft, but <b>cannot send</b>. Sending stays off until you deliberately turn it on, and even
 then every message waits for your approval. Your token is saved to your local <code>.env</code> only.</div>
       <details class="manual" style="margin-top:6px;">
@@ -241,11 +241,11 @@ then every message waits for your approval. Your token is saved to your local <c
   <section id="doneSec" class="hidden">
     <div class="head">&#10003; Email enabled</div>
     <div class="body">
-      <div class="okbox">Saved and turned on. Jarvis wrote your settings and your token for you, and it's
+      <div class="okbox">Saved and turned on. Adam wrote your settings and your token for you, and it's
         <b>live right now — no restart needed.</b> The Email add-on will show as <b>Enabled</b>.</div>
       <p style="margin-top:12px;">Try it:</p>
-      <div class="okbox">"Jarvis, check my email and draft a reply to the latest one."</div>
-      <p class="muted">Drafts always wait for your approval. Jarvis can't send, archive, or delete.</p>
+      <div class="okbox">"Adam, check my email and draft a reply to the latest one."</div>
+      <p class="muted">Drafts always wait for your approval. Adam can't send, archive, or delete.</p>
     </div>
   </section>
 
@@ -279,7 +279,7 @@ function enterGate() { show($("gateView")); hide($("wizardView")); hide($("signO
 async function signIn() {
   var t = $("tokenInput").value.trim();
   var u = $("urlInput").value.trim();
-  if (!t) { $("gateErr").textContent = "Paste your JARVIS_TOKEN."; show($("gateErr")); return; }
+  if (!t) { $("gateErr").textContent = "Paste your ADAM_TOKEN."; show($("gateErr")); return; }
   LS.token = t;
   if (u) LS.url = u;
   // Verify the token against a cheap token-gated route before entering.
@@ -323,7 +323,7 @@ async function testConnection() {
       body: JSON.stringify({ bridge_url: url, token: token })
     });
     $("testStatus").textContent = "";
-    if (r.status === 403) { $("testErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("testErr")); return; }
+    if (r.status === 403) { $("testErr").textContent = "Your Adam session was rejected — sign in again."; show($("testErr")); return; }
     var data = await r.json();
     if (data.ok) {
       $("testOk").textContent = "✓ Connected." + (data.account ? " Account: " + data.account + "." : "");
@@ -335,7 +335,7 @@ async function testConnection() {
     }
   } catch (e) {
     $("testStatus").textContent = "";
-    $("testErr").textContent = "Could not reach your Jarvis server to run the test.";
+    $("testErr").textContent = "Could not reach your Adam server to run the test.";
     show($("testErr"));
   }
 }
@@ -375,7 +375,7 @@ async function enableEmail() {
       body: JSON.stringify({ bridge_url: url, token: token })
     });
     $("enableStatus").textContent = "";
-    if (r.status === 403) { $("enableErr").textContent = "Your Jarvis session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
+    if (r.status === 403) { $("enableErr").textContent = "Your Adam session was rejected — sign in again."; show($("enableErr")); $("enableBtn").disabled = false; return; }
     var data = await r.json();
     if (data.ok) {
       hide($("finishSec"));
@@ -387,7 +387,7 @@ async function enableEmail() {
     }
   } catch (e) {
     $("enableStatus").textContent = "";
-    $("enableErr").textContent = "Could not reach your Jarvis server to save the setting.";
+    $("enableErr").textContent = "Could not reach your Adam server to save the setting.";
     show($("enableErr"));
     $("enableBtn").disabled = false;
   }

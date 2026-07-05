@@ -1,7 +1,7 @@
 # Integration Execution Model (read before any calendar or dashboard sync)
 
-This file is the single source of truth for **how JARVIS performs external writes**
-(Google Calendar, the Hunter dashboard Sheet) inside the Jarvis Voice Local product.
+This file is the single source of truth for **how Adam performs external writes**
+(Google Calendar, the Hunter dashboard Sheet) inside the Adam product.
 Every workflow that "commits the calendar" or "syncs the dashboard" follows this —
 the workflow files describe *what* to sync; this file is *how*.
 
