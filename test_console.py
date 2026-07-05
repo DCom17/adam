@@ -142,6 +142,21 @@ def main() -> int:
     check("/health version present", bool(rh.json().get("version")))
     check("/health agent_safety.mode present", "agent_safety" in rh.json())
     check("/health contains no secret value", _no_secret(rh.text))
+    # Anonymous callers get liveness + version ONLY — any web page can reach
+    # http://localhost:<port>/health cross-origin, so paths/URLs/integration
+    # state must require the token.
+    ra = client.get("/health")
+    ja = ra.json()
+    check("anon /health -> 200", ra.status_code == 200)
+    check("anon /health has version", bool(ja.get("version")))
+    check("anon /health omits filesystem paths", "vault_path" not in ja and "claude_exe" not in ja
+          and "data_dir" not in ja and "log_file" not in ja)
+    check("anon /health omits public_base_url + integrations",
+          "public_base_url" not in ja and "twilio_enabled" not in ja)
+    check("anon /health omits agent_safety", "agent_safety" not in ja)
+    rw = client.get("/health", headers={"Authorization": "Bearer wrong-token"})
+    check("wrong-token /health degrades to anon (200, minimal)", rw.status_code == 200
+          and "vault_path" not in rw.json())
 
     print("\n[7] /jobs shape is stable (seeded job)")
     job_store.create_job("smoke-job-1", mode="voice", session_id="sid-1",

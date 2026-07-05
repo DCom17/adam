@@ -2728,7 +2728,7 @@ async function loadStatus() {
   $("reachDot").className = "dot " + (ping.ok ? "ok" : "bad");
   $("reachDot").title = ping.ok ? "server reachable" : "server unreachable";
 
-  var h = await api("/health");           // /health is open, but auth header is harmless
+  var h = await api("/health");           // token unlocks the full summary (anon = version only)
   if (!h.ok || !h.data) {
     kvRows($("statusKv"), [["health", "unavailable (status " + h.status + ")"]]);
     return;

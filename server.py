@@ -954,6 +954,18 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def _security_headers(request, call_next):
+    """Baseline hardening headers on every response. SAMEORIGIN (not DENY):
+    the app iframes its own console/settings panels. No CSP — the PWA is one
+    file of inline script by design."""
+    resp = await call_next(request)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    resp.headers.setdefault("Referrer-Policy", "no-referrer")
+    return resp
+
+
 @app.exception_handler(Exception)
 async def _unhandled_exception(request, exc):
     """Last-resort crash catcher. HTTPException and rate-limit errors have their

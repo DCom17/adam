@@ -145,8 +145,12 @@ HOST = str(_get("host", "0.0.0.0"))
 PORT = int(_get("port", 8000))
 # Where the PWA is reached from outside (used for Twilio signature checks, docs).
 PUBLIC_BASE_URL = str(_get("public_base_url", "")).strip()
-# CORS: list of allowed origins, or ["*"] to allow all (the prototype default,
-# since the bearer token is the real gate). Tighten in settings.json for prod.
+# CORS: list of allowed origins, or ["*"] to allow all. The permissive default
+# is deliberate: the PWA may be opened from one origin (localhost, a LAN IP)
+# while pointed at another (the Tailscale HTTPS URL in its settings), and the
+# bearer token gates every route that returns anything — anonymous endpoints
+# (/ping, minimal /health, static shells) carry nothing worth reading
+# cross-origin. Pin origins in settings.json to tighten further.
 CORS_ALLOWED_ORIGINS = _get("cors_allowed_origins", ["*"]) or ["*"]
 
 # --- Local TTS service ------------------------------------------------------

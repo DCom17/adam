@@ -132,14 +132,22 @@ if (-not $ttsUp -and (Test-Path $ttsPy) -and (Test-Path $ttsModel)) {
 }
 
 # 5) Already running? If so, just open the browser - never start a duplicate.
+# The token rides along so /health returns the full summary (anonymous callers
+# get liveness + version only); without it we still detect "up" fine.
 $alreadyUp = $false
 try {
-    $h = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 3
+    $hdrs = @{}
+    if (-not [string]::IsNullOrWhiteSpace($adamToken) -and $adamToken -ne "replace-with-a-long-random-token") {
+        $hdrs["Authorization"] = "Bearer $adamToken"
+    }
+    $h = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 3 -Headers $hdrs
     if ($h.status -eq "ok") { $alreadyUp = $true }
 } catch { $alreadyUp = $false }
 
 if ($alreadyUp) {
-    Say "Adam is already running on port $port (v$($h.version), mode $($h.agent_safety.mode))." "Green"
+    $modeTxt = ""
+    if ($h.agent_safety) { $modeTxt = ", mode $($h.agent_safety.mode)" }
+    Say "Adam is already running on port $port (v$($h.version)$modeTxt)." "Green"
     Say "Opening $localUrl (signed in automatically)" "Cyan"
     Open-App $openUrl
     Say "Operator console: $consoleUrl" "DarkGray"

@@ -468,7 +468,7 @@
                autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
       </div>
       <button class="save" id="save">SAVE</button>
-      <div class="hint">Just paste your token — the server is detected automatically. Stored on this device only. Tip: open <b>…/?token=YOUR_TOKEN</b> once to sign in with a single tap; the token is then cleared from the address bar.</div>
+      <div class="hint">Just paste your token — the server is detected automatically. Stored on this device only. Tip: open <b>…/#token=YOUR_TOKEN</b> once to sign in with a single tap; the token is then cleared from the address bar (a <b>#</b> fragment never reaches the server or its logs).</div>
     </div>
   </div>
 
@@ -3792,7 +3792,10 @@
   }
 
   // --- One-tap login -----------------------------------------------------
-  // Open .../?token=XXXX once to sign in without typing. Store it, then strip it
+  // Legacy one-tap path: .../?token=XXXX. Still accepted (old printed links/QRs),
+  // but the DOCUMENTED path is the #token= fragment — a query string reaches the
+  // server and shows in uvicorn's console access log; a fragment never does.
+  // Store it, then strip it
   // from the address bar so the token isn't left sitting in history or the URL.
   (function consumeLoginParams() {
     const qp = new URLSearchParams(location.search);

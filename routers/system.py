@@ -10,7 +10,7 @@ import subprocess
 import sys
 import time
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 
 import config
@@ -19,7 +19,7 @@ import job_store
 import merge
 import permissions
 import updater
-from security import require_token
+from security import require_token, token_matches
 
 import server
 
@@ -33,9 +33,15 @@ async def ping():
 
 
 @router.get("/health")
-async def health():
-    """Health + config sanity for setup verification. No secrets exposed."""
-    return {"status": "ok", **config.safe_summary()}
+async def health(authorization: str = Header(default="")):
+    """Health + config sanity for setup verification. Anonymous callers get only
+    liveness + version (the PWA footer needs no more); the full config summary —
+    filesystem paths, the public URL, enabled integrations — requires the bearer
+    token. Any web page can hit http://localhost:<port>/health cross-origin, so
+    the anonymous body must not be worth reading. Never any secrets either way."""
+    if token_matches(authorization):
+        return {"status": "ok", **config.safe_summary()}
+    return {"status": "ok", "app": config.APP_NAME, "version": config.APP_VERSION}
 
 
 @router.get("/phone-setup", dependencies=[Depends(require_token)])

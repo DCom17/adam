@@ -22,6 +22,13 @@ old name, Jarvis Voice Local — they are a historical record and were left as w
   it now reads each existing Tailscale serve's proxy target, refuses to overwrite
   any serve that isn't Adam's, and reports whose port is whose generically.
 - The in-app brain template, docs, setup wizard, and web UI all speak "Adam" now.
+- **Security pass.** `/health` no longer tells anonymous callers anything beyond
+  "up, version X" — the full config summary (paths, public URL, which add-ons are
+  on) now requires the bearer token, so a random web page probing
+  `http://localhost:8000` cross-origin learns nothing. Every response carries
+  baseline hardening headers (nosniff, same-origin framing, no-referrer). The
+  documented one-tap sign-in is now the `#token=` fragment form, which never
+  reaches the server or its console log (`?token=` links still work).
 
 ## 0.9.34 - Two doors: run Jarvis on your Claude plan OR pay as you go
 
