@@ -61,6 +61,21 @@ following a setup guide.
 - Your token, keys, and files never leave your machine; nothing is routed through a
   third party.
 
+## "Windows protected your PC" (SmartScreen)
+
+The beta is not code-signed yet, so the first time you run `SETUP.cmd` (or `START.cmd`
+/ `UPDATE.cmd`) Windows may show a blue **"Windows protected your PC"** box. That is
+SmartScreen being cautious about an unsigned app from the internet — not a detection of
+anything wrong. Two ways past it:
+
+- **Best:** before extracting, right-click the downloaded ZIP → **Properties** → tick
+  **Unblock** → OK. Files extracted after that run without the warning.
+- **Otherwise:** on the blue box, click **More info** → **Run anyway** (needed once per
+  script).
+
+Never turn SmartScreen off system-wide for this — the per-file Unblock is all it takes.
+A code-signing certificate (which removes the warning entirely) is on the v1.0 roadmap.
+
 ## Getting unstuck
 
 Run `python scripts/doctor.py` first — it gives plain-language PASS/WARN/FAIL guidance

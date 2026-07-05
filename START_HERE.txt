@@ -24,11 +24,18 @@ FIRST - GET IT ONTO YOUR COMPUTER
      taskbar) and click  Downloads  on the left. The ZIP file
      you just downloaded is there.
 
-  3. UNZIP it. Click the ZIP file once to select it, then
+  3. UNBLOCK it (one click that saves warnings later).
+     Right-click the ZIP file -> Properties. At the bottom of
+     the window, if you see an  Unblock  checkbox, tick it and
+     click OK. (No checkbox? Fine - skip this step.)
+     Windows marks files from the internet and may otherwise
+     show a warning every time you open one.
+
+  4. UNZIP it. Click the ZIP file once to select it, then
      right-click it and choose  Extract All...  -> Extract.
      This makes a normal folder you can open.
 
-  4. OPEN the new folder. Scroll down the list until you find
+  5. OPEN the new folder. Scroll down the list until you find
      the file named  SETUP  (it may show as SETUP.cmd) - it sits
      near the bottom. That's your starting point; the next
      section picks up from there.
@@ -41,6 +48,11 @@ HOW TO SET IT UP
 ----------------
 
   1. Double-click the file named:   SETUP   (SETUP.cmd)
+
+     If a blue "Windows protected your PC" box appears, that is
+     Windows being cautious about new apps, not a problem with
+     Adam: click  More info , then  Run anyway . (Skipped the
+     Unblock step above? This box is why it exists.)
 
   2. Follow the steps on the screen. The wizard does almost
      everything for you.
