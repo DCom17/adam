@@ -3,6 +3,19 @@
 **Date:** 2026-07-05 · **Baseline:** v0.9.37 shipped (latest in DCom17/adam-releases)
 **Internal doc — deny-globbed by make_release.py, never ships.**
 
+> **STATUS UPDATE 2026-07-06 (overnight autonomous run):** **P0 — ALL DONE**,
+> **P2a/P2b/P2c/P2d — ALL DONE**, P3 items 4 (privacy — PRIVACY.md ships; EULA
+> draft in dist/), 7 (no crash reporting; diagnostics completed) and 8 (consumer
+> stories + ROTATE-TOKEN.cmd) — DONE. All committed as **v0.9.38** (f1c805c,
+> tagged; ZIP built + boot-verified, 217 files, leak-swept clean; full suite
+> green; release tests 117→129; updater tests 24→41). **NOT yet pushed or
+> published — run `dist\finish-v0.9.38.ps1`.** Owner materials ready:
+> `dist\tester-invite-draft.md`, `dist\phone-acceptance-runbook.md`,
+> `dist\EULA-draft-v1.0.md`. The live 8000 server still runs 0.9.37 — restart it
+> (close the Adam window, reopen from the desktop icon). Remaining v1.0 work =
+> P1 (signing enrollment, name search, testers, phone acceptance — all
+> owner-gated) + P3 items 1–3, 6 (installer, winget, icon art, site).
+
 Sources: four-way deep audit run 2026-07-05 — (A) cold-user product/UX audit, (B)
 production-readiness code audit, (C) live verification (49/49 suite, 117/117 release
 tests, doctor 0 FAIL, shipped ZIP boots clean + auth matrix correct), (D) launch-
