@@ -193,6 +193,46 @@ def main() -> int:
     check("syntax-broken clean merge is HELD, not written",
           read(i6 / "m.py") == "def f():\n    return (1\n" and "m.py" in res6.conflicts)
 
+    # --- post-apply verify + auto-restore (MP3-P2-1) ---------------------------------
+    # A toy tree (no server.py) must skip the probe entirely (proved implicitly by
+    # every apply above succeeding). Now simulate a real install whose update
+    # produces a broken server.py: verify must fail and the run must roll back.
+    b7 = sandbox / "b7"; i7 = sandbox / "i7"; n7 = sandbox / "n7"
+    write(b7 / "server.py", "OK = 1\n"); write(i7 / "server.py", "OK = 1\n")
+    write(n7 / "server.py", "import definitely_missing_module_xyz\n")
+    write(n7 / "brandnew.py", "x = 1\n")
+    raised7 = False
+    try:
+        ue.apply_update(n7, i7, b7, merge=False)
+    except RuntimeError as e:
+        raised7 = "safety check" in str(e)
+    check("broken update fails the post-apply verify", raised7)
+    check("server.py rolled back to the pre-update bytes",
+          read(i7 / "server.py") == "OK = 1\n")
+    check("newly-created file removed by the rollback",
+          not (i7 / "brandnew.py").exists())
+    check("baseline did NOT advance past a failed verify",
+          read(b7 / "server.py") == "OK = 1\n")
+    # And a GOOD update over the same install passes the probe end-to-end.
+    n7b = sandbox / "n7b"
+    write(n7b / "server.py", "OK = 2\n")
+    res7 = ue.apply_update(n7b, i7, b7, merge=False)
+    check("good update passes verify and applies",
+          res7 is not None and read(i7 / "server.py") == "OK = 2\n")
+    check("baseline advanced after the good update",
+          read(b7 / "server.py") == "OK = 2\n")
+
+    # --- crash-safe baseline snapshot (MP3-P2-3) -------------------------------------
+    # A leftover .tmp/.old from a crashed snapshot must be cleaned and never
+    # corrupt the swap.
+    stale_tmp = b7.with_name(b7.name + ".tmp"); write(stale_tmp / "junk.py", "junk\n")
+    stale_old = b7.with_name(b7.name + ".old"); write(stale_old / "junk.py", "junk\n")
+    n_snap = ue.snapshot_baseline(n7b, b7)
+    check("snapshot succeeds despite stale .tmp/.old leftovers", n_snap == 1)
+    check("stale snapshot dirs cleaned up",
+          not stale_tmp.exists() and not stale_old.exists())
+    check("baseline contents correct after swap", read(b7 / "server.py") == "OK = 2\n")
+
     print(f"\n{_passed} passed, {_failed} failed")
     return 1 if _failed else 0
 

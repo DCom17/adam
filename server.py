@@ -468,6 +468,28 @@ def _usage_limit_message(err: str) -> str | None:
     )
 
 
+# Pay-as-you-go's version of the usage cap: the prepaid API credit runs out and
+# Anthropic's raw billing error ("credit balance is too low...") gets spoken
+# verbatim. Same treatment; rides LIMIT_SENTINEL so the frontend needs no change.
+_BILLING_MARKERS = (
+    "credit balance", "insufficient credit", "purchase credits",
+    "plans & billing", "billing", "payment required",
+)
+
+
+def _billing_message(err: str) -> str | None:
+    """A friendly message when Claude reports exhausted/insufficient API credit,
+    else None. Only meaningful for the pay-as-you-go (API key) door."""
+    e = (err or "").lower()
+    if not any(m in e for m in _BILLING_MARKERS):
+        return None
+    return (
+        "Your prepaid Claude credit has run out. Top up at console.anthropic.com "
+        "(Plans & Billing), or switch to your Claude subscription under "
+        "Settings -> AI plan."
+    )
+
+
 _ACTION_BLOCK_RE = re.compile(r"<<ACTION\b([^>]*)>>(.*?)<<END_ACTION>>", re.DOTALL)
 _ACTION_ATTR_RE = re.compile(r'(\w+)\s*=\s*"([^"]*)"')
 
@@ -1253,6 +1275,11 @@ async def _read_stream_result(proc, job_id: str | None, timeout: int) -> dict:
         raise TurnStopped()
     if proc.returncode != 0:
         log.error("Claude exited %s: %s", proc.returncode, stderr[:500])
+        # Same friendly-failure ladder as the non-stream path (B2-I): a plan cap
+        # or exhausted credit mid-code-chat must not read as a raw crash.
+        limit_msg = _usage_limit_message(stderr) or _billing_message(stderr)
+        if limit_msg:
+            raise HTTPException(status_code=502, detail=f"{LIMIT_SENTINEL} {limit_msg}")
         if _is_claude_auth_failure(stderr):
             raise HTTPException(status_code=502,
                                 detail=f"{AUTH_REQUIRED_SENTINEL} {AUTH_REQUIRED_MESSAGE}")
@@ -1494,7 +1521,7 @@ async def run_claude(
             if proc.returncode != 0:
                 err = stderr.decode("utf-8", errors="replace").strip()
                 log.error("Claude exited %s: %s", proc.returncode, err[:500])
-                limit_msg = _usage_limit_message(err)
+                limit_msg = _usage_limit_message(err) or _billing_message(err)
                 if limit_msg:
                     raise HTTPException(status_code=502,
                                         detail=f"{LIMIT_SENTINEL} {limit_msg}")
@@ -1535,7 +1562,7 @@ async def run_claude(
     if data.get("is_error") or _subtype.startswith("error"):
         err_text = str(data.get("result") or data.get("error") or _subtype or "unknown error")
         log.error("Claude result error (subtype=%s): %s", _subtype or "?", err_text[:500])
-        limit_msg = _usage_limit_message(err_text)
+        limit_msg = _usage_limit_message(err_text) or _billing_message(err_text)
         if limit_msg:
             raise HTTPException(status_code=502, detail=f"{LIMIT_SENTINEL} {limit_msg}")
         if _is_claude_auth_failure(err_text):

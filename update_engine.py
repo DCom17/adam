@@ -39,6 +39,8 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import subprocess
+import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -252,15 +254,27 @@ def snapshot_baseline(src_dir: str | Path, baseline_dir: str | Path | None = Non
     if baseline_dir is None:
         baseline_dir = BASELINE_DIR          # resolved at call time, not import time
     src_dir, baseline_dir = Path(src_dir), Path(baseline_dir)
-    if baseline_dir.exists():
-        shutil.rmtree(baseline_dir, ignore_errors=True)
-    baseline_dir.mkdir(parents=True, exist_ok=True)
+    # Crash-safe: build the full snapshot BESIDE the live baseline, then swap by
+    # rename. The old rmtree-then-copy left a crash window the whole copy long,
+    # and a partial baseline silently misclassifies user files next update. The
+    # swap shrinks the window to two renames; worst case is NO baseline (every
+    # file classifies no_baseline = overwritten-with-backup), never a partial one.
+    tmp_dir = baseline_dir.with_name(baseline_dir.name + ".tmp")
+    old_dir = baseline_dir.with_name(baseline_dir.name + ".old")
+    for leftover in (tmp_dir, old_dir):
+        if leftover.exists():
+            shutil.rmtree(leftover, ignore_errors=True)
+    tmp_dir.mkdir(parents=True, exist_ok=True)
     n = 0
     for rel in iter_program_files(src_dir):
-        dst = baseline_dir / rel
+        dst = tmp_dir / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_dir / rel, dst)
         n += 1
+    if baseline_dir.exists():
+        os.replace(baseline_dir, old_dir)
+    os.replace(tmp_dir, baseline_dir)
+    shutil.rmtree(old_dir, ignore_errors=True)
     return n
 
 
@@ -341,6 +355,65 @@ def _retire_removed_files(new_dir: Path, install_dir: Path, baseline_dir: Path,
             result.kept_local.append(rel)
 
 
+def _verify_install(install_dir: Path, timeout: int = 120) -> str | None:
+    """Post-apply smoke test: `import server` in a subprocess from the updated
+    install. Returns None on success, else the failure text. Only meaningful for
+    a real install (server.py present) — toy trees skip it. The env is stripped
+    of repo paths so the check exercises the INSTALL, not this process's
+    sys.path; a dummy token satisfies config.validate() on pre-setup installs
+    (dotenv never overrides a set env var, so real installs are unaffected)."""
+    if not (install_dir / "server.py").is_file():
+        return None
+    env = os.environ.copy()
+    env.pop("PYTHONPATH", None)
+    env.pop("ADAM_CONFIG_ROOT", None)
+    env.setdefault("ADAM_TOKEN", "update-verify-dummy-token-000000")
+    try:
+        p = subprocess.run(
+            [sys.executable, "-c", "import server"],
+            cwd=str(install_dir), env=env,
+            capture_output=True, text=True, timeout=timeout,
+        )
+    except Exception as e:  # noqa: BLE001 — a probe that won't run is a failure
+        return f"verify probe failed to run: {e}"
+    if p.returncode == 0:
+        return None
+    return (p.stderr or p.stdout or f"exit {p.returncode}").strip()[-2000:]
+
+
+def _restore_from_backup(backup_root: Path, install_dir: Path,
+                         result: ApplyResult) -> None:
+    """Undo THIS run: copy every backed-up file back, un-retire *.removed
+    renames, and delete files the run newly created (they have no backup).
+    Best-effort — restoring most of a broken install beats leaving all of it."""
+    for rel in result.retired:
+        live = install_dir / rel
+        removed = live.with_name(live.name + ".removed")
+        if removed.exists() and not live.exists():
+            try:
+                os.replace(removed, live)
+            except OSError:
+                pass
+    if backup_root.is_dir():
+        for b in backup_root.rglob("*"):
+            if not b.is_file():
+                continue
+            rel = b.relative_to(backup_root)
+            try:
+                _atomic_copy(b, install_dir / rel)
+            except OSError:
+                pass
+    backed = {str(p.relative_to(backup_root)) for p in backup_root.rglob("*")
+              if p.is_file()} if backup_root.is_dir() else set()
+    for rel in result.written:
+        if str(Path(rel)) in backed:
+            continue  # restored above
+        try:
+            (install_dir / rel).unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 def apply_update(new_dir: str | Path, install_dir: str | Path,
                  baseline_dir: str | Path | None = None, *,
                  merge: bool = True) -> ApplyResult:
@@ -391,6 +464,18 @@ def apply_update(new_dir: str | Path, install_dir: str | Path,
 
         # Files the new version dropped: retire (rename), never delete.
         _retire_removed_files(new_dir, install_dir, baseline_dir, result)
+
+        # Post-apply smoke test BEFORE the baseline advances: if the updated
+        # install can't even import, auto-restore this run's backups and refuse.
+        # (P2a-5 — the backups above were write-only until this existed.)
+        verify_err = _verify_install(install_dir)
+        if verify_err:
+            _restore_from_backup(Path(backup_root), install_dir, result)
+            raise RuntimeError(
+                "The update didn't pass its safety check, so Adam put everything "
+                "back the way it was. You're still on your current version — "
+                f"try again later. (Technical detail: {verify_err[:300]})"
+            )
 
         # The baseline advances to what we just shipped, so the NEXT update three-ways
         # against this version. (Held conflicts are resolved by the friend in-app; once
