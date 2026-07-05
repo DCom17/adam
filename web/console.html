@@ -11,6 +11,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Adam — Operator Console</title>
+<link rel="icon" href="/icon.png" type="image/png" />
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
@@ -3475,7 +3476,7 @@ async function trySignIn() {
   // Validate against a token-gated route.
   var probe = await api("/jobs?limit=1");
   if (probe.status === 403) { LS.clearToken(); showGate("Auth rejected. Check your token."); return; }
-  if (probe.status === 0) { showGate("Server unreachable at " + LS.url + (probe.netErr ? " (" + probe.netErr + ")" : "")); return; }
+  if (probe.status === 0) { showGate("Can't reach Adam at " + LS.url + " — the Adam window on this PC may be closed. Reopen it from the desktop icon, then try again." + (probe.netErr ? " (" + probe.netErr + ")" : "")); return; }
   $("gateErr").classList.add("hidden");
   showConsole();
 }

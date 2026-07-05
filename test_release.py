@@ -264,6 +264,99 @@ def main() -> int:
           _import_guard_trips({"routers/chat.py"}))
     check("guard trips when security.py is dropped",
           _import_guard_trips({"security.py"}))
+    # These three ride on import forms the old regex guard could not see
+    # (parenthesized `from models import (…)`, indented lazy imports) — they
+    # shipped only by hand-listing until the guard moved to ast.parse.
+    check("guard trips when models.py is dropped (parenthesized import)",
+          _import_guard_trips({"models.py"}))
+    check("guard trips when tts_supervisor.py is dropped (lazy import)",
+          _import_guard_trips({"tts_supervisor.py"}))
+    check("guard trips when phone_link.py is dropped (lazy import)",
+          _import_guard_trips({"phone_link.py"}))
+
+    print("\n[9e] Tree-wide content guard (owner terms must appear in NO shipped file)")
+    try:
+        mr.check_tree_clean(rels)
+        check("clean tree passes the tree content guard", True)
+    except RuntimeError:
+        check("clean tree passes the tree content guard", False)
+    if mr._GUARD_LOCAL.is_file():
+        planted_doc = ROOT / "docs" / "_tree_guard_probe_tmp.md"
+        try:
+            _term = next(t.strip() for t in mr._GUARD_LOCAL.read_text("utf-8").splitlines()
+                         if t.strip() and not t.strip().startswith("#"))
+            planted_doc.write_text(f"leak test: {_term}\n", encoding="utf-8")
+            raised = False
+            try:
+                mr.check_tree_clean(rels + ["docs/_tree_guard_probe_tmp.md"])
+            except RuntimeError:
+                raised = True
+            check("tree guard raises on a planted owner term outside brain/", raised)
+        finally:
+            if planted_doc.exists():
+                planted_doc.unlink()
+
+    print("\n[9f] Allow-list completeness (renames/deletes must fail the build)")
+    try:
+        mr.check_allowlist_complete()
+        check("current allow-list fully resolves on disk", True)
+    except RuntimeError:
+        check("current allow-list fully resolves on disk", False)
+    _saved_root_files = mr._ROOT_FILES
+    try:
+        mr._ROOT_FILES = _saved_root_files + ["_no_such_file_ever.py"]
+        raised = False
+        try:
+            mr.check_allowlist_complete()
+        except RuntimeError:
+            raised = True
+        check("allow-list guard raises on a dangling entry", raised)
+    finally:
+        mr._ROOT_FILES = _saved_root_files
+
+    print("\n[9g] Changelog gate")
+    try:
+        import config as _cfg
+        mr.check_changelog_has_version(str(_cfg.APP_VERSION))
+        check("CHANGELOG has an entry for config.APP_VERSION", True)
+    except RuntimeError:
+        check("CHANGELOG has an entry for config.APP_VERSION", False)
+    raised = False
+    try:
+        mr.check_changelog_has_version("999.999.999")
+    except RuntimeError:
+        raised = True
+    check("changelog gate raises for a version with no notes", raised)
+
+    print("\n[10] Boot-the-ZIP: the built ZIP must import in isolation")
+    # The v0.9.35 incident proof: static guards can lie; actually extract the ZIP
+    # and import server FROM IT with the repo off sys.path. Any staged-set gap
+    # (missing module, missing package member) fails here no matter its form.
+    import os
+    import subprocess
+    with tempfile.TemporaryDirectory(prefix="jvl_rel_boot_") as td:
+        zp = mr.build_zip(out_dir=td, version="0.0.0-boottest")
+        ex = Path(td) / "extracted"
+        with zipfile.ZipFile(zp) as z:
+            z.extractall(ex)
+        (ex / ".env").write_text(
+            "ADAM_TOKEN=boottest-token-0123456789abcdef0123456789abcdef\n",
+            encoding="utf-8")
+        settings = (ex / "settings.example.json").read_text(encoding="utf-8")
+        (ex / "settings.json").write_text(settings, encoding="utf-8")
+        env = dict(os.environ)
+        env.pop("PYTHONPATH", None)  # nothing from the repo may leak in
+        # The pytest legacy harness points ADAM_CONFIG_ROOT at a temp config;
+        # this boot must read the .env/settings.json created in the extract dir.
+        env.pop("ADAM_CONFIG_ROOT", None)
+        env.pop("ADAM_TOKEN", None)
+        r = subprocess.run(
+            [sys.executable, "-c", "import server; print('BOOT_OK')"],
+            cwd=str(ex), env=env, capture_output=True, text=True, timeout=180)
+        check("extracted ZIP imports server (cold-install boot)",
+              r.returncode == 0 and "BOOT_OK" in r.stdout)
+        if r.returncode != 0:
+            print("      stderr tail:", (r.stderr or "")[-400:].replace("\n", " | "))
 
     print("\n[9c] Brain guard fails closed on a planted violation")
     planted = ROOT / "brain" / "_guard_probe_tmp.md"

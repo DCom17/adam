@@ -440,6 +440,34 @@ def _is_claude_auth_failure(err: str) -> bool:
     return any(m in e for m in _AUTH_FAILURE_MARKERS)
 
 
+# A subscription plan hitting its usage window used to surface as either silence
+# or the CLI's raw "Claude AI usage limit reached|<epoch>" string spoken aloud.
+# Same sentinel pattern as auth: the frontend shows the message verbatim.
+LIMIT_SENTINEL = "JVL_LIMIT_REACHED:"
+
+
+def _usage_limit_message(err: str) -> str | None:
+    """A friendly message when Claude reports the plan's usage limit, else None.
+    Parses the reset epoch the CLI appends after a '|' when present."""
+    if "usage limit" not in (err or "").lower():
+        return None
+    when = ""
+    m = re.search(r"\|(\d{9,13})", err)
+    if m:
+        try:
+            from datetime import datetime
+            ts = int(m.group(1))
+            if ts > 10**12:  # milliseconds
+                ts //= 1000
+            when = " around " + datetime.fromtimestamp(ts).strftime("%I:%M %p").lstrip("0")
+        except Exception:  # noqa: BLE001 — the time is a nicety, never fail over it
+            when = ""
+    return (
+        f"Your Claude plan's usage limit has been reached — it resets{when or ' in a few hours'}. "
+        "Try again then, or switch to pay-as-you-go under Settings -> AI plan."
+    )
+
+
 _ACTION_BLOCK_RE = re.compile(r"<<ACTION\b([^>]*)>>(.*?)<<END_ACTION>>", re.DOTALL)
 _ACTION_ATTR_RE = re.compile(r'(\w+)\s*=\s*"([^"]*)"')
 
@@ -982,7 +1010,7 @@ async def _start_sms_poller():
     (idle unless SMS is enabled + fully configured) and never raises. Reuses
     _run_sms_job as the per-message callback, so polled texts take the exact same
     path as webhook texts (brain -> action -> Web Push reply)."""
-    asyncio.create_task(twilio_sms.run_poller(_run_sms_job, log=log))
+    keep_task(asyncio.create_task(twilio_sms.run_poller(_run_sms_job, log=log)))
 
 
 @app.on_event("startup")
@@ -991,7 +1019,7 @@ async def _start_voicemail_poller():
     self-gates on config (idle unless voicemail is enabled + fully configured) and
     never raises. Pulls new recordings from Twilio, transcribes, and pushes the
     message to the phone — same private outbound-poll posture as the SMS poller."""
-    asyncio.create_task(twilio_voicemail.run_poller(_run_voicemail_job, log=log))
+    keep_task(asyncio.create_task(twilio_voicemail.run_poller(_run_voicemail_job, log=log)))
 
 
 @app.on_event("startup")
@@ -1112,6 +1140,18 @@ JOB_PROGRESS: dict[str, list[str]] = {}
 CANCELLED_JOBS: set[str] = set()
 PROGRESS_MAX_LINES = 200                # rolling cap per turn
 STREAM_LINE_LIMIT = 16 * 1024 * 1024    # stream-json lines embed whole tool results
+
+# Strong references to fire-and-forget tasks (jobs, pollers). The event loop
+# holds only weak refs to tasks — an unreferenced task can be garbage-collected
+# mid-run, which leaves its job stuck in `running` until the next restart.
+_BACKGROUND_TASKS: set[asyncio.Task] = set()
+
+
+def keep_task(task: asyncio.Task) -> asyncio.Task:
+    """Anchor a fire-and-forget task so GC can never collect it mid-run."""
+    _BACKGROUND_TASKS.add(task)
+    task.add_done_callback(_BACKGROUND_TASKS.discard)
+    return task
 
 
 class TurnStopped(Exception):
@@ -1372,7 +1412,18 @@ async def run_claude(
 
     # --append-system-prompt must come last (before the positional message) so the
     # variadic --disallowedTools / --add-dir lists terminate cleanly.
-    cmd += ["--append-system-prompt", prompt, message]
+    cmd += ["--append-system-prompt", prompt]
+    # Windows caps a process command line at ~32,767 chars. A long pasted message
+    # (an email, a document) on argv makes the spawn itself fail with a cryptic
+    # WinError — so long messages ride stdin instead (`claude -p` reads the prompt
+    # from stdin when no positional prompt is given). Short messages stay on argv,
+    # the long-proven path.
+    stdin_payload: bytes | None = None
+    argv_chars = sum(len(a) + 1 for a in cmd) + len(message)
+    if argv_chars > 28000:
+        stdin_payload = message.encode("utf-8")
+    else:
+        cmd += [message]
 
     # Auth isolation: the CLI bills whichever credential it finds, and an env
     # ANTHROPIC_API_KEY silently outranks a subscription login. So the child env
@@ -1388,7 +1439,8 @@ async def run_claude(
         *cmd,
         cwd=run_cwd,
         env=child_env,
-        stdin=asyncio.subprocess.DEVNULL,
+        stdin=(asyncio.subprocess.PIPE if stdin_payload is not None
+               else asyncio.subprocess.DEVNULL),
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         limit=STREAM_LINE_LIMIT,
@@ -1401,6 +1453,11 @@ async def run_claude(
 
     try:
         if mode == "code":
+            if stdin_payload is not None:
+                # Deliver the long message, then close stdin so `-p` sees EOF.
+                proc.stdin.write(stdin_payload)
+                await proc.stdin.drain()
+                proc.stdin.close()
             try:
                 data = await _read_stream_result(proc, job_id, timeout)
             except asyncio.TimeoutError:
@@ -1408,13 +1465,25 @@ async def run_claude(
                 await proc.wait()
                 log.error("Claude turn timed out after %ss (mode=%s)", timeout, mode)
                 raise HTTPException(status_code=504, detail="Claude timed out")
+            except (HTTPException, TurnStopped):
+                raise
+            except Exception:
+                # A stream-reader crash (oversize line, decode error) must never
+                # orphan a bypassPermissions claude.exe running unwatched.
+                await _kill_proc_tree(proc)
+                await proc.wait()
+                raise
         else:
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(), timeout=timeout
-                )
+                # Only pass input= when a long message rides stdin — the normal
+                # path stays the plain communicate() every fake/test stubs.
+                comm = (proc.communicate(input=stdin_payload)
+                        if stdin_payload is not None else proc.communicate())
+                stdout, stderr = await asyncio.wait_for(comm, timeout=timeout)
             except asyncio.TimeoutError:
-                proc.kill()
+                # Kill the whole tree — claude.exe spawns helpers (node, MCP) that
+                # a bare proc.kill() leaves running.
+                await _kill_proc_tree(proc)
                 await proc.wait()
                 log.error("Claude turn timed out after %ss (mode=%s)", timeout, mode)
                 raise HTTPException(status_code=504, detail="Claude timed out")
@@ -1425,6 +1494,10 @@ async def run_claude(
             if proc.returncode != 0:
                 err = stderr.decode("utf-8", errors="replace").strip()
                 log.error("Claude exited %s: %s", proc.returncode, err[:500])
+                limit_msg = _usage_limit_message(err)
+                if limit_msg:
+                    raise HTTPException(status_code=502,
+                                        detail=f"{LIMIT_SENTINEL} {limit_msg}")
                 if _is_claude_auth_failure(err):
                     # Surfaced to the user as clear sign-in guidance, not "connection error".
                     raise HTTPException(status_code=502,
@@ -1452,6 +1525,23 @@ async def run_claude(
             usage_store.record_turn(float(_cost))
         except Exception:  # noqa: BLE001 — never fail a finished turn over bookkeeping
             log.warning("usage_store.record_turn failed", exc_info=True)
+
+    # The CLI can exit 0 with an ERROR result (subtype error_*, is_error true) —
+    # e.g. a subscription plan hitting its usage window mid-session. Untreated,
+    # that either speaks the raw "usage limit reached|<epoch>" string or reads as
+    # a silent empty turn. Surface it like any other failure, with a friendly
+    # message for the limit case.
+    _subtype = str(data.get("subtype") or "")
+    if data.get("is_error") or _subtype.startswith("error"):
+        err_text = str(data.get("result") or data.get("error") or _subtype or "unknown error")
+        log.error("Claude result error (subtype=%s): %s", _subtype or "?", err_text[:500])
+        limit_msg = _usage_limit_message(err_text)
+        if limit_msg:
+            raise HTTPException(status_code=502, detail=f"{LIMIT_SENTINEL} {limit_msg}")
+        if _is_claude_auth_failure(err_text):
+            raise HTTPException(status_code=502,
+                                detail=f"{AUTH_REQUIRED_SENTINEL} {AUTH_REQUIRED_MESSAGE}")
+        raise HTTPException(status_code=502, detail=f"Claude failed: {err_text[:300]}")
 
     display, spoken = _extract_spoken(data.get("result", ""), mode)
     sid = data.get("session_id", session_id or "")
@@ -1613,13 +1703,24 @@ async def _run_job(
         # Not a failure: the user hit stop. The chat keeps its resume id — the
         # next utterance continues from the last COMPLETED turn.
         log.info("job %s stopped by user", job_id)
-        job_store.cancel_job(job_id, "Stopped by user.")
+        _end_job_safely(job_store.cancel_job, job_id, "Stopped by user.")
     except HTTPException as e:
         log.error("job %s failed: %s", job_id, e.detail)
-        job_store.fail_job(job_id, str(e.detail))
+        _end_job_safely(job_store.fail_job, job_id, str(e.detail))
     except Exception as e:  # noqa: BLE001 — never let a job die silently
         log.exception("job %s crashed", job_id)
-        job_store.fail_job(job_id, str(e)[:500])
+        _end_job_safely(job_store.fail_job, job_id, str(e)[:500])
+
+
+def _end_job_safely(writer, job_id: str, detail: str) -> None:
+    """Record a job's terminal state without ever raising. If the store write
+    itself fails (disk full, DB locked), the job would otherwise be wedged in
+    `running` — the phone polls forever — until the next restart's recovery
+    sweep. Log loudly and move on; recovery will mark it interrupted."""
+    try:
+        writer(job_id, detail)
+    except Exception:  # noqa: BLE001 — a bookkeeping failure must not kill the task
+        log.exception("job %s: could not record terminal state (%s)", job_id, detail[:120])
 
 
 # --- Twilio inbound SMS -----------------------------------------------------

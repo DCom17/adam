@@ -176,88 +176,6 @@ if ($claudeExe) {
     }
 }
 
-# --- the plan step: two doors for paying for AI time -------------------------------
-# Records auth_mode + voice_model in settings.json (and the API key in .env for
-# door 2) through integration_config's atomic, backed-up writers — same code path
-# the in-app Settings -> AI plan control uses, so the two never disagree.
-function Set-AiPlan([string]$mode, [string]$model, [string]$key = "") {
-    $planPy = @'
-import sys
-sys.path.insert(0, sys.argv[1])
-import integration_config as ic
-ic.set_settings_top_level("auth_mode", sys.argv[2])
-ic.set_settings_top_level("voice_model", sys.argv[3])
-if len(sys.argv) > 4 and sys.argv[4]:
-    ic.set_env_var("ANTHROPIC_API_KEY", sys.argv[4], section_header="# AI plan (pay-as-you-go)")
-'@
-    try { & $pythonExe -c $planPy $root $mode $model $key | Out-Null }
-    catch { Warn "Couldn't record the plan choice: $($_.Exception.Message)" }
-}
-
-Write-Host ""
-Info "How will Adam's AI time be paid for? Two doors - and you can switch"
-Info "anytime later under Settings -> AI plan in the app:"
-Write-Host ""
-Info "  [1] Sign in with Claude   (recommended for regular daily use)"
-Info "      You have - or will get - a Claude plan (about `$20/month for Pro)."
-Info "      Adam runs on it at a flat rate: no meter, nothing extra to pay."
-Write-Host ""
-Info "  [2] Pay as you go   (no subscription needed)"
-Info "      Load prepaid credit onto an Anthropic API key - like an arcade card:"
-Info "      `$5 is roughly 200-300 conversations, it reloads only when YOU choose,"
-Info "      and Adam can never spend past your credit. A monthly budget in the"
-Info "      app adds its own hard stop, and a live cost meter keeps it honest."
-Write-Host ""
-$door = ""
-while ($door -ne "1" -and $door -ne "2") {
-    $door = (Read-Host "  Type 1 or 2, then press Enter").Trim()
-}
-
-if ($door -eq "2") {
-    Write-Host ""
-    Info "Create a key at  https://console.anthropic.com  ->  API keys, and buy a"
-    Info "small amount of credit (`$5 is plenty to start). Leave auto-reload OFF"
-    Info "and overspending is impossible."
-    $apiKey = ""
-    while ($true) {
-        $apiKey = (Read-Host "  Paste your API key (starts with sk-ant-), or press Enter to skip").Trim()
-        if (-not $apiKey) { break }
-        if ($apiKey.StartsWith("sk-ant-") -and $apiKey.Length -ge 20) { break }
-        Warn "That doesn't look like an Anthropic key - they start with sk-ant-."
-    }
-    if ($apiKey) {
-        Set-AiPlan "api_key" "claude-sonnet-5" $apiKey
-        Good "Pay-as-you-go is set up (model: Claude Sonnet - fast and affordable)."
-        Info "Switch models, raise the budget, or change doors anytime in the app."
-    } else {
-        # No key recorded -> leave the subscription default so the app's sign-in
-        # guidance stays truthful; the user finishes the choice in Settings -> AI plan.
-        Warn "No key added - finish this later in the app under Settings -> AI plan."
-    }
-} else {
-    Set-AiPlan "subscription" "claude-opus-4-8"
-    Write-Host ""
-    Info "Now the one step only you can do: signing in to your Claude account."
-    Info "I'll open Claude. A browser window will appear - sign in (or create an"
-    Info "account). When it says you're logged in, type  /exit  to close Claude and"
-    Info "come back here."
-    Write-Host ""
-    if (YesNo "Open Claude to sign in now?") {
-        try {
-            # New window so the login session is clean and doesn't take over this wizard.
-            Start-Process "cmd.exe" -ArgumentList "/k", "claude"
-            Info "A Claude window opened. Sign in there, then type  /exit  in it."
-        } catch {
-            Warn "Couldn't open it automatically. Open a terminal and type:  claude"
-        }
-        Pause-Enter "When you've signed in to Claude, press Enter here to continue"
-    } else {
-        Warn "You can sign in later, but Adam won't answer until you do."
-        Info "To sign in later: open a terminal and type  claude  , then log in."
-        Pause-Enter "Press Enter to continue"
-    }
-}
-
 # === STEP 3 — Dependencies =========================================================
 Section 3 "Adam's building blocks (one-time download)"
 Info "Downloading the small set of components Adam needs (needs internet)..."
@@ -294,6 +212,103 @@ if (-not (Test-CoreImports)) {
     exit 1
 }
 Good "Components installed."
+
+# --- the plan step: two doors for paying for AI time -------------------------------
+# Records auth_mode + voice_model in settings.json (and the API key in .env for
+# door 2) through integration_config's atomic, backed-up writers — same code path
+# the in-app Settings -> AI plan control uses, so the two never disagree.
+# This step MUST stay after STEP 3: integration_config imports config, which needs
+# the just-installed python-dotenv — on a fresh machine, running it before the
+# dependency install crashed and silently dropped the choice (and any pasted key).
+function Set-AiPlan([string]$mode, [string]$model, [string]$key = "") {
+    $planPy = @'
+import sys
+sys.path.insert(0, sys.argv[1])
+import integration_config as ic
+ic.set_settings_top_level("auth_mode", sys.argv[2])
+ic.set_settings_top_level("voice_model", sys.argv[3])
+if len(sys.argv) > 4 and sys.argv[4]:
+    ic.set_env_var("ANTHROPIC_API_KEY", sys.argv[4], section_header="# AI plan (pay-as-you-go)")
+'@
+    # A failed native python call doesn't throw in PowerShell — check the exit code.
+    $planOk = $false
+    try {
+        & $pythonExe -c $planPy $root $mode $model $key | Out-Null
+        $planOk = ($LASTEXITCODE -eq 0)
+    } catch { $planOk = $false }
+    if (-not $planOk) {
+        Warn "Couldn't record the plan choice automatically."
+        Info "No harm done - after setup, open Adam and finish this under"
+        Info "Settings -> AI plan."
+        if ($key) { Warn "Your API key was NOT saved - paste it again there." }
+    }
+    return $planOk
+}
+
+Write-Host ""
+Info "How will Adam's AI time be paid for? Two doors - and you can switch"
+Info "anytime later under Settings -> AI plan in the app:"
+Write-Host ""
+Info "  [1] Sign in with Claude   (recommended for regular daily use)"
+Info "      You have - or will get - a Claude plan (about `$20/month for Pro)."
+Info "      Adam runs on it at a flat rate: no meter, nothing extra to pay."
+Write-Host ""
+Info "  [2] Pay as you go   (no subscription needed)"
+Info "      Load prepaid credit onto an Anthropic API key - like an arcade card:"
+Info "      `$5 is roughly 200-300 conversations, it reloads only when YOU choose,"
+Info "      and Adam can never spend past your credit. A monthly budget in the"
+Info "      app adds its own hard stop, and a live cost meter keeps it honest."
+Write-Host ""
+$door = ""
+while ($door -ne "1" -and $door -ne "2") {
+    $door = (Read-Host "  Type 1 or 2, then press Enter").Trim()
+}
+
+if ($door -eq "2") {
+    Write-Host ""
+    Info "Create a key at  https://console.anthropic.com  ->  API keys, and buy a"
+    Info "small amount of credit (`$5 is plenty to start). Leave auto-reload OFF"
+    Info "and overspending is impossible."
+    $apiKey = ""
+    while ($true) {
+        $apiKey = (Read-Host "  Paste your API key (starts with sk-ant-), or press Enter to skip").Trim()
+        if (-not $apiKey) { break }
+        if ($apiKey.StartsWith("sk-ant-") -and $apiKey.Length -ge 20) { break }
+        Warn "That doesn't look like an Anthropic key - they start with sk-ant-."
+    }
+    if ($apiKey) {
+        if (Set-AiPlan "api_key" "claude-sonnet-5" $apiKey) {
+            Good "Pay-as-you-go is set up (model: Claude Sonnet - fast and affordable)."
+            Info "Switch models, raise the budget, or change doors anytime in the app."
+        }
+    } else {
+        # No key recorded -> leave the subscription default so the app's sign-in
+        # guidance stays truthful; the user finishes the choice in Settings -> AI plan.
+        Warn "No key added - finish this later in the app under Settings -> AI plan."
+    }
+} else {
+    $null = Set-AiPlan "subscription" "claude-opus-4-8"
+    Write-Host ""
+    Info "Now the one step only you can do: signing in to your Claude account."
+    Info "I'll open Claude. A browser window will appear - sign in (or create an"
+    Info "account). When it says you're logged in, type  /exit  to close Claude and"
+    Info "come back here."
+    Write-Host ""
+    if (YesNo "Open Claude to sign in now?") {
+        try {
+            # New window so the login session is clean and doesn't take over this wizard.
+            Start-Process "cmd.exe" -ArgumentList "/k", "claude"
+            Info "A Claude window opened. Sign in there, then type  /exit  in it."
+        } catch {
+            Warn "Couldn't open it automatically. Open a terminal and type:  claude"
+        }
+        Pause-Enter "When you've signed in to Claude, press Enter here to continue"
+    } else {
+        Warn "You can sign in later, but Adam won't answer until you do."
+        Info "To sign in later: open a terminal and type  claude  , then log in."
+        Pause-Enter "Press Enter to continue"
+    }
+}
 
 # === STEP 4 — Your notes folder ====================================================
 Section 4 "Your notes folder (the files Adam works with)"
@@ -356,7 +371,7 @@ if ($doctorExit -ne 0) {
 
 # === STEP 6 — Launch ===============================================================
 Section 6 "Starting Adam"
-Info "Adding a Adam app shortcut, then starting it up..."
+Info "Adding an Adam app shortcut, then starting it up..."
 # Make Adam launchable like an app (Desktop + Start Menu), not just from this folder.
 try { & (Join-Path $root "scripts\add-app-shortcut.ps1") | Out-Host } catch {}
 Write-Host ""

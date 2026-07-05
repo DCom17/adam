@@ -8,14 +8,20 @@ jobs:
   test:
     # The product is Windows-only (PowerShell launchers, Windows event-loop
     # policy, taskkill), so test on the platform users actually run.
+    # 3.12 is what the setup wizard winget-installs on user machines; 3.14 is
+    # the maintainer's interpreter — cold installs must pass on both.
     runs-on: windows-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.14"]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: ${{ matrix.python-version }}
           cache: pip
 
       - name: Install dependencies

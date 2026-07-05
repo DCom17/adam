@@ -55,8 +55,9 @@ def main() -> int:
     for d in (baseline, install, new, backups):
         d.mkdir(parents=True, exist_ok=True)
 
-    # backups land in our sandbox, not real data/
+    # backups + the apply lock land in our sandbox, not real data/
     config.BACKUP_DIR = backups
+    config.STATE_DIR = sandbox / "state"
     config.PERM_BACKUP_BEFORE_WRITE = True
     config.PERM_MAX_FILE_SIZE_MB = 25
 
@@ -122,6 +123,75 @@ def main() -> int:
     check("re-running same update finds no conflicts", res2.conflicts == [])
     # b.py is now keep_local again (friend still differs, maintainer still didn't change it)
     check("friend's b.py still preserved on re-run", read(install / "b.py") == "LOCAL\n")
+
+    # --- per-run backup folder (the rollback story) --------------------------------
+    check("apply reports its own backup folder",
+          bool(res.backup_root) and "update-" in str(res.backup_root))
+    check("every backup lives inside THIS run's folder",
+          all(str(b).startswith(str(res.backup_root)) for b in res.backups))
+    # Same-basename files must not collide (the shared pool collided on basenames).
+    b3 = sandbox / "b3"; i3 = sandbox / "i3"; n3 = sandbox / "n3"
+    write(b3 / "requirements.txt", "old\n"); write(i3 / "requirements.txt", "old\n")
+    write(n3 / "requirements.txt", "NEW\n")
+    write(b3 / "scripts" / "requirements.txt", "old-s\n")
+    write(i3 / "scripts" / "requirements.txt", "old-s\n")
+    write(n3 / "scripts" / "requirements.txt", "NEW-s\n")
+    res3 = ue.apply_update(n3, i3, b3, merge=False)
+    check("two same-basename backups both survive (tree preserved)",
+          len(res3.backups) == 2 and len({Path(b).as_posix() for b in res3.backups}) == 2
+          and read(Path(res3.backup_root) / "requirements.txt") == "old\n"
+          and read(Path(res3.backup_root) / "scripts" / "requirements.txt") == "old-s\n")
+    # The shared-pool pruner must never eat per-run update folders.
+    import permissions as _perm
+    config.PERM_BACKUP_KEEP = 1
+    for i in range(3):
+        write(backups / f"2020010{i}_000000_loose.py", "x\n")
+    _perm.prune_backups()
+    check("prune_backups leaves update-run folders alone",
+          Path(res.backup_root).is_dir() and Path(res3.backup_root).is_dir())
+
+    # --- atomic writes leave no temp droppings --------------------------------------
+    check("no .jvltmp temp files left behind",
+          not list(install.rglob("*.jvltmp")) and not list(i3.rglob("*.jvltmp")))
+
+    # --- removed-file retirement (module-shadowing prevention) ----------------------
+    b4 = sandbox / "b4"; i4 = sandbox / "i4"; n4 = sandbox / "n4"
+    write(b4 / "gone.py", "old module\n"); write(i4 / "gone.py", "old module\n")
+    write(b4 / "edited_gone.py", "old\n"); write(i4 / "edited_gone.py", "MY EDIT\n")
+    write(b4 / "stays.py", "keep\n"); write(i4 / "stays.py", "keep\n"); write(n4 / "stays.py", "keep\n")
+    res4 = ue.apply_update(n4, i4, b4, merge=False)
+    check("untouched removed file retired to *.removed",
+          not (i4 / "gone.py").exists() and (i4 / "gone.py.removed").is_file()
+          and "gone.py" in res4.retired)
+    check("locally-edited removed file KEPT untouched",
+          read(i4 / "edited_gone.py") == "MY EDIT\n" and "edited_gone.py" in res4.kept_local)
+    check("retired file's bytes preserved in the rename",
+          read(i4 / "gone.py.removed") == "old module\n")
+
+    # --- apply lock: two applies can't interleave -----------------------------------
+    lock = Path(config.STATE_DIR) / "update_apply.lock"
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    lock.write_text("999999", encoding="utf-8")
+    raised = False
+    try:
+        ue.apply_update(n4, i4, b4, merge=False)
+    except ue.UpdateInProgress:
+        raised = True
+    check("a fresh lock blocks a second apply", raised)
+    import os as _os, time as _time
+    _os.utime(lock, (_time.time() - 7200, _time.time() - 7200))
+    res5 = ue.apply_update(n4, i4, b4, merge=False)
+    check("a stale (crashed) lock is broken and apply proceeds", res5 is not None)
+    check("lock removed after apply", not lock.exists())
+
+    # --- diff3-merged .py must parse (or be held as a conflict) ---------------------
+    b6 = sandbox / "b6"; i6 = sandbox / "i6"; n6 = sandbox / "n6"
+    write(b6 / "m.py", "def f():\n    return 1\n")
+    write(i6 / "m.py", "def f():\n    return (1\n")            # friend broke line 2
+    write(n6 / "m.py", "def f():\n    return 1\n\ndef g():\n    return 2\n")  # tail added
+    res6 = ue.apply_update(n6, i6, b6, merge=True)
+    check("syntax-broken clean merge is HELD, not written",
+          read(i6 / "m.py") == "def f():\n    return (1\n" and "m.py" in res6.conflicts)
 
     print(f"\n{_passed} passed, {_failed} failed")
     return 1 if _failed else 0

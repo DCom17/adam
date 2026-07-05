@@ -9,13 +9,14 @@ keys, no cloud sessions. You run it, you own it.
 Phone PWA  ->  your desktop backend (this app)  ->  your Claude Code  ->  your files
 ```
 
-> **Status — v0.9.35, friends-&-family / prosumer beta.** Desktop-local works out of the
+> **Status — v0.9.x, friends-&-family / prosumer beta.** Desktop-local works out of the
 > box via the double-click **`SETUP.cmd`** wizard; phone access is supported via
 > **Tailscale Serve** (HTTPS); updates arrive through a one-click in-app updater
-> (GitHub Releases). Not yet done before it's a full consumer product: a tray app /
-> auto-start, per-device auth (it's a single bearer token today), and platforms beyond
-> Windows. Run it on your own trusted Windows machine. New here? Start with the
-> **[Beta handoff](docs/BETA_HANDOFF.md)**.
+> (GitHub Releases). Not yet done before it's a full consumer product: a signed
+> installer, per-device auth (it's a single bearer token today), and platforms beyond
+> Windows. (The server deliberately runs in a visible window — no hidden service, no
+> autostart; that's part of the trust model, not a gap.) Run it on your own trusted
+> Windows machine. New here? Start with the **[Beta handoff](docs/BETA_HANDOFF.md)**.
 
 ---
 
@@ -27,7 +28,10 @@ Phone PWA  ->  your desktop backend (this app)  ->  your Claude Code  ->  your f
   iPhone via Tailscale (the supported mobile path). Explains why HTTPS is required for
   iPhone mic/voice/PWA, with a step-by-step Tailscale Serve runbook and troubleshooting.
 - **[Support & scope](docs/SUPPORT.md)** — what's supported/required and what isn't yet
-  (Windows-only, single-user, desktop-local by default, mobile via Tailscale).
+  (Windows-only, single-user, desktop-local by default, mobile via Tailscale), plus
+  where your data lives, token rotation, uninstall, and factory reset.
+- **[Privacy](docs/PRIVACY.md)** — the complete list of network calls Adam makes
+  (short version: it collects nothing; your data stays on your PC).
 - **[Building a release](docs/RELEASE.md)** — the secret-safe ZIP flow and the manual
   update path for the friends-&-family beta.
 - **[Advanced remote access](docs/ADVANCED_REMOTE.md)** — optional public access via
@@ -574,23 +578,34 @@ field whitelist, and no secrets — it never exposes the raw server log.
 
 ### Verify `/health`
 
+Anonymous callers get liveness only (so a random web page probing localhost
+learns nothing about your setup):
+
 ```powershell
 curl http://localhost:8000/health
 ```
-Expected:
+```json
+{ "status": "ok", "app": "adam-local", "version": "0.9.37" }
+```
+
+With your token, `/health` returns the full config summary:
+
+```powershell
+curl -H "Authorization: Bearer <your ADAM_TOKEN>" http://localhost:8000/health
+```
 ```json
 {
   "status": "ok",
   "app": "adam-local",
-  "version": "0.9.35",
+  "version": "0.9.37",
   "claude_configured": true,
   "vault_configured": true,
   "permissions": { "write_dirs": ["...\\data\\outputs", "...\\data\\drafts"], "...": "..." },
   "agent_safety": { "mode": "draft_only", "tools_restricted": true, "...": "..." }
 }
 ```
-No secrets are ever returned by `/health`. The `permissions` and `agent_safety`
-blocks reflect the active Level 3 + safe-agent policy.
+No secrets are ever returned by `/health` in either form. The `permissions` and
+`agent_safety` blocks reflect the active Level 3 + safe-agent policy.
 
 ### Run the permission tests
 
@@ -696,5 +711,7 @@ included in a release ZIP.
 
 The 0.9.x line delivered mobile access, packaging, the setup wizard, one-click in-app
 updates, and the optional high-quality voice. The remaining road to **v1.0** is beta
-hardening: tray/auto-start, per-device auth, and cold-install validation with outside
-testers. See `CHANGELOG.md` for the full history.
+hardening: cold-install validation with outside testers, code signing (a signed
+installer), and final polish. The server intentionally keeps running in a visible
+window — no tray app, no hidden service, no autostart; per-device auth stays a
+post-1.0 idea. See `CHANGELOG.md` for the full history.

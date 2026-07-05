@@ -287,6 +287,60 @@ def _claude_version_ok(claude_path: str) -> bool | None:
         return None
 
 
+def _claude_signin_check(cfg) -> dict:
+    """Advisory: does Claude Code look signed in? `--version` succeeds signed-out,
+    so an installed-but-never-signed-in Claude used to pass the doctor cleanly and
+    then fail the user's FIRST real message. Heuristic, never FAIL: pay-as-you-go
+    installs need no sign-in; otherwise look for the CLI's stored credentials."""
+    if str(getattr(cfg, "AUTH_MODE", "") or "") == "api_key" and getattr(cfg, "ANTHROPIC_API_KEY", ""):
+        return _check("Claude sign-in", PASS, "pay-as-you-go API key set — no sign-in needed")
+    home = Path.home()
+    evidence = ""
+    cred = home / ".claude" / ".credentials.json"
+    try:
+        if cred.is_file() and cred.stat().st_size > 2:
+            evidence = ".claude/.credentials.json present"
+    except OSError:
+        pass
+    if not evidence:
+        cj = home / ".claude.json"
+        try:
+            if cj.is_file() and '"oauthAccount"' in cj.read_text("utf-8", errors="ignore"):
+                evidence = "account recorded in .claude.json"
+        except OSError:
+            pass
+    if evidence:
+        return _check("Claude sign-in", PASS, f"looks signed in ({evidence})")
+    return _check("Claude sign-in", WARN,
+                  "no sign-in detected — if your first message fails, open a terminal, "
+                  "type  claude  , then  /login  (newer Claude versions may store "
+                  "credentials elsewhere, so this can be a false alarm)")
+
+
+def _voice_service_check(cfg) -> dict:
+    """Advisory: the optional high-quality Adam voice. Not installed is a valid
+    setup (browser-voice fallback); installed-but-dead earns a WARN pointing at
+    data/logs/tts.log — 'replies sound robotic' is the most likely tester report
+    and used to be undiagnosable."""
+    try:
+        import tts_supervisor as tsup
+        if not tsup.is_local_tts_url():
+            return _check("Adam voice (Kokoro)", PASS,
+                          f"custom tts_url in use: {getattr(cfg, 'TTS_URL', '')}")
+        if not tsup.runnable():
+            return _check("Adam voice (Kokoro)", PASS,
+                          "not installed — replies use the browser voice; run "
+                          "INSTALL-VOICE.cmd for the real Adam voice (optional)")
+        if tsup._ping():
+            return _check("Adam voice (Kokoro)", PASS, "installed and answering")
+        return _check("Adam voice (Kokoro)", WARN,
+                      "installed but not answering — Adam restarts it automatically on "
+                      "demand (the first reply may use the fallback voice while the "
+                      "model warms up); if replies STAY robotic, read data/logs/tts.log")
+    except Exception as e:  # noqa: BLE001 — the doctor must never crash on a check
+        return _check("Adam voice (Kokoro)", WARN, f"voice check errored: {e}")
+
+
 def _summary_contains_secret(summary: dict, secret_values: list[str]) -> bool:
     """True if any non-empty secret value appears anywhere in the (stringified)
     health summary. Used to prove /health never leaks a token/key."""
@@ -511,6 +565,10 @@ def run_doctor(reload_config: bool = True) -> list[dict]:
                              "Claude Code not found — install it, or set claude_exe "
                              "in settings.json"))
 
+    # 2b. Claude sign-in (advisory) — --version succeeds signed-out, so this is
+    # the check that catches a skipped first sign-in BEFORE the first message.
+    checks.append(_claude_signin_check(cfg))
+
     # 3. settings.json present, or example defaults in use.
     checks.append(_settings_presence_check())
 
@@ -576,6 +634,9 @@ def run_doctor(reload_config: bool = True) -> list[dict]:
 
     # 9. Port availability / server reachability.
     checks.append(_port_status(cfg))
+
+    # 7b. The optional high-quality voice (advisory).
+    checks.append(_voice_service_check(cfg))
 
     # 10. Python dependencies.
     checks.append(_python_deps_check())

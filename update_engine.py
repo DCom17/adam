@@ -37,7 +37,9 @@ is ever lost. Pure-stdlib except for `config`/`permissions` (project modules).
 from __future__ import annotations
 
 import hashlib
+import os
 import shutil
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -54,7 +56,8 @@ BASELINE_DIR = config.DATA_DIR / "baseline"
 _EXCLUDE_NAMES = {".env", "settings.json"}
 _EXCLUDE_DIRS = {"data", "__pycache__", ".git"}
 # Rollback/backup artifacts that may exist in an install but are never "the program".
-_EXCLUDE_SUFFIXES = (".pyc",)
+# .jvltmp = our own in-flight atomic-write temp; .removed = a retired shipped file.
+_EXCLUDE_SUFFIXES = (".pyc", ".jvltmp", ".removed")
 
 
 def _is_excluded(rel: str) -> bool:
@@ -170,15 +173,73 @@ class ApplyResult:
     conflicts: list[str] = field(default_factory=list)    # rels needing review
     backups: list[str] = field(default_factory=list)      # backup paths made
     merged: list[str] = field(default_factory=list)       # rels auto-merged (M2)
+    retired: list[str] = field(default_factory=list)      # rels renamed *.removed
+    backup_root: str | None = None                        # this run's backup folder
 
 
-def _copy_over(src: Path, dst: Path, result: ApplyResult, *, backup: bool) -> None:
+def atomic_write_bytes(dst: Path, data: bytes) -> None:
+    """Write `data` to `dst` atomically: full write to a sibling temp file, then
+    os.replace (atomic on NTFS). A crash mid-write leaves the old file intact —
+    never a truncated server.py the next classify would mistake for a user edit
+    and preserve forever."""
+    tmp = dst.with_name(dst.name + ".jvltmp")
+    with open(tmp, "wb") as fh:
+        fh.write(data)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, dst)
+
+
+def _atomic_copy(src: Path, dst: Path) -> None:
+    atomic_write_bytes(dst, Path(src).read_bytes())
+    try:
+        shutil.copystat(src, dst)
+    except OSError:
+        pass  # mtime is cosmetic; the bytes are what matter
+
+
+def update_backup(dst: Path, install_dir: Path, backup_root: Path,
+                  result: ApplyResult) -> None:
+    """Back `dst` up into THIS update run's own folder, preserving the relative
+    tree. Unlike the shared pruned pool (make_backup_before_write), a per-run
+    folder can't collide on basenames (two requirements.txt) and can't have its
+    own entries pruned away mid-run by PERM_BACKUP_KEEP — so 'the update is
+    undoable' stays true for a 200-file release."""
+    try:
+        rel = dst.resolve().relative_to(Path(install_dir).resolve())
+    except ValueError:
+        rel = Path(dst.name)
+    bdst = backup_root / rel
+    bdst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(dst, bdst)
+    result.backups.append(str(bdst))
+
+
+def _prune_update_backup_dirs(keep: int = 3) -> None:
+    """Keep only the newest `keep` update-run backup folders (each is a full
+    program-file snapshot; unbounded they'd eat the disk update by update)."""
+    try:
+        runs = sorted(
+            (p for p in config.BACKUP_DIR.glob("update-*") if p.is_dir()),
+            key=lambda p: p.name,
+        )
+        for p in runs[:-keep] if keep > 0 else runs:
+            shutil.rmtree(p, ignore_errors=True)
+    except OSError:
+        pass
+
+
+def _copy_over(src: Path, dst: Path, result: ApplyResult, *, backup: bool,
+               install_dir: Path | None = None, backup_root: Path | None = None) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     if backup and dst.exists():
-        b = permissions.make_backup_before_write(dst)
-        if b:
-            result.backups.append(str(b))
-    shutil.copy2(src, dst)
+        if backup_root is not None and install_dir is not None:
+            update_backup(dst, install_dir, backup_root, result)
+        else:
+            b = permissions.make_backup_before_write(dst)
+            if b:
+                result.backups.append(str(b))
+    _atomic_copy(src, dst)
 
 
 def snapshot_baseline(src_dir: str | Path, baseline_dir: str | Path | None = None) -> int:
@@ -203,6 +264,83 @@ def snapshot_baseline(src_dir: str | Path, baseline_dir: str | Path | None = Non
     return n
 
 
+class UpdateInProgress(RuntimeError):
+    """Another apply is already running against this install."""
+
+
+_LOCK_STALE_SECONDS = 3600
+
+
+def _acquire_apply_lock(install_dir: Path) -> Path:
+    """One apply at a time: /update/apply racing a double-clicked UPDATE.cmd can
+    interleave copies and corrupt the baseline for every future update. The lock
+    is a state file created exclusively; a crash's leftover goes stale after an
+    hour so a failed run can't wedge updates forever."""
+    lock = Path(config.STATE_DIR) / "update_apply.lock"
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, str(os.getpid()).encode())
+        os.close(fd)
+        return lock
+    except FileExistsError:
+        try:
+            age = time.time() - lock.stat().st_mtime
+        except OSError:
+            age = 0.0
+        if age > _LOCK_STALE_SECONDS:
+            lock.unlink(missing_ok=True)
+            return _acquire_apply_lock(install_dir)
+        raise UpdateInProgress(
+            "An update is already being applied to this install. Wait for it to "
+            "finish (or, if it crashed, try again in an hour)."
+        )
+
+
+def _check_free_disk(new_dir: Path, install_dir: Path) -> None:
+    """Refuse to start an apply the disk can't finish: a mid-run ENOSPC leaves a
+    half-old/half-new tree. Needs ~2x the new build (copies + per-run backups)."""
+    try:
+        need = sum(p.stat().st_size for p in new_dir.rglob("*") if p.is_file()) * 2
+        free = shutil.disk_usage(install_dir).free
+    except OSError:
+        return  # can't measure — don't block the update over the probe itself
+    if free < need + 50 * 1024 * 1024:  # +50MB headroom
+        raise RuntimeError(
+            f"Not enough free disk space to update safely (need ~{need // (1024*1024)} MB "
+            f"plus headroom, have {free // (1024*1024)} MB free). Free some space and retry."
+        )
+
+
+def _retire_removed_files(new_dir: Path, install_dir: Path, baseline_dir: Path,
+                          result: ApplyResult) -> None:
+    """Handle files the new version REMOVED. Three-way rule, mirror of classify:
+    a file that exists in the old baseline but not the new build was dropped by
+    the maintainer — if the friend never touched it (theirs == baseline), rename
+    it to *.removed so a stale module can't shadow its replacement (the 0.9.36
+    routers/ restructure would have left a stale top-level module importable
+    forever). If the friend DID change it, keep it untouched and report it. Runs
+    BEFORE the baseline advances; never deletes bytes, only renames."""
+    if not (baseline_dir.is_dir() and any(baseline_dir.rglob("*"))):
+        return
+    new_rels = set(iter_program_files(new_dir))
+    for rel in iter_program_files(baseline_dir):
+        if rel in new_rels:
+            continue
+        live = install_dir / rel
+        if not live.is_file():
+            continue  # already gone
+        if sha256_file(live) == sha256_file(baseline_dir / rel):
+            try:
+                os.replace(live, live.with_name(live.name + ".removed"))
+                result.retired.append(rel)
+            except OSError:
+                result.kept_local.append(rel)
+        else:
+            # The friend modified a file the new version dropped — never touch it.
+            result.kept_local.append(rel)
+
+
 def apply_update(new_dir: str | Path, install_dir: str | Path,
                  baseline_dir: str | Path | None = None, *,
                  merge: bool = True) -> ApplyResult:
@@ -211,42 +349,57 @@ def apply_update(new_dir: str | Path, install_dir: str | Path,
     `merge=True` (M2) attempts an automatic 3-way merge of conflicting files and
     records anything it can't merge cleanly as a proposed change for in-app review.
     `merge=False` (M1) simply holds every conflict as theirs. Either way, nothing a
-    friend changed is ever silently lost: overwrites are backed up, `keep_local`
-    files are untouched, and conflicts are surfaced.
+    friend changed is ever silently lost: overwrites are backed up (into this run's
+    own un-pruned backup folder), `keep_local` files are untouched, and conflicts
+    are surfaced. Every write is atomic (temp + os.replace), the whole run holds a
+    lock so two applies can't interleave, and files the new version removed are
+    retired to *.removed (never deleted) when the friend hadn't modified them.
     """
     if baseline_dir is None:
         baseline_dir = BASELINE_DIR          # resolved at call time, not import time
     new_dir, install_dir, baseline_dir = Path(new_dir), Path(install_dir), Path(baseline_dir)
-    verdicts = classify(new_dir, install_dir, baseline_dir)
-    result = ApplyResult()
+    lock = _acquire_apply_lock(install_dir)
+    try:
+        _check_free_disk(new_dir, install_dir)
+        verdicts = classify(new_dir, install_dir, baseline_dir)
+        result = ApplyResult()
+        backup_root = config.BACKUP_DIR / f"update-{time.strftime('%Y%m%d_%H%M%S')}"
+        result.backup_root = str(backup_root)
 
-    for v in verdicts:
-        result.counts[v.category] = result.counts.get(v.category, 0) + 1
-        src = new_dir / v.rel
-        dst = install_dir / v.rel
+        for v in verdicts:
+            result.counts[v.category] = result.counts.get(v.category, 0) + 1
+            src = new_dir / v.rel
+            dst = install_dir / v.rel
 
-        if v.category in ("new_file",):
-            _copy_over(src, dst, result, backup=False)
-            result.written.append(v.rel)
-        elif v.category in ("take_incoming", "no_baseline"):
-            _copy_over(src, dst, result, backup=True)
-            result.written.append(v.rel)
-        elif v.category in ("keep_local",):
-            result.kept_local.append(v.rel)
-        elif v.category in ("unchanged", "already_matches"):
-            pass
-        elif v.category == "conflict":
-            handled = False
-            if merge:
-                handled = _try_merge_conflict(v, new_dir, install_dir, baseline_dir, result)
-            if not handled:
-                result.conflicts.append(v.rel)
+            if v.category in ("new_file",):
+                _copy_over(src, dst, result, backup=False)
+                result.written.append(v.rel)
+            elif v.category in ("take_incoming", "no_baseline"):
+                _copy_over(src, dst, result, backup=True,
+                           install_dir=install_dir, backup_root=backup_root)
+                result.written.append(v.rel)
+            elif v.category in ("keep_local",):
+                result.kept_local.append(v.rel)
+            elif v.category in ("unchanged", "already_matches"):
+                pass
+            elif v.category == "conflict":
+                handled = False
+                if merge:
+                    handled = _try_merge_conflict(v, new_dir, install_dir, baseline_dir, result)
+                if not handled:
+                    result.conflicts.append(v.rel)
 
-    # The baseline advances to what we just shipped, so the NEXT update three-ways
-    # against this version. (Held conflicts are resolved by the friend in-app; once
-    # resolved their file matches and won't re-conflict.)
-    snapshot_baseline(new_dir, baseline_dir)
-    return result
+        # Files the new version dropped: retire (rename), never delete.
+        _retire_removed_files(new_dir, install_dir, baseline_dir, result)
+
+        # The baseline advances to what we just shipped, so the NEXT update three-ways
+        # against this version. (Held conflicts are resolved by the friend in-app; once
+        # resolved their file matches and won't re-conflict.)
+        snapshot_baseline(new_dir, baseline_dir)
+        _prune_update_backup_dirs()
+        return result
+    finally:
+        lock.unlink(missing_ok=True)
 
 
 def _try_merge_conflict(v: FileVerdict, new_dir: Path, install_dir: Path,

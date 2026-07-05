@@ -29,6 +29,7 @@ import sys
 import threading
 import time
 import urllib.request
+from pathlib import Path
 from urllib.parse import urlparse
 
 import config
@@ -83,16 +84,40 @@ def _ping() -> bool:
         return False
 
 
+def _tts_log_handle():
+    """Append-mode handle for the voice service's own log. A real file can't
+    fill like a pipe, and without it a crash-looping Kokoro (broken venv, bad
+    model) respawns every cooldown forever with its traceback existing NOWHERE
+    on the machine — the single most undiagnosable cold-tester failure."""
+    try:
+        log_dir = Path(config.DATA_DIR) / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        path = log_dir / "tts.log"
+        # Simple size cap: past ~2MB start fresh (one .old generation kept).
+        if path.is_file() and path.stat().st_size > 2 * 1024 * 1024:
+            old = path.with_suffix(".log.old")
+            old.unlink(missing_ok=True)
+            path.rename(old)
+        return open(path, "ab")
+    except Exception:
+        return subprocess.DEVNULL
+
+
 def _spawn() -> None:
+    out = _tts_log_handle()
     subprocess.Popen(
         [str(_venv_python()), "tts_server.py"],
         cwd=str(_tts_dir()),
         stdin=subprocess.DEVNULL,
-        # DEVNULL, never PIPE: an unread pipe fills and wedges the child.
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        # An append-mode FILE, never PIPE: an unread pipe fills and wedges the
+        # child, while a file both absorbs unlimited output and preserves the
+        # crash traceback for data/logs/tts.log.
+        stdout=out,
+        stderr=out,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )
+    if out is not subprocess.DEVNULL:
+        out.close()  # the child holds its own duplicated handle
 
 
 def recover(reason: str, log=None) -> bool:

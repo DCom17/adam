@@ -7,8 +7,8 @@
 #   * it does not modify .env, settings.json, or Tailscale;
 #   * if the server is already running, it just opens the browser (no duplicate).
 #
-# First-time setup is still: python scripts\setup.py  then  python scripts\doctor.py
-# (this launcher reminds you if it looks like setup hasn't been run).
+# First-time setup is SETUP.cmd (the wizard); this launcher points there if it
+# looks like setup hasn't been run yet.
 #
 # -AppWindow opens Adam as a clean Edge "app" window (no browser chrome) instead of a
 # normal browser tab; this is what the pinnable Adam shortcut uses. Falls back to the
@@ -72,11 +72,11 @@ foreach ($f in @("server.py", "config.py")) {
 
 # 3) Looks set up? (.env is required; settings.json is optional - falls back to example)
 if (-not (Test-Path (Join-Path $root ".env"))) {
-    Say "No .env found - it looks like setup hasn't been run yet." "Yellow"
-    Say "Run first:" "Yellow"
-    Say "    python scripts\setup.py     # creates .env, finds Claude, sets your files path" "Cyan"
-    Say "    python scripts\doctor.py    # health check (aim for 0 FAIL)" "Cyan"
-    Say "Then run this launcher again." "Yellow"
+    Say "It looks like Adam hasn't been set up on this computer yet." "Yellow"
+    Say "Double-click SETUP in the Adam folder first - it walks you through" "Cyan"
+    Say "everything (about 15 minutes) - then open Adam again." "Cyan"
+    Say ""
+    Say "(Advanced/manual path: python scripts\setup.py, then python scripts\doctor.py)" "DarkGray"
     exit 1
 }
 
@@ -177,13 +177,17 @@ $ready = $false
 for ($i = 0; $i -lt 30; $i++) {
     Start-Sleep -Milliseconds 500
     try {
-        $h = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 2
+        # Send the token when we have it: anonymous /health returns only
+        # liveness+version, and the fuller body lets us print the mode below.
+        $h = Invoke-RestMethod -Uri $healthUrl -TimeoutSec 2 -Headers $hdrs
         if ($h.status -eq "ok") { $ready = $true; break }
     } catch { }
 }
 
 if ($ready) {
-    Say "Adam is UP (v$($h.version), mode $($h.agent_safety.mode))." "Green"
+    $modeTxt = ""
+    if ($h.agent_safety) { $modeTxt = ", mode $($h.agent_safety.mode)" }
+    Say "Adam is UP (v$($h.version)$modeTxt)." "Green"
     Say "Opening $localUrl (signed in automatically)" "Cyan"
     Open-App $openUrl
     Say ""

@@ -347,7 +347,9 @@ def main() -> int:
     check("no CDN / remote script asset",
           all(s not in html for s in ("cdn.", "unpkg", "jsdelivr", "googleapis",
                                       "<script src", "<script  src", "integrity=")))
-    check("no remote stylesheet/link asset", '<link ' not in html)
+    _links = re.findall(r"<link\b[^>]*>", html)
+    check("no remote stylesheet/link asset (local icon links only)",
+          all('rel="icon"' in ln and 'href="/' in ln for ln in _links))
     check("console JS still never assigns innerHTML",
           "innerHTML =" not in html and "innerHTML=" not in html)
     # Token discipline in the STATIC page.
@@ -451,7 +453,7 @@ def _headless_qr_checks() -> None:
             pg = browser.new_page()
             errs = []
             pg.on("pageerror", lambda exc: errs.append(str(exc)))
-            url = "https://chainforge.tail4a86a8.ts.net:8443"
+            url = "https://examplebox.tail0000ab.ts.net:8443"
             pg.goto(f"http://127.0.0.1:{port}/console")
             pg.evaluate("([t, u]) => { localStorage.setItem('jarvis_token', t);"
                         " localStorage.setItem('jarvis_url', u); }", [tok, url])

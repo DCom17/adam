@@ -3,6 +3,62 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.38 - The pre-tester hardening release
+
+The output of a full four-way product audit (cold-user UX, code production-readiness,
+live verification, launch research). Everything here is aimed at one thing: a
+stranger's machine.
+
+**Fixed — cold-install blockers:**
+- **Setup no longer loses your AI-plan choice on a brand-new PC.** The wizard
+  recorded your choice (and a pasted API key) before installing the components the
+  recorder needs — on a machine where the wizard had just installed Python, the
+  choice (and key) were silently dropped. The step now runs after the install, and
+  a failure tells you exactly where to re-enter the key (Settings → AI plan).
+- **"Can't reach Adam" now says why.** When the app can't reach the server, it
+  names the most likely cause — the black Adam window on the PC was closed — and
+  how to fix it (reopen from the desktop icon), on both the phone app and the
+  console sign-in. A server restart mid-question likewise now says "Adam restarted
+  mid-task — ask again" instead of a generic connection error.
+- **Hitting your Claude plan's usage limit is now said in plain words** (with the
+  reset time when known) instead of silence or a raw error string read aloud.
+
+**Fixed — reliability under the hood:**
+- **The updater can no longer brick an install.** Every file write is atomic (a
+  crash mid-update leaves the old file, never a truncated one); each update run
+  keeps its own complete backup folder (undo is real now, even for 200-file
+  updates); a broken auto-merge of Python code is held for review instead of
+  written; files a new version removed are retired (renamed `*.removed`), never
+  left to shadow their replacements; two updates can't run at once; and an update
+  won't start on a disk too full to finish it.
+- **Release pipeline:** the import guard now parses code properly (the old
+  pattern-match missed three modules), every built ZIP is boot-tested in
+  isolation before it can ship, a missing allow-list file fails the build instead
+  of silently vanishing from the ZIP, publishing refuses a dirty tree or failing
+  tests, and a tree-wide guard keeps ANY owner-identifying text out of releases.
+- **Runtime:** very long pasted messages no longer crash the turn (Windows
+  command-line limit); background jobs can't be lost to garbage collection;
+  slow add-on bridges no longer freeze every request for up to 20 s; the
+  proposed-changes store sheds old resolved records instead of growing forever;
+  a timed-out turn kills the whole helper-process tree.
+
+**New:**
+- **`ROTATE-TOKEN.cmd`** — one double-click generates a fresh access token if
+  yours may have been exposed (then re-pair devices via the Connect-phone QR).
+- **`docs/PRIVACY.md`** — the complete, honest list of network calls Adam makes
+  (short version: it collects nothing).
+- **Uninstall / your-data / factory-reset documentation** in SUPPORT.md.
+- **The doctor now checks the two things testers actually hit:** whether Claude
+  is signed in (not just installed), and whether the Adam voice service is
+  installed and answering. The voice service finally has its own log
+  (`data\logs\tts.log`) — a crashing voice engine used to leave no trace at all.
+- **Favicon** — Adam pages now have a proper tab icon, and the server window no
+  longer prints a 404 line on every page load.
+- Diagnostics bundle now includes the persistent log tail (survives restarts)
+  and redacts the API key; the voice-service dependency set is fully pinned so
+  INSTALL-VOICE keeps working months from now; CI now also tests Python 3.12
+  (what setup actually installs on user machines).
+
 ## 0.9.37 - The real Adam voice heals itself (and yes, it works on your phone)
 
 - **The server now keeps the real Adam voice alive.** If the voice service

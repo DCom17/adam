@@ -83,7 +83,7 @@ HOW TO SET IT UP
 OPENING IT AGAIN LATER
 ----------------------
 
-  Setup added a "Adam" icon to your Desktop and
+  Setup added an "Adam" icon to your Desktop and
   Start Menu - open it from there, like any app. (Double-clicking
   START in this folder still works too.)
 
@@ -142,10 +142,10 @@ IF SOMETHING GOES WRONG
   - Run SETUP again - it's safe to run more than once and
     will pick up where it left off.
   - Open the "docs" folder and read SUPPORT.md.
-  - The wizard prints a short health check near the end; if a
-    line says FAIL, it usually means the Claude sign-in didn't
-    finish - open a terminal, type  claude  , sign in, and run
-    SETUP again.
+  - The wizard prints a short health check near the end. A line
+    that says "Claude sign-in: WARN" means the Claude sign-in
+    probably didn't finish - open a terminal, type  claude  ,
+    sign in with /login, and run SETUP again.
 
 
 Your data stays on YOUR computer. Adam runs locally and uses

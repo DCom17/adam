@@ -229,11 +229,29 @@ def handle_conflict(v, new_dir: Path, install_dir: Path, baseline_dir: Path, res
         _record_conflict(v.rel, baseline_dir, install_dir, new_dir)
         return False  # held by caller, but now recorded for in-app resolution
 
+    merged_text = "".join(merged)
+    # A textually-clean diff3 merge can still be syntactically broken Python —
+    # and once written, the baseline advances and the breakage would be
+    # classified as the friend's own edit and preserved forever. Refuse: hold it
+    # as a normal conflict for in-app review instead.
+    if v.rel.endswith(".py"):
+        try:
+            compile(merged_text, v.rel, "exec")
+        except SyntaxError:
+            _record_conflict(v.rel, baseline_dir, install_dir, new_dir)
+            return False
+
     dst = install_dir / v.rel
-    b = permissions.make_backup_before_write(dst)
-    if b:
-        result.backups.append(str(b))
-    dst.write_text("".join(merged), encoding="utf-8")
+    backup_root = getattr(result, "backup_root", None)
+    if backup_root:
+        import update_engine as _ue
+        _ue.update_backup(dst, install_dir, Path(backup_root), result)
+    else:
+        b = permissions.make_backup_before_write(dst)
+        if b:
+            result.backups.append(str(b))
+    from update_engine import atomic_write_bytes
+    atomic_write_bytes(dst, merged_text.encode("utf-8"))
     result.written.append(v.rel)
     result.merged.append(v.rel)
     return True

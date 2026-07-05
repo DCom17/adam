@@ -30,7 +30,7 @@ import update_engine as ue  # noqa: E402
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Apply a Adam build over this install.")
+    ap = argparse.ArgumentParser(description="Apply an Adam build over this install.")
     ap.add_argument("--new", required=True, help="extracted new-build directory")
     ap.add_argument("--root", default=str(_INSTALL_ROOT), help="install directory")
     ap.add_argument("--merge", dest="merge", action="store_true", default=True)
@@ -52,9 +52,11 @@ def main() -> int:
 
     print(f"  Updated {updated} file(s); kept {kept} of your own change(s)"
           + (f"; auto-merged {merged}" if merged else "")
+          + (f"; retired {len(res.retired)} file(s) the new version removed" if res.retired else "")
           + (f"; {conflicts} need your review" if conflicts else "") + ".")
     if res.backups:
-        print(f"  ({len(res.backups)} backup(s) saved under data/backups — fully undoable.)")
+        where = res.backup_root or "data/backups"
+        print(f"  ({len(res.backups)} backup(s) saved under {where} — this update is undoable.)")
     if res.kept_local:
         for r in res.kept_local[:10]:
             print(f"    kept your version: {r}")

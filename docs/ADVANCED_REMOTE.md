@@ -36,8 +36,6 @@ By choosing this path you take on:
 
 - Do **not** route anything through the maintainer's Claude account — you run the
   backend on your machine with **your own** Claude Code credentials.
-- Do **not** modify the maintainer's personal rig (`scripts/voice_server`); it is not
-  part of this product.
 - `agent_safety.mode` stays `draft_only`, the server stays the sole writer, and file
   changes still go through review → approval → apply, exactly as on the local path.
 - Tighten **CORS**: with a public origin, set `cors_allowed_origins` in `settings.json`

@@ -1,6 +1,6 @@
 # Building & Shipping a Release
 
-How to cut a Adam release ZIP for the friends-&-family beta. The goal is
+How to cut an Adam release ZIP for the friends-&-family beta. The goal is
 a download that contains the **product and its docs — and never your secrets, your
 files, or rollback backups**.
 

@@ -123,7 +123,7 @@ the loop.
 
 ## Where the app comes from / updating
 
-You received a **release ZIP** (e.g. `adam-local-v0.9.35.zip`). It contains the
+You received a **release ZIP** (e.g. `adam-local-v0.9.38.zip`). It contains the
 app, templates (`.env.example`, `settings.example.json`), and docs — but **never** real
 secrets or anyone's data.
 

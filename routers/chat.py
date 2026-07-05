@@ -146,9 +146,9 @@ async def ask_async(request: Request, body: AskRequest):
         job_id, mode=mode, session_id=body.session_id,
         input_summary=summary, pid=os.getpid(),
     )
-    asyncio.create_task(
+    server.keep_task(asyncio.create_task(
         server._run_job(job_id, message, body.session_id, mode, body.attachments)
-    )
+    ))
     return {"job_id": job_id}
 
 

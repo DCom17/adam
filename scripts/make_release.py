@@ -43,6 +43,7 @@ _ROOT_FILES = [
     ".env.example", "settings.example.json", ".gitignore",
     # consumer one-click entry points (double-clickable; the non-technical front door)
     "START_HERE.txt", "SETUP.cmd", "START.cmd", "UPDATE.cmd", "INSTALL-VOICE.cmd",
+    "ROTATE-TOKEN.cmd",
     # Apps Script bridge the user pastes into their OWN Google account (template,
     # no secret — the token is generated inside the user's script, not shipped).
     "calendar_bridge.gs",
@@ -54,7 +55,7 @@ _SCRIPT_FILES = [
     "self_update.py", "publish-release.ps1",
     "wizard.ps1", "add-app-shortcut.ps1", "adam-app.vbs", "update.ps1", "install-voice.ps1",
     "tts_server/tts_server.py", "tts_server/requirements.txt",
-    "start-adam.ps1", "connect-phone.py", "connect-phone.ps1",
+    "start-adam.ps1", "rotate-token.ps1", "connect-phone.py", "connect-phone.ps1",
     # forwarding shims: pre-rename desktop/taskbar shortcuts point at the old
     # launcher names (start-jarvis.ps1 directly, jarvis-app.vbs via wscript)
     "start-jarvis.ps1", "jarvis-app.vbs",
@@ -65,7 +66,7 @@ _SCRIPT_FILES = [
 # User-facing docs only — internal process docs are intentionally NOT shipped.
 _DOC_FILES = [
     "BETA_HANDOFF.md", "CONNECT_YOUR_PHONE.md", "ADVANCED_REMOTE.md", "SUPPORT.md",
-    "RELEASE.md", "CONSUMER_TEST_CHECKLIST.md",
+    "RELEASE.md", "CONSUMER_TEST_CHECKLIST.md", "PRIVACY.md",
 ]
 _ROUTERS_FILES = [  # the routers/ package server.py imports at boot
     "__init__.py", "chat.py", "integrations.py", "reviews.py", "system.py",
@@ -208,19 +209,18 @@ def check_brain_clean(rels: list[str]) -> None:
         )
 
 
-_IMPORT_RE = re.compile(
-    r"^(?:from\s+([A-Za-z_][A-Za-z0-9_.]*)\s+import\s+([A-Za-z0-9_,\s]+)"
-    r"|import\s+([A-Za-z_][A-Za-z0-9_.]*))",
-    re.M,
-)
-
-
 def check_imports_ship(rels: list[str]) -> None:
-    """Fail closed: every top-level import in a staged .py that resolves to a
-    repo-local module/package must itself be staged. This is what catches a
-    server.py refactor (new module, new package) whose files were never added
-    to the allow-list — the v0.9.35 ZIP shipped without routers/, security.py,
-    models.py, rate_limit.py and usage_store.py and could not boot at all."""
+    """Fail closed: every import in a staged .py that resolves to a repo-local
+    module/package must itself be staged. This is what catches a server.py
+    refactor (new module, new package) whose files were never added to the
+    allow-list — the v0.9.35 ZIP shipped without routers/, security.py,
+    models.py, rate_limit.py and usage_store.py and could not boot at all.
+
+    Uses ast.parse (not a regex): the earlier regex missed parenthesized
+    `from models import (\\n ...)` and indented lazy imports, so models.py,
+    tts_supervisor.py and phone_link.py shipped only by hand-listing."""
+    import ast
+
     relset = set(rels)
 
     def _local_kind(mod: str) -> str | None:
@@ -241,21 +241,127 @@ def check_imports_ship(rels: list[str]) -> None:
             text = (ROOT / rel).read_text("utf-8", errors="ignore")
         except OSError:
             continue
-        for m in _IMPORT_RE.finditer(text):
-            root_mod = (m.group(1) or m.group(3) or "").split(".")[0]
-            kind = _local_kind(root_mod)
-            if kind and not _staged(root_mod):
-                missing.append(f"{rel} imports {root_mod} ({kind} not staged)")
-            # `from PKG import a, b` — each name that is a repo file must ship too
-            if kind == "package" and m.group(1) and m.group(2):
-                for name in (n.strip() for n in m.group(2).split(",")):
-                    if name and (ROOT / root_mod / f"{name}.py").is_file() \
-                            and f"{root_mod}/{name}.py" not in relset:
-                        missing.append(f"{rel} imports {root_mod}.{name} (submodule not staged)")
+        try:
+            tree = ast.parse(text, filename=rel)
+        except SyntaxError as e:
+            raise RuntimeError(
+                f"release import-guard: staged file {rel} does not parse "
+                f"({e.msg} at line {e.lineno}) — refusing to ship broken code"
+            ) from e
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    root_mod = alias.name.split(".")[0]
+                    kind = _local_kind(root_mod)
+                    if kind and not _staged(root_mod):
+                        missing.append(f"{rel} imports {root_mod} ({kind} not staged)")
+            elif isinstance(node, ast.ImportFrom):
+                if node.level:  # relative import — resolve against the file's package
+                    pkg_parts = rel.split("/")[:-1]
+                    base = pkg_parts[: len(pkg_parts) - (node.level - 1)]
+                    target = "/".join(base + (node.module or "").split("."))
+                    if (ROOT / f"{target}.py").is_file() and f"{target}.py" not in relset:
+                        missing.append(f"{rel} imports .{node.module} (relative module not staged)")
+                    continue
+                root_mod = (node.module or "").split(".")[0]
+                if not root_mod:
+                    continue
+                kind = _local_kind(root_mod)
+                if kind and not _staged(root_mod):
+                    missing.append(f"{rel} imports {root_mod} ({kind} not staged)")
+                # `from PKG import a, b` — each name that is a repo file must ship too
+                if kind == "package":
+                    for alias in node.names:
+                        sub = f"{root_mod}/{alias.name}.py"
+                        if (ROOT / sub).is_file() and sub not in relset:
+                            missing.append(f"{rel} imports {root_mod}.{alias.name} (submodule not staged)")
     if missing:
         raise RuntimeError(
             "release import-guard tripped (staged code imports local files that "
             "would NOT ship — the ZIP could not run): " + "; ".join(sorted(set(missing)))
+        )
+
+
+# File types the tree-wide content guard cannot meaningfully text-scan.
+_BINARY_EXTS = {".png", ".ico", ".zip", ".db", ".gif", ".jpg", ".jpeg", ".woff", ".woff2"}
+
+
+def check_tree_clean(rels: list[str]) -> None:
+    """Fail closed: NO staged text file may carry an owner-identifying term from
+    scripts/release_guard.local. The brain guard (check_brain_clean) already
+    covers brain/ with the wider Morrow-infrastructure patterns; this tree-wide
+    pass exists because v0.9.37 shipped the owner's real tailnet hostname inside
+    three test fixtures — a class the brain-only scan could never catch.
+    Uses ONLY the local terms (not the Morrow base patterns) because the guard's
+    own code and tests legitimately mention those patterns."""
+    parts = []
+    if _GUARD_LOCAL.is_file():
+        for line in _GUARD_LOCAL.read_text("utf-8", errors="ignore").splitlines():
+            term = line.strip()
+            if term and not term.startswith("#"):
+                parts.append(re.escape(term))
+    if not parts:
+        return  # user install: no local guard file, nothing to scan for
+    local_re = re.compile("|".join(parts), re.IGNORECASE)
+    bad = []
+    for rel in rels:
+        if rel.startswith(_BRAIN_DIR + "/"):
+            continue  # brain/ is covered (base + local terms) by check_brain_clean
+        if Path(rel).suffix.lower() in _BINARY_EXTS:
+            continue
+        try:
+            text = (ROOT / rel).read_text("utf-8", errors="ignore")
+        except OSError:
+            continue
+        m = local_re.search(text)
+        if m:
+            bad.append(f"{rel} ~ '{m.group(0)}'")
+    if bad:
+        raise RuntimeError(
+            "tree content-guard tripped (owner-identifying term in a shipped file, "
+            "refusing to ship): " + "; ".join(bad)
+        )
+
+
+def check_allowlist_complete() -> None:
+    """Fail closed: every hand-listed allow-list entry must exist on disk.
+    Silently skipping a missing entry (the old behavior) ships a green ZIP with
+    a missing entry point — e.g. a renamed START.cmd or web/settings.html would
+    vanish from the release with no error anywhere."""
+    missing: list[str] = []
+    for f in _ROOT_FILES:
+        if not (ROOT / f).is_file():
+            missing.append(f)
+    for f in _WEB_FILES:
+        if not (ROOT / "web" / f).is_file():
+            missing.append(f"web/{f}")
+    for f in _SCRIPT_FILES:
+        if not (ROOT / "scripts" / f).is_file():
+            missing.append(f"scripts/{f}")
+    for f in _DOC_FILES:
+        if not (ROOT / "docs" / f).is_file():
+            missing.append(f"docs/{f}")
+    for f in _ROUTERS_FILES:
+        if not (ROOT / "routers" / f).is_file():
+            missing.append(f"routers/{f}")
+    if not (ROOT / _DATA_KEEP).is_file():
+        missing.append(_DATA_KEEP)
+    if missing:
+        raise RuntimeError(
+            "release allow-list names files that do not exist (renamed or deleted "
+            "without updating make_release.py): " + "; ".join(missing)
+        )
+
+
+def check_changelog_has_version(version: str) -> None:
+    """Fail closed: CHANGELOG.md must carry a `## <version>` entry so a release
+    is never cut for a version nobody wrote notes for (or with a version label
+    that disagrees with config.APP_VERSION)."""
+    text = (ROOT / "CHANGELOG.md").read_text("utf-8", errors="ignore")
+    if not re.search(rf"^## {re.escape(version)}\b", text, re.M):
+        raise RuntimeError(
+            f"CHANGELOG.md has no '## {version}' entry — write the changelog "
+            "(or fix the version label) before building the release"
         )
 
 
@@ -272,12 +378,18 @@ def _version() -> str:
 
 
 def build_zip(out_dir: Path | str | None = None, version: str | None = None) -> Path:
-    """Stage the allow-list, run the deny guard (fail-closed), then write the ZIP."""
+    """Stage the allow-list, run every guard (fail-closed), then write the ZIP."""
+    check_allowlist_complete()  # every hand-listed entry must exist on disk
     rels = staged_files()
     check_no_excluded(rels)  # abort BEFORE creating any file
     check_brain_clean(rels)  # brain bundle must carry no Morrow/owner content
+    check_tree_clean(rels)   # NO shipped file may carry an owner-identifying term
     check_imports_ship(rels)  # staged code must not import files that don't ship
-    version = version or _version()
+    if version is None:
+        version = _version()
+        # An explicit --version override is a deliberate act (tests use it);
+        # a default build must have release notes for the version it ships.
+        check_changelog_has_version(version)
     out_dir = Path(out_dir) if out_dir else (ROOT / "dist")
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"adam-local-v{version}.zip"
@@ -299,8 +411,10 @@ def main(argv=None) -> int:
 
     rels = staged_files()
     try:
+        check_allowlist_complete()
         check_no_excluded(rels)
         check_brain_clean(rels)
+        check_tree_clean(rels)
         check_imports_ship(rels)
     except RuntimeError as e:
         print(f"[FAIL] {e}", file=sys.stderr)

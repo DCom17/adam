@@ -83,6 +83,8 @@ def _redact(text: str) -> str:
         config.GMAIL_TOKEN, config.LINKEDIN_CLIENT_SECRET,
         config.LINKEDIN_ACCESS_TOKEN, config.TWILIO_AUTH_TOKEN,
         config.OWNER_PHONE,
+        # Claude's stderr can echo a bad key back into a job error message.
+        getattr(config, "ANTHROPIC_API_KEY", ""),
     ]
     for s in secrets:
         if s and s in text:
@@ -117,6 +119,17 @@ async def diagnostics():
     except Exception:
         addons = []
 
+    # The in-memory ring dies with the process — after the crash that most needs
+    # diagnosing, it's empty. Tail the persistent log FILE too (same redaction),
+    # so "Copy diagnostics" still carries the pre-restart evidence.
+    file_tail: list[str] = []
+    try:
+        from collections import deque
+        with open(config.LOG_FILE, "r", encoding="utf-8", errors="replace") as fh:
+            file_tail = [_redact(ln.rstrip("\n")) for ln in deque(fh, maxlen=120)]
+    except Exception:
+        file_tail = ["(log file unavailable)"]
+
     return {
         "app": {
             "name": config.APP_NAME,
@@ -130,6 +143,7 @@ async def diagnostics():
         "addons": addons,
         "recent_jobs": jobs,
         "log_tail": [_redact(line) for line in list(server.LOG_RING)[-200:]],
+        "log_file_tail": file_tail,
     }
 
 
@@ -208,6 +222,16 @@ async def icon():
     if path.exists():
         return FileResponse(path, media_type="image/png")
     raise HTTPException(status_code=404, detail="icon.png not found")
+
+
+@router.get("/favicon.ico")
+async def favicon():
+    # Browsers request this on every page load; without a route each load
+    # printed a 404 line in the always-visible server window.
+    path = server.FRONTEND.parent / "icon.ico"
+    if path.exists():
+        return FileResponse(path, media_type="image/x-icon")
+    raise HTTPException(status_code=404, detail="icon.ico not found")
 
 
 def _static_page(name: str) -> FileResponse:

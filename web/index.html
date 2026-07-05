@@ -36,6 +36,7 @@
 <link rel="manifest" href="/manifest.json" />
 <link rel="apple-touch-icon" href="/icon.png" />
 <title>Adam</title>
+<link rel="icon" href="/icon.png" type="image/png" />
 <style>
   :root {
     --bg: #05070d;
@@ -1993,10 +1994,24 @@
       Sessions.clearSidFor(turnKey);   // this chat's resume id was bad — start it fresh next time
       if (turnKey === Sessions.activeKey()) {
         var authIdx = detail ? detail.indexOf("JVL_AUTH_REQUIRED:") : -1;
+        var limitIdx = detail ? detail.indexOf("JVL_LIMIT_REACHED:") : -1;
         if (authIdx !== -1) {
           // Claude isn't signed in — show clear sign-in steps, not "connection error".
           showErr(detail.slice(authIdx + "JVL_AUTH_REQUIRED:".length).trim());
           speak("I'm not signed in to Claude yet, sir. Sign in, then try again.");
+        } else if (limitIdx !== -1) {
+          // The Claude plan's usage window is exhausted — say so, with the reset time.
+          showErr(detail.slice(limitIdx + "JVL_LIMIT_REACHED:".length).trim());
+          speak("We've hit your Claude plan's usage limit, sir. It resets in a few hours — or switch plans in settings.");
+        } else if (reason === "kickoff-unreachable" || reason === "kickoff-timeout") {
+          // No HTTP response at all — the #1 real-world cause is the Adam server
+          // window being closed on the PC (see DECISION_LOG D20).
+          showErr("Can't reach Adam. The Adam window on your PC may be closed — reopen it from the desktop icon. (On your phone, also check Tailscale is connected on both devices.)");
+          speak("I can't reach the Adam server, sir. Check that its window is still open on your PC.");
+        } else if (reason === "poll-404") {
+          // The server answered but the job is gone — it restarted mid-task.
+          showErr("Adam restarted mid-task, so that question was lost. Ask again.");
+          speak("I restarted mid-task, sir — ask me that again.");
         } else {
           showErr(timedOut ? "Timed out — session reset. Try again." : "Connection error — session reset.");
           speak(timedOut ? "That timed out, sir. I've reset the session — try again." : "Connection error, sir.");
@@ -2044,7 +2059,7 @@
         // Network-level failure (the fetch itself rejected) — retry a few times.
         const aborted = err.name === "AbortError";
         if (!active || attempt >= KICKOFF_TRIES || Date.now() - startedAt > capMs) {
-          fail(aborted, aborted ? "kickoff-timeout" : "kickoff-error", (err.message || err.name) + " (after " + attempt + " tries)");
+          fail(false, aborted ? "kickoff-timeout" : "kickoff-unreachable", (err.message || err.name) + " (after " + attempt + " tries)");
           return;
         }
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));   // brief backoff, then retry

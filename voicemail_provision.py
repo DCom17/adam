@@ -14,7 +14,7 @@ This module owns three jobs:
   1. build_answer_twiml()  — generate the exact TwiML the user pastes into a Bin.
      Default greeting voice is Amazon Polly's British male neural voice (Polly.Brian),
      which Twilio renders server-side with NO audio hosting — a deep British voice
-     that always works. If the user hosts a Adam/Kokoro greeting clip somewhere
+     that always works. If the user hosts an Adam/Kokoro greeting clip somewhere
      publicly reachable, the TwiML <Play>s that instead (the voice upgrade).
 
   2. set_number_voice_url() — the automatable slice. Once the user has a Bin URL,

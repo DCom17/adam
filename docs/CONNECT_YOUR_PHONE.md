@@ -145,7 +145,7 @@ which is what makes **voice** work off your home Wi-Fi.
 > desktop** — the audio is generated on your PC and delivered over this same private
 > HTTPS connection. If it isn't installed, or its service isn't running, replies fall
 > back to your phone's built-in (robotic) text-to-speech. (See
-> [Beta handoff → About the voice](BETA_HANDOFF.md#about-the-voice-please-read-set-your-expectations).)
+> [Beta handoff → About the voice](BETA_HANDOFF.md#about-the-voice).)
 
 ## Troubleshooting
 

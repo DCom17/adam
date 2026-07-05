@@ -223,8 +223,8 @@ PC + iPhone and a live Tailscale tailnet, so it is a **manual** checklist (the u
 suite covers the doctor diagnostics and the secure-context banner rule; only the live
 device round-trip is manual).
 
-**Status: PASS — owner-verified 2026-06-24** on the real PC (`chainforge`, Windows) +
-iPhone (`iphone182`, Safari), same tailnet. Because this machine already had another app served
+**Status: PASS — owner-verified 2026-06-24** on the maintainer's real Windows PC +
+iPhone (Safari), same tailnet. Because this machine already had another app served
 on the tailnet's 443, Adam was served on a **separate HTTPS port (8443)**
 (`tailscale serve --https=8443 http://127.0.0.1:8010`) so that serve stayed intact; the
 generic single-app case would use 443. The full round-trip worked end-to-end.

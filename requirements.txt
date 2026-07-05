@@ -19,3 +19,7 @@ python-multipart==0.0.32
 # Test-only: FastAPI's TestClient (used by test_console.py) requires httpx.
 # Not needed to run the server, only to run the headless smoke tests.
 httpx==0.28.1
+# direct imports that previously rode in as transitive deps (server.py
+# imports cryptography for VAPID keygen; models.py imports pydantic directly)
+cryptography==49.0.0
+pydantic==2.13.4

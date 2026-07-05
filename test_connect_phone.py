@@ -47,18 +47,18 @@ def check(name: str, cond: bool) -> None:
 
 
 OTHER_APP_SERVE = (
-    "https://chainforge.tail4a86a8.ts.net (tailnet only)\n"
+    "https://examplebox.tail0000ab.ts.net (tailnet only)\n"
     "|-- / proxy http://127.0.0.1:9100\n"
 )
 OTHER_443_SERVE = (
-    "https://chainforge.tail4a86a8.ts.net (tailnet only)\n"
+    "https://examplebox.tail0000ab.ts.net (tailnet only)\n"
     "|-- / proxy http://127.0.0.1:9000\n"
 )
 Adam_8443_SERVE = (
-    "https://chainforge.tail4a86a8.ts.net:8443 (tailnet only)\n"
+    "https://examplebox.tail0000ab.ts.net:8443 (tailnet only)\n"
     "|-- / proxy http://127.0.0.1:8010\n"
 )
-STATUS_JSON = json.dumps({"Self": {"DNSName": "chainforge.tail4a86a8.ts.net."}})
+STATUS_JSON = json.dumps({"Self": {"DNSName": "examplebox.tail0000ab.ts.net."}})
 
 
 def make_runner(serve_text):
@@ -71,7 +71,7 @@ def make_runner(serve_text):
         if sub[:1] == ["status"] and "--json" in sub:
             return types.SimpleNamespace(returncode=0, stdout=STATUS_JSON, stderr="")
         if sub[:1] == ["status"]:
-            return types.SimpleNamespace(returncode=0, stdout="100.0.0.1 chainforge ...\n", stderr="")
+            return types.SimpleNamespace(returncode=0, stdout="100.0.0.1 examplebox ...\n", stderr="")
         if sub[:2] == ["serve", "status"]:
             return types.SimpleNamespace(returncode=0, stdout=serve_text, stderr="")
         return types.SimpleNamespace(returncode=0, stdout="", stderr="")
@@ -127,7 +127,7 @@ def main() -> int:
         check("target_port from config", d["target_port"] == int(config.PORT))
         check("occupied :443 -> recommend 8443", d["recommended_https_port"] == 8443)
         check("tailnet name resolved from status --json",
-              d["tailnet_name"] == "chainforge.tail4a86a8.ts.net")
+              d["tailnet_name"] == "examplebox.tail0000ab.ts.net")
 
         print("\n[3] Detection falls back to standard path (resolver reused)")
         # Drive the real resolver: not on PATH, but a real file via the fallback list.

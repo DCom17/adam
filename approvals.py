@@ -50,15 +50,27 @@ def _save(items: list[dict]) -> None:
     )
 
 
+# Resolved records older than this are shed (same rationale as proposed_changes:
+# the store is one JSON file, fully re-parsed and rewritten on use — it must not
+# grow forever). The audit log keeps the full decision history.
+_TERMINAL_RETENTION_SECONDS = 30 * 24 * 3600
+
+
 def _expire(items: list[dict]) -> list[dict]:
-    """Mark still-pending records past their expiry as 'expired'. Mutates in place
-    and returns the list."""
+    """Mark still-pending records past their expiry as 'expired', and shed
+    non-pending records older than the retention window. Returns the list."""
     now = _now()
     for it in items:
         if it.get("status") == "pending" and it.get("expires_at_ts", 0) and now > it["expires_at_ts"]:
             it["status"] = "expired"
             it["resolved_at"] = _iso(now)
-    return items
+    cutoff = now - _TERMINAL_RETENTION_SECONDS
+    return [
+        it for it in items
+        if it.get("status") == "pending"
+        or (it.get("resolved_at_ts") or it.get("expires_at_ts")
+            or it.get("created_at_ts") or now) >= cutoff
+    ]
 
 
 def create(

@@ -44,6 +44,24 @@ if (-not $Repo) { $Repo = "DCom17/adam-releases" }
 $py = (Get-Command python -ErrorAction SilentlyContinue).Source
 if (-not $py) { Say "Python not found on PATH - needed to build the release zip." "Red"; exit 1 }
 
+# --- Publish gates: never ship a ZIP that matches no commit or fails its tests ----
+# Gate 1: clean tree. A dirty-tree publish ships bytes that correspond to no commit,
+# making the release unreproducible and un-debuggable.
+$dirty = (& git -C $root status --porcelain) | Where-Object { $_ -and ($_ -notmatch '^\?\?') }
+if ($dirty) {
+    Say "Refusing to publish: uncommitted changes in the working tree:" "Red"
+    $dirty | ForEach-Object { Say "  $_" "Yellow" }
+    Say "Commit (or stash) first, then publish. (Untracked files are allowed.)" "Red"
+    exit 1
+}
+# Gate 2: release tests (includes every packaging guard + the boot-the-ZIP smoke).
+Say "Running release tests before publishing ..." "Cyan"
+& $py (Join-Path $root "test_release.py")
+if ($LASTEXITCODE -ne 0) {
+    Say "Refusing to publish: test_release.py failed (exit $LASTEXITCODE)." "Red"
+    exit 1
+}
+
 Say "Building release zip for $tag ..." "Cyan"
 & $py (Join-Path $here "make_release.py") | Write-Host
 $zip = Join-Path $root ("dist\adam-local-$tag.zip")

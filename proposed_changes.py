@@ -209,12 +209,30 @@ def create(
     return _public(rec)
 
 
+# Terminal records older than this are shed from the store. Each record carries
+# the full proposed file content plus a diff (up to 200K chars), and the store is
+# one JSON file parsed and rewritten under a lock on the hot path EVERY turn
+# (resolved_since) — without shedding, months of auto-applied brain writes grow
+# it to tens of MB and every turn pays for it. The audit log (audit.jsonl) keeps
+# the full lifecycle forever; only the working store forgets.
+_TERMINAL_RETENTION_SECONDS = 30 * 24 * 3600
+_TERMINAL_STATUSES = ("applied", "denied", "failed", "expired")
+
+
 def _expire(items: list[dict]) -> list[dict]:
     now = _now()
     for it in items:
         if it.get("status") == "pending" and it.get("expires_at_ts", 0) and now > it["expires_at_ts"]:
             it["status"] = "expired"
-    return items
+    # Shed old terminal records (pending/approved/conflict are still actionable
+    # and are always kept, whatever their age).
+    cutoff = now - _TERMINAL_RETENTION_SECONDS
+    return [
+        it for it in items
+        if it.get("status") not in _TERMINAL_STATUSES
+        or (it.get("resolved_at_ts") or it.get("expires_at_ts")
+            or it.get("created_at_ts") or now) >= cutoff
+    ]
 
 
 def _public(rec: dict) -> dict:

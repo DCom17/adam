@@ -1,9 +1,12 @@
 # Adam Kokoro voice service — installed into scripts/tts_server/.venv by INSTALL-VOICE.cmd.
 # Kept separate from the main app so the heavy ONNX runtime never touches the core install.
+# All pinned to the versions the voice was validated with: this venv is built COLD on
+# every user's machine, and an unpinned numpy/onnxruntime ABI drift would break the
+# voice install months later with no code change anywhere.
 kokoro-onnx==0.4.7
-onnxruntime
-soundfile
-numpy
-fastapi
-uvicorn
-pydantic
+onnxruntime==1.27.0
+soundfile==0.14.0
+numpy==2.5.0
+fastapi==0.139.0
+uvicorn==0.49.0
+pydantic==2.13.4

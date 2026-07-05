@@ -61,7 +61,7 @@ async def sms(request: Request):
         return empty  # unknown sender — ignore silently
     body = (params.get("Body") or "").strip()
     if body:
-        asyncio.create_task(server._run_sms_job(body))
+        server.keep_task(asyncio.create_task(server._run_sms_job(body)))
     return empty
 
 
@@ -97,8 +97,9 @@ async def calendar_test(req: CalendarTestRequest):
     call and is never logged; any error is redacted of the submitted token before
     returning."""
     try:
-        result = google_calendar.probe_bridge(
-            req.bridge_url, req.token, req.calendar_id or "primary"
+        result = await asyncio.to_thread(
+            google_calendar.probe_bridge,
+            req.bridge_url, req.token, req.calendar_id or "primary",
         )
         return {"ok": True, "calendar_id": result.get("calendar_id", "primary")}
     except google_calendar.CalendarError as e:
@@ -123,8 +124,9 @@ async def calendar_enable(req: CalendarEnableRequest):
     # Re-probe so we never enable on unverified input (defends against a stale
     # field, a copy-paste slip, or a token that has since rotated).
     try:
-        result = google_calendar.probe_bridge(
-            req.bridge_url, req.token, req.calendar_id or "primary"
+        result = await asyncio.to_thread(
+            google_calendar.probe_bridge,
+            req.bridge_url, req.token, req.calendar_id or "primary",
         )
     except google_calendar.CalendarError as e:
         msg = str(e)
@@ -176,7 +178,7 @@ async def calendar_events(time_min: str | None = None, time_max: str | None = No
     tmin = time_min or now.isoformat()
     tmax = time_max or (now + timedelta(days=7)).isoformat()
     try:
-        events = google_calendar.list_events(tmin, tmax, calendar_id)
+        events = await asyncio.to_thread(google_calendar.list_events, tmin, tmax, calendar_id)
         return {"ok": True, "count": len(events), "events": events}
     except google_calendar.CalendarError as e:
         raise HTTPException(status_code=502, detail=str(e))
@@ -193,7 +195,7 @@ async def linkedin_test(req: LinkedInTestRequest):
     is deliberately NO agent-callable post route — publishing is an explicit
     operator action against an approved draft, keeping 'never auto-post' structural."""
     try:
-        result = linkedin.probe_credentials(req.access_token)
+        result = await asyncio.to_thread(linkedin.probe_credentials, req.access_token)
         return {"ok": True, "author_urn": result.get("author_urn", ""),
                 "name": result.get("name", "")}
     except linkedin.LinkedInError as e:
@@ -230,7 +232,7 @@ async def linkedin_enable(req: LinkedInEnableRequest):
     if not (req.access_token or "").strip():
         return {"ok": False, "error": "The auto-post lane needs your member access token."}
     try:
-        result = linkedin.probe_credentials(req.access_token)
+        result = await asyncio.to_thread(linkedin.probe_credentials, req.access_token)
     except linkedin.LinkedInError as e:
         msg = str(e)
         for sec in (req.access_token, req.client_secret):
@@ -285,7 +287,7 @@ async def email_test(req: EmailTestRequest):
     contents. The bridge token is used only for this call and is never logged; any
     error is redacted of the submitted token before returning."""
     try:
-        result = gmail.probe_bridge(req.bridge_url, req.token)
+        result = await asyncio.to_thread(gmail.probe_bridge, req.bridge_url, req.token)
         return {"ok": True, "account": result.get("account", "")}
     except gmail.GmailError as e:
         msg = str(e)
@@ -303,7 +305,7 @@ async def email_enable(req: EmailEnableRequest):
     only to the local .env and is NEVER logged or echoed back. A server RESTART is
     required for the new config to load."""
     try:
-        gmail.probe_bridge(req.bridge_url, req.token)
+        await asyncio.to_thread(gmail.probe_bridge, req.bridge_url, req.token)
     except gmail.GmailError as e:
         msg = str(e)
         if req.token and req.token in msg:
@@ -546,7 +548,7 @@ async def hunter_test(req: HunterTestRequest):
     is a read. The bridge token is used only for this call and is never logged;
     any error is redacted of the submitted token before returning."""
     try:
-        result = hunter.probe_bridge(req.bridge_url, req.token)
+        result = await asyncio.to_thread(hunter.probe_bridge, req.bridge_url, req.token)
         return {"ok": True,
                 "quest_count": result.get("quest_count"),
                 "stat_count": result.get("stat_count")}
@@ -568,7 +570,7 @@ async def hunter_enable(req: HunterEnableRequest):
     to the local .env and is NEVER logged or echoed back. A server RESTART is
     required for the new config to load."""
     try:
-        hunter.probe_bridge(req.bridge_url, req.token)
+        await asyncio.to_thread(hunter.probe_bridge, req.bridge_url, req.token)
     except hunter.HunterError as e:
         msg = str(e)
         if req.token and req.token in msg:

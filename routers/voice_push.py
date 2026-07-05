@@ -68,6 +68,9 @@ async def speak(request: Request, body: SpeakRequest):
         # TTS, and (in the background, so this 502 isn't delayed) check whether
         # Kokoro died and restart it for the next turn. recover() pings first,
         # so a merely-slow sentence never triggers a spawn.
+        # Log it: an HTTPException bypasses the catch-all logger, and a phone
+        # degrading to the robot voice used to leave zero server-side trace.
+        server.log.warning("TTS /speak failed (falling back to browser voice): %s", e)
         task = asyncio.create_task(
             asyncio.to_thread(tts_supervisor.recover, "speak failed", server.log)
         )
