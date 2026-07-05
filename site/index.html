@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adam Local — a voice assistant that lives on your PC</title>
+<meta name="description" content="Adam Local is a personal, local-first voice assistant for your own files. Powered by your own Claude. Nothing collected, no telemetry — everything runs on your PC.">
+<link rel="icon" href="icon.png" type="image/png">
+<style>
+  :root {
+    --bg: #05070d; --panel: #0a121c; --edge: rgba(33,230,255,.22);
+    --cyan: #21e6ff; --cyan-dim: #17a8c9; --text: #cfe9ef; --dim: #7fb6c4;
+    --faint: #5f8a96;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 16px/1.65 system-ui, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+
+  header.hero {
+    text-align: center; padding: 72px 24px 56px;
+    background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(33,230,255,.08), transparent);
+  }
+  .hero img { width: 96px; height: 96px; border-radius: 22px; }
+  .hero h1 {
+    margin-top: 22px; font-size: 15px; letter-spacing: 9px; font-weight: 600;
+    color: var(--cyan);
+  }
+  .hero .tag {
+    margin: 14px auto 0; max-width: 560px; font-size: 26px; font-weight: 650;
+    line-height: 1.3; color: #eaf7fa;
+  }
+  .hero .sub { margin: 14px auto 0; max-width: 540px; color: var(--dim); }
+  .cta {
+    display: inline-block; margin-top: 30px; padding: 14px 34px;
+    background: var(--cyan); color: #04252c; font-weight: 700; font-size: 17px;
+    border-radius: 12px; box-shadow: 0 0 32px rgba(33,230,255,.25);
+  }
+  .cta:hover { text-decoration: none; filter: brightness(1.08); }
+  .cta-sub { margin-top: 10px; font-size: 13px; color: var(--faint); }
+  .cta-sub a { color: var(--dim); }
+
+  section { padding: 44px 0; border-top: 1px solid rgba(33,230,255,.09); }
+  h2 { font-size: 13px; letter-spacing: 4px; color: var(--cyan); margin-bottom: 22px;
+       font-weight: 600; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--edge); border-radius: 14px;
+    padding: 20px 22px;
+  }
+  .card h3 { font-size: 15px; color: #eaf7fa; margin-bottom: 8px; }
+  .card p { font-size: 14px; color: var(--dim); }
+
+  ol.steps { counter-reset: s; list-style: none; max-width: 620px; }
+  ol.steps li {
+    counter-increment: s; position: relative; padding: 0 0 22px 56px;
+  }
+  ol.steps li::before {
+    content: counter(s); position: absolute; left: 0; top: 0;
+    width: 34px; height: 34px; line-height: 34px; text-align: center;
+    background: var(--panel); border: 1px solid var(--edge); border-radius: 50%;
+    color: var(--cyan); font-weight: 700; font-size: 15px;
+  }
+  ol.steps b { color: #eaf7fa; }
+  ol.steps .note { font-size: 13.5px; color: var(--faint); margin-top: 3px; }
+  code { background: var(--panel); border: 1px solid var(--edge); border-radius: 6px;
+         padding: 1px 7px; font-size: 14px; color: #b9ecf5; }
+
+  .req { max-width: 620px; }
+  .req li { margin: 0 0 10px 22px; color: var(--dim); }
+  .req li b { color: var(--text); font-weight: 600; }
+
+  footer { padding: 40px 24px 56px; text-align: center; color: var(--faint);
+           font-size: 13.5px; border-top: 1px solid rgba(33,230,255,.09); }
+  footer nav { margin-bottom: 12px; }
+  footer nav a { margin: 0 12px; color: var(--dim); }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <img src="icon.png" alt="Adam icon" width="96" height="96">
+  <h1>A D A M&nbsp;&nbsp;L O C A L</h1>
+  <div class="tag">A voice assistant that lives on your PC and works with your own files.</div>
+  <p class="sub">Talk to it from your desk or your phone. Powered by your own Claude —
+  your subscription or your API key. Nothing collected, no accounts, no telemetry:
+  there is no server to send anything to.</p>
+  <a class="cta" id="dl" href="https://github.com/DCom17/adam-releases/releases/latest">Download for Windows</a>
+  <div class="cta-sub" id="ver">Free beta ·
+    <a href="https://github.com/DCom17/adam-releases/releases">all releases &amp; changelog</a></div>
+</header>
+
+<div class="wrap">
+
+<section>
+  <h2>WHAT MAKES IT DIFFERENT</h2>
+  <div class="cards">
+    <div class="card">
+      <h3>Local first, actually</h3>
+      <p>Your notes, chat history, and settings never leave your PC. The one thing
+      that goes to the internet is your question to Claude — under your own account,
+      exactly as if you'd typed it there yourself.</p>
+    </div>
+    <div class="card">
+      <h3>No middleman servers</h3>
+      <p>Phone access rides your own private Tailscale network: your phone talks
+      directly to your PC over an encrypted tunnel. Nothing transits anyone else's
+      infrastructure — there is no relay, and no maintainer server to trust.</p>
+    </div>
+    <div class="card">
+      <h3>Safe by architecture</h3>
+      <p>Adam proposes; you approve. File changes go through a review flow with
+      automatic backups and an audit log. Zero telemetry and zero crash reporting —
+      if you want to share diagnostics, you copy a redacted bundle yourself.</p>
+    </div>
+    <div class="card">
+      <h3>A real voice</h3>
+      <p>An optional one-time download adds a natural on-device voice (the
+      open-source Kokoro model) — speech is generated on your own hardware, not in
+      the cloud.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>QUICK START</h2>
+  <ol class="steps">
+    <li><b>Download the ZIP</b> and right-click → <b>Extract All</b>.
+      <div class="note">Grab the file named <code>adam-local-… .zip</code> under
+      Assets — not "Source code".</div></li>
+    <li><b>Double-click <code>SETUP</code></b> in the extracted folder and follow the
+      wizard — it installs everything for you.
+      <div class="note">If Windows shows a blue "Windows protected your PC" box,
+      click <i>More info → Run anyway</i>. That's Windows being cautious about new
+      apps; a signed installer arrives with v1.0.</div></li>
+    <li><b>Sign in to Claude</b> when the wizard asks (or paste your own Anthropic
+      API key — both are first-class).</li>
+    <li><b>Open Adam</b> from the desktop icon and start talking.</li>
+    <li><b>Optional:</b> put it on your phone — the in-app wizard walks you through
+      connecting over your own Tailscale network, and the app installs to your home
+      screen like any other.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>WHAT YOU NEED</h2>
+  <ul class="req">
+    <li><b>A Windows 10/11 PC</b> — this is where Adam lives. The setup wizard
+      installs Python and Claude Code automatically if they're missing.</li>
+    <li><b>Your own Claude</b> — a Claude Pro/Max subscription, or an Anthropic API
+      key with a monthly budget Adam will not exceed.</li>
+    <li><b>Optional: Tailscale</b> (free) on your PC and phone for remote access.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>SUPPORT</h2>
+  <p style="max-width:620px;color:var(--dim)">Found a problem or need a hand?
+  <a href="https://github.com/DCom17/adam/issues">Open a GitHub issue</a> — there are
+  templates for setup trouble, bugs, and phone-connection questions. The
+  <a href="https://github.com/DCom17/adam-releases/releases">changelog</a> lists
+  what's new in every release.</p>
+</section>
+
+</div>
+
+<footer>
+  <nav>
+    <a href="privacy.html">Privacy</a>
+    <a href="https://github.com/DCom17/adam">Source</a>
+    <a href="https://github.com/DCom17/adam-releases/releases">Releases</a>
+    <a href="https://github.com/DCom17/adam/issues">Support</a>
+  </nav>
+  © 2026 Zachary Campos · Adam Local is an independent product, powered by Claude —
+  it is not affiliated with or endorsed by Anthropic.
+</footer>
+
+<script>
+  // Nicety: swap the button for a direct asset link + show the version.
+  // Graceful: any failure leaves the releases-page link in place.
+  fetch("https://api.github.com/repos/DCom17/adam-releases/releases/latest")
+    .then(r => r.ok ? r.json() : null)
+    .then(rel => {
+      if (!rel) return;
+      const zip = (rel.assets || []).find(a => /^adam-local-.*\.zip$/.test(a.name));
+      if (zip) document.getElementById("dl").href = zip.browser_download_url;
+      if (rel.tag_name) document.getElementById("ver").firstChild.textContent =
+        "Free beta · " + rel.tag_name + " · ";
+    })
+    .catch(() => {});
+</script>
+
+</body>
+</html>
