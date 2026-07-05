@@ -397,6 +397,16 @@ default upgrade path, so these become mainline before v1.0)
 > Remaining MP3-P2: item 6 only (LICENSE finalization — owner reviews the EULA
 > draft). Remaining overall: owner-gated items (signing, phone acceptance,
 > testers, site publish go-ahead) + winget after signing.
+>
+> **SECOND BATCH same evening (68c437a):** INSTALL-VOICE + ROTATE-TOKEN got
+> the ZIP guard too (all 5 entry points covered; v0.9.39 artifacts REBUILT —
+> publish the rebuilt ones); signing is drop-in (`build-installer.ps1 -Sign`
+> + ADAM_ACS_DLIB/ADAM_ACS_METADATA env vars, ISCC /Ssigntool → conditional
+> SignTool= in the .iss, unsigned path regression-verified); winget kit at
+> packaging/winget/ (3 manifests, TODO = version/URL/SHA256, submit AFTER
+> signing per README); dist/LICENSE-v1.0-proposed.txt ready to adopt (one
+> decision: governing state = Arizona); dist/publish-site.ps1 one-shots the
+> gh-pages publish when the owner says go.
 
 ## MP3 — the updated v1.0 gate (supersedes P4 list where they overlap)
 
