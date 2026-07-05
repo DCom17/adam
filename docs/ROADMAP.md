@@ -24,6 +24,16 @@
 > Owner's desktop JARVIS.lnk replaced by Adam.lnk via add-app-shortcut.ps1.
 > Phones: Android launcher updates on SW refresh; iOS home-screen icon needs
 > remove + re-add. Remaining P3: items 1, 2, 6 (installer, winget, site).
+>
+> **P3-1 (installer) BUILT 2026-07-05, signing pending:** scripts/
+> adam-installer.iss + scripts/build-installer.ps1 (payload = the guarded
+> ZIP, all release guards fail-closed first). Per-user, no-UAC install to
+> %LOCALAPPDATA%\Programs\Adam; /VERYSILENT works (winget-ready); uninstall
+> keeps brain/ + data/ + .env. Acceptance run on v0.9.38: silent install →
+> `import server` boots → reinstall preserves edited brain file → silent
+> uninstall removes program, keeps user data. Still due: SignTool= once the
+> Azure cert lands; ship the installer alongside the ZIP from v0.9.39 on.
+> Remaining P3: 2 (winget, after signing) + 6 (site).
 
 Sources: four-way deep audit run 2026-07-05 — (A) cold-user product/UX audit, (B)
 production-readiness code audit, (C) live verification (49/49 suite, 117/117 release

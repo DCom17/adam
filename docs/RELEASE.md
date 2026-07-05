@@ -100,3 +100,29 @@ The update takes effect after the server restarts (close the black window, reope
 3. Re-run `python scripts/doctor.py`, then start as usual. If the doctor reports a
    FAIL, follow its plain-language guidance before starting.
 </details>
+
+## Building the Windows installer (v1.0 packaging)
+
+The installer wraps the exact guarded ZIP — every fail-closed release guard runs
+before a single installer byte exists:
+
+```powershell
+.\scripts\build-installer.ps1                                    # builds the ZIP fresh, then the installer
+.\scripts\build-installer.ps1 -Zip dist\adam-local-vX.Y.Z.zip    # reuse an already-built ZIP
+```
+
+Output: `dist\adam-setup-vX.Y.Z.exe` (Inno Setup 6 required:
+`winget install JRSoftware.InnoSetup`).
+
+Behavior by design (see comments in `scripts\adam-installer.iss`):
+- Per-user install to `%LOCALAPPDATA%\Programs\Adam` — no admin prompt, and the
+  in-app updater keeps working because the folder stays user-writable.
+- First-install tool: upgrades between releases go through UPDATE.cmd / the
+  in-app updater (which has merge + backup logic). A reinstall over an existing
+  folder never overwrites `brain\`, `.env`, `settings.json`, or `data\`.
+- Uninstall (Add/Remove Programs, or `unins000.exe /VERYSILENT`) removes program
+  files and shortcuts but keeps `brain\`, `data\`, and `.env` — the user's notes,
+  token, and backups survive; delete the folder by hand to remove everything.
+- Silent install for winget: `adam-setup-vX.Y.Z.exe /VERYSILENT /SUPPRESSMSGBOXES`.
+- Unsigned until the Azure Artifact Signing cert lands (SmartScreen will warn);
+  when it does, add a `SignTool=` directive in the `.iss` — nothing else changes.
