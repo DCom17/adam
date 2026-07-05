@@ -79,3 +79,17 @@ decision):**
 **Accepted residual risk:** their standalone-ADAM will likely register; a
 cease-and-desist is never impossible from a funded company. The evidence file is the
 day-one defense record. This entry is not legal advice.
+
+**D21 addendum — "Atam" alternative considered and REJECTED, 2026-07-05.** Proposal:
+respell as "Atam" (backronym: Agentic Thought and Action Manager) to gain distance
+from adam.ai's marks. Rejected on two independent grounds: (1) **zero phonetic
+distance** — American English flaps intervocalic /t/ to the same sound as /d/
+(latter/ladder), so "Atam" is pronounced identically to "Adam"; sound similarity is
+a core likelihood-of-confusion factor, so the respelling buys no legal room against
+an ADAM mark while costing a full rename. (2) **Direct collision with a registered
+mark in our own field:** ATAM(R) — Architecture Tradeoff Analysis Method — is a
+USPTO-registered trademark of Carnegie Mellon University (SEI), famous specifically
+among software practitioners (exactly the beta audience), and CMU actively licenses
+its marks. "Atam" is therefore strictly worse than "Adam": same sound as the mark we
+were avoiding, plus a new head-on conflict with a university's registered mark.
+D21 and its four guardrails stand unchanged.
