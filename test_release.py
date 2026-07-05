@@ -72,7 +72,11 @@ def main() -> int:
     print("\n[1] Staged set INCLUDES the core product files")
     for f in ("server.py", "config.py", "permissions.py", "proposed_changes.py",
               "approvals.py", "diffs.py", "job_store.py", "onboarding.py",
+              "security.py", "models.py", "rate_limit.py", "usage_store.py",
               "requirements.txt"):
+        check(f"includes {f}", f in relset)
+    for f in ("routers/__init__.py", "routers/chat.py", "routers/integrations.py",
+              "routers/reviews.py", "routers/system.py", "routers/voice_push.py"):
         check(f"includes {f}", f in relset)
     check("includes .env.example", ".env.example" in relset)
     check("includes settings.example.json", "settings.example.json" in relset)
@@ -232,6 +236,34 @@ def main() -> int:
         check("release_guard.local itself never ships",
               "scripts/release_guard.local" not in relset
               and _guard_raises("scripts/release_guard.local"))
+
+    print("\n[9d] Import guard: staged code must not import files that don't ship")
+    # The v0.9.35 ZIP shipped a server.py importing routers/, security.py, models.py,
+    # rate_limit.py and usage_store.py — none of which were staged — so a fresh
+    # install could not boot. This guard makes that class of bug a build failure.
+    try:
+        mr.check_imports_ship(rels)
+        check("clean staged set passes the import guard", True)
+    except RuntimeError:
+        check("clean staged set passes the import guard", False)
+
+    def _import_guard_trips(dropped) -> bool:
+        pruned = [r for r in rels if r not in dropped and not r.startswith(tuple(
+            d for d in dropped if d.endswith("/")))]
+        try:
+            mr.check_imports_ship(pruned)
+            return False
+        except RuntimeError:
+            return True
+
+    check("guard trips when the routers/ package is dropped",
+          _import_guard_trips({"routers/"}))
+    check("guard trips when usage_store.py is dropped",
+          _import_guard_trips({"usage_store.py"}))
+    check("guard trips when a single router submodule is dropped",
+          _import_guard_trips({"routers/chat.py"}))
+    check("guard trips when security.py is dropped",
+          _import_guard_trips({"security.py"}))
 
     print("\n[9c] Brain guard fails closed on a planted violation")
     planted = ROOT / "brain" / "_guard_probe_tmp.md"

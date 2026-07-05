@@ -3,6 +3,19 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.36 - Critical packaging fix: the 0.9.35 ZIP could not start
+
+- **If you installed or updated to 0.9.35, take this update.** The 0.9.35 release
+  ZIP was missing five internal code files (`routers/`, `security.py`, `models.py`,
+  `rate_limit.py`, `usage_store.py`) — the release builder's file list was never
+  updated when the server code was reorganized, so a fresh install (or an install
+  updated from the ZIP) failed at startup with a module-not-found error. Installs
+  running from the source repo were unaffected. 0.9.36 is the same product with a
+  complete ZIP.
+- **This can't happen again:** the release builder now fails closed if any staged
+  code imports a local file that isn't in the ZIP, and the release test suite
+  covers the guard (drop any required module and the build refuses to ship).
+
 ## 0.9.35 - Jarvis Voice Local is now Adam
 
 - **The product is renamed Adam.** Same app, new name (the old one collided with

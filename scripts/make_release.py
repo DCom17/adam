@@ -29,7 +29,8 @@ ROOT = Path(__file__).resolve().parent.parent
 _ROOT_FILES = [
     # product modules
     "server.py", "config.py", "permissions.py", "proposed_changes.py",
-    "self_edit_guard.py",
+    "self_edit_guard.py", "security.py", "models.py", "rate_limit.py",
+    "usage_store.py",
     "approvals.py", "diffs.py", "job_store.py", "session_store.py", "onboarding.py", "agent_write_probe.py",
     "google_calendar.py", "integration_registry.py", "twilio_sms.py",
     "twilio_voicemail.py", "voicemail_provision.py", "voicemail_store.py",
@@ -65,6 +66,10 @@ _SCRIPT_FILES = [
 _DOC_FILES = [
     "BETA_HANDOFF.md", "CONNECT_YOUR_PHONE.md", "ADVANCED_REMOTE.md", "SUPPORT.md",
     "RELEASE.md", "CONSUMER_TEST_CHECKLIST.md",
+]
+_ROUTERS_FILES = [  # the routers/ package server.py imports at boot
+    "__init__.py", "chat.py", "integrations.py", "reviews.py", "system.py",
+    "voice_push.py",
 ]
 _TEST_GLOB = "test_*.py"   # F&F beta ships the test suites for self-verification
 _DATA_KEEP = "data/.gitkeep"
@@ -159,6 +164,9 @@ def staged_files() -> list[str]:
     for f in _DOC_FILES:
         if (ROOT / "docs" / f).is_file():
             rels.append(f"docs/{f}")
+    for f in _ROUTERS_FILES:
+        if (ROOT / "routers" / f).is_file():
+            rels.append(f"routers/{f}")
     for p in sorted(ROOT.glob(_TEST_GLOB)):
         if p.is_file():
             rels.append(p.name)
@@ -200,6 +208,57 @@ def check_brain_clean(rels: list[str]) -> None:
         )
 
 
+_IMPORT_RE = re.compile(
+    r"^(?:from\s+([A-Za-z_][A-Za-z0-9_.]*)\s+import\s+([A-Za-z0-9_,\s]+)"
+    r"|import\s+([A-Za-z_][A-Za-z0-9_.]*))",
+    re.M,
+)
+
+
+def check_imports_ship(rels: list[str]) -> None:
+    """Fail closed: every top-level import in a staged .py that resolves to a
+    repo-local module/package must itself be staged. This is what catches a
+    server.py refactor (new module, new package) whose files were never added
+    to the allow-list — the v0.9.35 ZIP shipped without routers/, security.py,
+    models.py, rate_limit.py and usage_store.py and could not boot at all."""
+    relset = set(rels)
+
+    def _local_kind(mod: str) -> str | None:
+        if (ROOT / f"{mod}.py").is_file():
+            return "module"
+        if (ROOT / mod / "__init__.py").is_file():
+            return "package"
+        return None
+
+    def _staged(mod: str) -> bool:
+        return f"{mod}.py" in relset or f"{mod}/__init__.py" in relset
+
+    missing: list[str] = []
+    for rel in rels:
+        if not rel.endswith(".py") or rel.startswith(_BRAIN_DIR + "/"):
+            continue
+        try:
+            text = (ROOT / rel).read_text("utf-8", errors="ignore")
+        except OSError:
+            continue
+        for m in _IMPORT_RE.finditer(text):
+            root_mod = (m.group(1) or m.group(3) or "").split(".")[0]
+            kind = _local_kind(root_mod)
+            if kind and not _staged(root_mod):
+                missing.append(f"{rel} imports {root_mod} ({kind} not staged)")
+            # `from PKG import a, b` — each name that is a repo file must ship too
+            if kind == "package" and m.group(1) and m.group(2):
+                for name in (n.strip() for n in m.group(2).split(",")):
+                    if name and (ROOT / root_mod / f"{name}.py").is_file() \
+                            and f"{root_mod}/{name}.py" not in relset:
+                        missing.append(f"{rel} imports {root_mod}.{name} (submodule not staged)")
+    if missing:
+        raise RuntimeError(
+            "release import-guard tripped (staged code imports local files that "
+            "would NOT ship — the ZIP could not run): " + "; ".join(sorted(set(missing)))
+        )
+
+
 def _version() -> str:
     # When run as a CLI, sys.path[0] is scripts/, so a bare `import config` misses the
     # repo-root module. Add ROOT to the path first so the version label resolves.
@@ -217,6 +276,7 @@ def build_zip(out_dir: Path | str | None = None, version: str | None = None) -> 
     rels = staged_files()
     check_no_excluded(rels)  # abort BEFORE creating any file
     check_brain_clean(rels)  # brain bundle must carry no Morrow/owner content
+    check_imports_ship(rels)  # staged code must not import files that don't ship
     version = version or _version()
     out_dir = Path(out_dir) if out_dir else (ROOT / "dist")
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -241,6 +301,7 @@ def main(argv=None) -> int:
     try:
         check_no_excluded(rels)
         check_brain_clean(rels)
+        check_imports_ship(rels)
     except RuntimeError as e:
         print(f"[FAIL] {e}", file=sys.stderr)
         return 2
