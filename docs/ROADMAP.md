@@ -34,6 +34,17 @@
 > uninstall removes program, keeps user data. Still due: SignTool= once the
 > Azure cert lands; ship the installer alongside the ZIP from v0.9.39 on.
 > Remaining P3: 2 (winget, after signing) + 6 (site).
+>
+> **P3-6 (site) BUILT 2026-07-05, publish pending owner go-ahead:** site/
+> in the adam repo — index.html (download w/ GitHub-API direct-link
+> upgrade, quick start, no-middleman security story, SmartScreen note) +
+> privacy.html (mirrors shipped PRIVACY.md) + icon. D21-guardrail branding
+> ("Adam Local", powered-by-Claude non-affiliation footer). Verified
+> excluded from the release ZIP (allow-list). To publish: push a gh-pages
+> branch with site/ contents at root (auto-publishes to
+> dcom17.github.io/adam) — owner must approve first. Also fix the brand
+> header note: index.html home screen said "J A R V I S" (letter-spaced,
+> grep-proof) until 9c9faea. Remaining P3: winget only (after signing).
 
 Sources: four-way deep audit run 2026-07-05 — (A) cold-user product/UX audit, (B)
 production-readiness code audit, (C) live verification (49/49 suite, 117/117 release
