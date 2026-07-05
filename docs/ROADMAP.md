@@ -15,6 +15,15 @@
 > (close the Adam window, reopen from the desktop icon). Remaining v1.0 work =
 > P1 (signing enrollment, name search, testers, phone acceptance — all
 > owner-gated) + P3 items 1–3, 6 (installer, winget, icon art, site).
+>
+> **P3-3 (icon art) DONE 2026-07-05:** new Adam "A" mark (cyan gradient +
+> glow on navy — brand-continuous with the old orb). web/icon.png (512²,
+> full-bleed), NEW web/icon-maskable.png (safe-zone padded, own manifest
+> entry + /icon-maskable.png route + SW cache, cache bumped to
+> adam-shell-v2), web/icon.ico regenerated multi-size (16–256, rounded).
+> Owner's desktop JARVIS.lnk replaced by Adam.lnk via add-app-shortcut.ps1.
+> Phones: Android launcher updates on SW refresh; iOS home-screen icon needs
+> remove + re-add. Remaining P3: items 1, 2, 6 (installer, winget, site).
 
 Sources: four-way deep audit run 2026-07-05 — (A) cold-user product/UX audit, (B)
 production-readiness code audit, (C) live verification (49/49 suite, 117/117 release

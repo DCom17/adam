@@ -14,8 +14,8 @@
  * fall back to cache only when the network fails), so a redeploy is picked up on
  * the next online launch. Only the static icon/manifest are served cache-first.
  */
-const CACHE = "adam-shell-v1";
-const SHELL = ["/", "/manifest.json", "/icon.png"];
+const CACHE = "adam-shell-v2";
+const SHELL = ["/", "/manifest.json", "/icon.png", "/icon-maskable.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -56,7 +56,8 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Static shell assets: cache-first (they rarely change; refresh in background).
-  if (url.pathname === "/manifest.json" || url.pathname === "/icon.png") {
+  if (url.pathname === "/manifest.json" || url.pathname === "/icon.png" ||
+      url.pathname === "/icon-maskable.png") {
     event.respondWith((async () => {
       const cached = await caches.match(req);
       const network = fetch(req).then((res) => {

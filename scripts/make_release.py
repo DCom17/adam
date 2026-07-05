@@ -49,7 +49,7 @@ _ROOT_FILES = [
     "calendar_bridge.gs",
     "hunter_dashboard.gs", "hunter_verify.gs",
 ]
-_WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.html", "setup-email.html", "setup-linkedin.html", "setup-sms.html", "setup-voicemail.html", "setup-hunter.html", "hunter-dashboard.html", "sw.js", "manifest.json", "icon.png", "icon.ico"]
+_WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.html", "setup-email.html", "setup-linkedin.html", "setup-sms.html", "setup-voicemail.html", "setup-hunter.html", "hunter-dashboard.html", "sw.js", "manifest.json", "icon.png", "icon-maskable.png", "icon.ico"]
 _SCRIPT_FILES = [
     "setup.py", "doctor.py", "make_release.py", "make_release.ps1", "apply_update.py",
     "self_update.py", "publish-release.ps1",

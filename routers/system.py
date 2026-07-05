@@ -224,6 +224,16 @@ async def icon():
     raise HTTPException(status_code=404, detail="icon.png not found")
 
 
+@router.get("/icon-maskable.png")
+async def icon_maskable():
+    # Android launcher icon (manifest purpose "maskable"): same art padded
+    # into the safe zone so launcher shapes don't crop the letter.
+    path = server.FRONTEND.parent / "icon-maskable.png"
+    if path.exists():
+        return FileResponse(path, media_type="image/png")
+    raise HTTPException(status_code=404, detail="icon-maskable.png not found")
+
+
 @router.get("/favicon.ico")
 async def favicon():
     # Browsers request this on every page load; without a route each load

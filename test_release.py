@@ -87,7 +87,7 @@ def main() -> int:
 
     print("\n[2] Staged set INCLUDES web + scripts + user-facing docs + tests")
     for f in ("web/index.html", "web/console.html", "web/sw.js", "web/manifest.json",
-              "web/icon.png"):
+              "web/icon.png", "web/icon-maskable.png", "web/icon.ico"):
         check(f"includes {f}", f in relset)
     for f in ("scripts/setup.py", "scripts/doctor.py", "scripts/make_release.py",
               "scripts/make_release.ps1", "scripts/start-adam.ps1",
