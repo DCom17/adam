@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+PackageIdentifier: ZacharyCampos.AdamLocal
+PackageVersion: "1.0.0"   # TODO: match the signed release
+PackageLocale: en-US
+Publisher: Zachary Campos
+PublisherUrl: https://github.com/DCom17/adam
+PublisherSupportUrl: https://github.com/DCom17/adam/issues
+PackageName: Adam Local
+PackageUrl: https://dcom17.github.io/adam/
+License: Proprietary
+LicenseUrl: https://github.com/DCom17/adam/blob/main/LICENSE
+PrivacyUrl: https://dcom17.github.io/adam/privacy.html
+Copyright: Copyright (c) 2026 Zachary Campos
+ShortDescription: A local-first AI voice assistant for your own files, powered by your own Claude.
+Description: |-
+  Adam Local is a personal AI voice assistant that runs entirely on your own
+  PC and works with your own files. It is powered by Claude using YOUR
+  Anthropic account (Claude subscription or your own API key) - there is no
+  middleman server, no account with the maintainer, and no telemetry.
+  After installation, the guided setup wizard downloads its declared
+  dependencies (Python, and Anthropic's Claude Code CLI) and walks you through
+  signing in to your own Claude. Optional: connect your phone over your own
+  private Tailscale network, and install a natural on-device voice (a one-time
+  Kokoro model download).
+  Adam is an AI assistant: your messages are processed by Anthropic's Claude
+  under your own account. Everything else stays on your machine.
+Moniker: adam-local
+Tags:
+  - ai
+  - assistant
+  - claude
+  - local-first
+  - privacy
+  - voice
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

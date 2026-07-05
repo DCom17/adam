@@ -1,0 +1,31 @@
+# winget submission kit (MP3-P3 / roadmap P3-2)
+
+Draft manifests for `winget install AdamLocal`. **Submit only AFTER the
+installer is signed** — unsigned EXEs aren't banned by winget policy, but they
+routinely trip the Defender validation pipeline into manual-review purgatory.
+
+## When the signed v1.0 installer exists
+
+1. Publish the release with the signed `adam-setup-v<ver>.exe` attached.
+2. Fill the three `TODO` fields in `ZacharyCampos.AdamLocal.installer.yaml`:
+   the tagged (never `latest`) asset URL, the file's SHA256
+   (`Get-FileHash dist\adam-setup-v<ver>.exe`), and the version.
+3. Bump `PackageVersion` in all three files to match.
+4. Fork microsoft/winget-pkgs → copy these files to
+   `manifests/z/ZacharyCampos/AdamLocal/<ver>/` → PR. Or let the tool do it:
+   `wingetcreate submit` / `komac submit`.
+5. Validate locally first: `winget validate --manifest packaging\winget` then
+   `winget install --manifest packaging\winget` on a spare machine/VM.
+
+Notes from the July 2026 policy research (sources in docs/ROADMAP.md MP3-P3):
+- Silent install/uninstall is REQUIRED and already satisfied: InstallerType
+  `inno` gets /VERYSILENT by default; our running-instance guard aborts
+  cleanly (exit 1) rather than hanging when Adam is open.
+- The wizard's post-install downloads (Python, Claude Code) are policy-OK
+  because they're disclosed in the Description (policy 1.2.3 allows declared
+  dependencies).
+- PrivacyUrl is expected for apps that transmit personal info (policy 1.5.1).
+- First submission from a new publisher sits in a human moderation queue
+  (days to ~2 weeks). PackageIdentifier naming nits are the usual friction.
+
+This folder is NOT in the release allow-list — it never ships in the ZIP.

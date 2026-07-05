@@ -22,8 +22,9 @@
 ;  - Uninstall keeps user data (data\, .env, logs) in place by design — the
 ;    "what stays after uninstall" consumer story. It also removes the
 ;    wizard-made shortcuts (add-app-shortcut.ps1 creates the same names).
-;  - Signing: once the Azure Artifact Signing cert exists, add a SignTool=
-;    directive here and sign via build-installer.ps1 — nothing else changes.
+;  - Signing: build-installer.ps1 -Sign passes /DSignBuild plus a
+;    /Ssigntool=... definition; the [Setup] SignTool= below then signs the
+;    installer AND the uninstaller. Unsigned builds simply omit -Sign.
 
 #ifndef StageDir
   #error Pass /DStageDir=... — run scripts\build-installer.ps1, not ISCC directly
@@ -60,6 +61,12 @@ SolidCompression=yes
 WizardStyle=modern
 VersionInfoVersion={#AppVersion}.0
 VersionInfoDescription=Adam - your local AI assistant
+#ifdef SignBuild
+; The "signtool" name is defined on the ISCC command line by build-installer.ps1
+; (-Sign): Azure Artifact Signing via signtool /dlib. Signs setup + uninstaller.
+SignTool=signtool
+SignedUninstaller=yes
+#endif
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Shortcuts:"

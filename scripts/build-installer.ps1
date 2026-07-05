@@ -12,7 +12,16 @@
 
 param(
     [string]$Zip = "",
-    [string]$OutDir = ""
+    [string]$OutDir = "",
+    # -Sign: sign the installer + uninstaller with Azure Artifact Signing.
+    # Prereqs (one-time, after the ACS identity validation completes):
+    #   1. .NET 8 runtime + a recent Windows SDK signtool (supports /dlib)
+    #   2. Azure.CodeSigning.Dlib (the ACS client): note its Azure.CodeSigning.Dlib.dll path
+    #   3. A metadata.json pointing at the ACS account/profile, e.g.
+    #      { "Endpoint": "https://eus.codesigning.azure.net",
+    #        "CodeSigningAccountName": "<account>", "CertificateProfileName": "<profile>" }
+    #   4. Set the three env vars below (or edit the defaults here)
+    [switch]$Sign
 )
 $ErrorActionPreference = "Stop"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path   # scripts/
@@ -72,7 +81,20 @@ Move-Item (Join-Path $stage "brain") $brainStage
 
 # --- compile --------------------------------------------------------------
 Write-Host "[3/4] Compiling installer (Inno Setup)..."
-& $iscc /Qp "/DStageDir=$stage" "/DBrainDir=$brainStage" "/DAppVersion=$version" "/DOutDir=$OutDir" (Join-Path $here "adam-installer.iss")
+$isccArgs = @("/Qp", "/DStageDir=$stage", "/DBrainDir=$brainStage",
+              "/DAppVersion=$version", "/DOutDir=$OutDir")
+if ($Sign) {
+    $signtool = if ($env:ADAM_SIGNTOOL) { $env:ADAM_SIGNTOOL } else { "signtool.exe" }
+    $dlib     = $env:ADAM_ACS_DLIB      # ...\Azure.CodeSigning.Dlib.dll
+    $mdf      = $env:ADAM_ACS_METADATA  # ...\metadata.json
+    if (-not ($dlib -and (Test-Path $dlib))) { throw "-Sign: set ADAM_ACS_DLIB to Azure.CodeSigning.Dlib.dll" }
+    if (-not ($mdf -and (Test-Path $mdf)))  { throw "-Sign: set ADAM_ACS_METADATA to the ACS metadata.json" }
+    # $f is Inno's placeholder for the file to sign; $q escapes quotes in .iss land.
+    $signCmd = "`"$signtool`" sign /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib `"$dlib`" /dmdf `"$mdf`" `$f"
+    $isccArgs += @("/DSignBuild", "/Ssigntool=$signCmd")
+    Write-Host "      signing enabled (Azure Artifact Signing)"
+}
+& $iscc @isccArgs (Join-Path $here "adam-installer.iss")
 if ($LASTEXITCODE -ne 0) { throw "ISCC failed (exit $LASTEXITCODE)" }
 
 $exe = Join-Path $OutDir "adam-setup-v$version.exe"
@@ -86,4 +108,8 @@ $size = "{0:N1} MB" -f ((Get-Item $exe).Length / 1MB)
 Write-Host ""
 Write-Host "[OK] wrote $exe ($size)" -ForegroundColor Green
 Write-Host "     silent install:   adam-setup-v$version.exe /VERYSILENT /SUPPRESSMSGBOXES"
-Write-Host "     (unsigned until the Azure Artifact Signing cert lands - SmartScreen will warn)"
+if ($Sign) {
+    Write-Host "     signed (verify: signtool verify /pa `"$exe`")" -ForegroundColor Green
+} else {
+    Write-Host "     UNSIGNED (SmartScreen will warn) - rebuild with -Sign once the ACS cert is live"
+}
