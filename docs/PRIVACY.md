@@ -1,5 +1,9 @@
 # Privacy — what Adam does (and doesn't do) with your data
 
+**Adam is an AI assistant, powered by Claude.** When you talk to Adam you are
+talking to an AI, not a person; your messages are processed by Anthropic's
+Claude under your own account (details below).
+
 **The short version: Adam collects nothing.** There is no Adam server, no account,
 no telemetry, no analytics, no crash reporting. The maintainer never sees your
 files, your conversations, your token, or your keys — there is no infrastructure

@@ -4,6 +4,10 @@
 
 Welcome! Setting this up is easy. You do not need to be technical.
 
+(What you're installing: Adam is an AI assistant, powered by Claude.
+When you talk to Adam, your messages are processed by Anthropic's
+Claude under your own account - everything else stays on your PC.)
+
 
 FIRST - GET IT ONTO YOUR COMPUTER
 ---------------------------------

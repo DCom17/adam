@@ -180,20 +180,12 @@
   it is not affiliated with or endorsed by Anthropic.
 </footer>
 
-<script>
-  // Nicety: swap the button for a direct asset link + show the version.
-  // Graceful: any failure leaves the releases-page link in place.
-  fetch("https://api.github.com/repos/DCom17/adam-releases/releases/latest")
-    .then(r => r.ok ? r.json() : null)
-    .then(rel => {
-      if (!rel) return;
-      const zip = (rel.assets || []).find(a => /^adam-local-.*\.zip$/.test(a.name));
-      if (zip) document.getElementById("dl").href = zip.browser_download_url;
-      if (rel.tag_name) document.getElementById("ver").firstChild.textContent =
-        "Free beta · " + rel.tag_name + " · ";
-    })
-    .catch(() => {});
-</script>
+<!-- Download deliberately links to the Releases page, not api.github.com:
+     the unauthenticated API is limited to 60 req/hr/IP (shared NATs can starve
+     it) while the releases page and its latest/download/ redirects are plain
+     web requests with no such cap. Swap the button to
+     releases/latest/download/adam-setup.exe once a stable-named signed
+     installer asset ships. -->
 
 </body>
 </html>

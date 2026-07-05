@@ -102,8 +102,10 @@ Write-Host "  ============================================================" -For
 Write-Host "     ADAM LOCAL  -  easy setup" -ForegroundColor Cyan
 Write-Host "  ============================================================" -ForegroundColor Cyan
 Write-Host ""
-Info "This will set up Adam on this computer. It runs entirely on YOUR"
-Info "machine, using YOUR own Claude account. Nothing is shared or hosted."
+Info "This will set up Adam on this computer. Adam is an AI assistant,"
+Info "powered by Claude: what you say to it is processed by Anthropic's"
+Info "Claude under YOUR own account. Everything else runs entirely on"
+Info "YOUR machine. Nothing is shared or hosted anywhere else."
 Write-Host ""
 Info "I'll handle almost everything automatically. There is ONE step only you"
 Info "can do: signing in to your Claude (Anthropic) account in your browser."
