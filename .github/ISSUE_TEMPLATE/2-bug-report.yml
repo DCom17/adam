@@ -1,0 +1,57 @@
+name: Bug report
+description: Something in the app misbehaved (voice, chat, proposed changes, console, jobs…).
+title: "[bug] "
+labels: ["bug", "beta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never share your `.env`, your `JARVIS_TOKEN`, or your `settings.json`.**
+        Run `python scripts/doctor.py` first — it often names the fix, and its output is safe to paste.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: v0.9.34
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where were you using it?
+      options:
+        - PC browser (http://localhost)
+        - Phone via Tailscale (https://…)
+        - Both
+        - Other (public tunnel, LAN IP, …)
+    validations:
+      required: true
+  - type: dropdown
+    id: banner
+    attributes:
+      label: Was the insecure-connection banner showing?
+      description: If yes, you're on plain http — the mic and voice won't work there by design.
+      options:
+        - "No"
+        - "Yes"
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What you did, what happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Doctor output
+      description: Paste the output of `python scripts/doctor.py` (no secrets).
+      render: text
+  - type: textarea
+    id: log
+    attributes:
+      label: Relevant log tail
+      description: The last ~30 lines of `data/logs/voice_server.log` around the failure. Scan it for anything personal first — it should not contain your token.
+      render: text

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Support & scope
+    url: https://github.com/DCom17/jarvis-voice/blob/main/docs/SUPPORT.md
+    about: What's supported (and what isn't yet) before you file an issue.
+  - name: Beta handoff guide
+    url: https://github.com/DCom17/jarvis-voice/blob/main/docs/BETA_HANDOFF.md
+    about: First-time setup, what to test, and how to gather the info an issue needs.

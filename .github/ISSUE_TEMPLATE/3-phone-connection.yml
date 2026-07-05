@@ -1,0 +1,63 @@
+name: Phone connection problem
+description: Trouble getting the PWA, mic, or voice working on your phone (Tailscale path).
+title: "[phone] "
+labels: ["phone", "beta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Phones need **HTTPS** — plain `http://<pc-ip>` silently breaks the mic and shows the
+        insecure-connection banner. The supported path is Tailscale Serve:
+        see [Connect your phone](https://github.com/DCom17/jarvis-voice/blob/main/docs/CONNECT_YOUR_PHONE.md).
+        **Never share your `.env`, your `JARVIS_TOKEN`, or your `settings.json`.**
+        Please replace your Tailscale hostname with `<tailnet-host>` in anything you paste.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: v0.9.34
+    validations:
+      required: true
+  - type: input
+    id: phone
+    attributes:
+      label: Phone and browser
+      placeholder: e.g. iPhone 14, Safari, iOS 19.2
+    validations:
+      required: true
+  - type: dropdown
+    id: stage
+    attributes:
+      label: How far did you get?
+      options:
+        - Tailscale isn't set up / Serve won't start on the PC
+        - The HTTPS URL won't open on the phone
+        - Page opens but sign-in (QR / token) fails
+        - Signed in but the mic does nothing
+        - Mic works but replies don't speak
+        - Worked before, stopped working
+    validations:
+      required: true
+  - type: dropdown
+    id: banner
+    attributes:
+      label: Was the insecure-connection banner showing?
+      options:
+        - "No"
+        - "Yes"
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What you did, what happened, and what you expected
+      description: Include the URL shape you used (https vs http — hostname redacted).
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Doctor output (from the PC)
+      description: Paste the output of `python scripts/doctor.py` (no secrets).
+      render: text

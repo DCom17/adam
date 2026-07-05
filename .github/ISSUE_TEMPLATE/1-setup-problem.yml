@@ -1,0 +1,62 @@
+name: Setup problem
+description: SETUP.cmd, setup.py, or first launch didn't work on your machine.
+title: "[setup] "
+labels: ["setup", "beta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing! Two rules before you paste anything:
+        - **Never share your `.env`, your `JARVIS_TOKEN`, or your `settings.json`.** No support question requires them.
+        - The output of `python scripts/doctor.py` prints no secrets and is safe to share — please include it below.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: From the CHANGELOG, the release ZIP name, or `/health` (e.g. v0.9.34).
+      placeholder: v0.9.34
+    validations:
+      required: true
+  - type: dropdown
+    id: how
+    attributes:
+      label: How did you set up?
+      options:
+        - Double-clicked SETUP.cmd
+        - Manual (pip install + python scripts/setup.py)
+        - Other / not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where did it go wrong?
+      options:
+        - Installing Python
+        - Installing Claude Code
+        - Claude sign-in
+        - Generating the token / writing .env
+        - The doctor check (scripts/doctor.py)
+        - First launch (START.cmd / start-jarvis.ps1)
+        - The browser opened but the app didn't work
+        - Somewhere else
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What you did, and what happened
+      description: Include what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Doctor output
+      description: Paste the output of `python scripts/doctor.py`. It prints no secrets.
+      render: text
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: e.g. Windows 11 Home 23H2
