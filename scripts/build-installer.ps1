@@ -20,8 +20,10 @@ $root = Split-Path -Parent $here                          # repo root
 if (-not $OutDir) { $OutDir = Join-Path $root "dist" }
 
 # --- locate ISCC ---------------------------------------------------------
+# NB ${env:ProgramFiles(x86)} — the braces are required; "$env:ProgramFiles(x86)"
+# parses as $env:ProgramFiles + literal "(x86)" and never matches.
 $iscc = @(
-    "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe",
+    "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
     "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
     "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
 ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
@@ -60,6 +62,12 @@ foreach ($d in @($stage, $brainStage)) {
 }
 Expand-Archive -Path $Zip -DestinationPath $stage
 if (-not (Test-Path (Join-Path $stage "SETUP.cmd"))) { throw "staged tree looks wrong (no SETUP.cmd)" }
+# The version stamped on the exe must be the version INSIDE the ZIP — with -Zip
+# reuse, current config.py may already be newer than a stale ZIP.
+$stagedVer = (Select-String -Path (Join-Path $stage "config.py") -Pattern 'APP_VERSION\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+if ($stagedVer -ne $version) {
+    throw "version mismatch: repo config.py says $version but the ZIP contains $stagedVer - rebuild the ZIP (or pass the right one)"
+}
 Move-Item (Join-Path $stage "brain") $brainStage
 
 # --- compile --------------------------------------------------------------
