@@ -6,10 +6,10 @@ Publisher: Zachary Campos
 PublisherUrl: https://github.com/DCom17/adam
 PublisherSupportUrl: https://github.com/DCom17/adam/issues
 PackageName: Adam Local
-PackageUrl: https://dcom17.github.io/adam/
+PackageUrl: https://adam.camposenterprises.org/
 License: Proprietary
 LicenseUrl: https://github.com/DCom17/adam/blob/main/LICENSE
-PrivacyUrl: https://dcom17.github.io/adam/privacy.html
+PrivacyUrl: https://adam.camposenterprises.org/privacy.html
 Copyright: Copyright (c) 2026 Zachary Campos
 ShortDescription: A local-first AI voice assistant for your own files, powered by your own Claude.
 Description: |-
