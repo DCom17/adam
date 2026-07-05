@@ -256,6 +256,13 @@ def check_imports_ship(rels: list[str]) -> None:
                     kind = _local_kind(root_mod)
                     if kind and not _staged(root_mod):
                         missing.append(f"{rel} imports {root_mod} ({kind} not staged)")
+                    # `import PKG.sub` — the dotted submodule file must ship too
+                    # (fix found while porting this guard to Morrow: the root-
+                    # package check alone lets a dotted path ship without its file)
+                    if kind == "package" and "." in alias.name:
+                        sub = alias.name.replace(".", "/") + ".py"
+                        if (ROOT / sub).is_file() and sub not in relset:
+                            missing.append(f"{rel} imports {alias.name} (submodule not staged)")
             elif isinstance(node, ast.ImportFrom):
                 if node.level:  # relative import — resolve against the file's package
                     pkg_parts = rel.split("/")[:-1]
@@ -270,6 +277,11 @@ def check_imports_ship(rels: list[str]) -> None:
                 kind = _local_kind(root_mod)
                 if kind and not _staged(root_mod):
                     missing.append(f"{rel} imports {root_mod} ({kind} not staged)")
+                # `from PKG.sub import x` — the dotted submodule file must ship too
+                if kind == "package" and "." in node.module:
+                    sub = node.module.replace(".", "/") + ".py"
+                    if (ROOT / sub).is_file() and sub not in relset:
+                        missing.append(f"{rel} imports {node.module} (submodule not staged)")
                 # `from PKG import a, b` — each name that is a repo file must ship too
                 if kind == "package":
                     for alias in node.names:
