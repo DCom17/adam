@@ -384,6 +384,20 @@ default upgrade path, so these become mainline before v1.0)
    distribution recommended, required before monetizing (D21 guardrail 4 already
    covers attorney).
 
+> **STATUS 2026-07-05 (same-day autonomous run):** **MP3-P0 DONE, MP3-P1 DONE,
+> MP3-P2 items 1-5 + 7 DONE — all committed and pushed; v0.9.39 BUILT + TAGGED
+> (ZIP 218 files + adam-setup-v0.9.39.exe; suite 54 / release 131 / updater 50
+> green). NOT yet published — owner runs `dist\finish-v0.9.39.ps1` (pushes the
+> tag, opens the release page; attach BOTH the ZIP and the installer), then
+> restarts the live server.** Installer acceptance matrix passed live:
+> guard-refusal with real server running → fresh silent install → upgrade
+> (pre-backup + baseline reset + brain survives) → uninstall (voice package
+> gone, user data kept). Found+fixed live: a [Code] MsgBox ignores
+> /SUPPRESSMSGBOXES and hung silent installs (now gated on WizardSilent).
+> Remaining MP3-P2: item 6 only (LICENSE finalization — owner reviews the EULA
+> draft). Remaining overall: owner-gated items (signing, phone acceptance,
+> testers, site publish go-ahead) + winget after signing.
+
 ## MP3 — the updated v1.0 gate (supersedes P4 list where they overlap)
 
 - [ ] MP3-P0 shipped as v0.9.39 → tester invites out
