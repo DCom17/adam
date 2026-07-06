@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <base target="_top">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#030712">
+<meta name="theme-color" content="#04060b">
 <meta name="robots" content="noindex, nofollow">
 <title>Hunter Dashboard — Adam</title>
 <link rel="icon" href="/icon.png" type="image/png" />
@@ -15,11 +15,11 @@
      header — never in a URL. All sheet values are escaped before render. -->
 <style>
     :root {
-      --bg:#030712;
+      --bg:#04060b;
       --panel:rgba(15,23,42,.96);
       --panel2:rgba(17,24,39,.98);
-      --cyan:#38bdf8;
-      --cyan2:#67e8f9;
+      --cyan:#21e6ff;
+      --cyan2:#8df2ff;
       --purple:#818cf8;
       --violet:#a78bfa;
       --green:#22c55e;
@@ -28,7 +28,7 @@
       --text:#f8fafc;
       --dim:#cbd5e1;
       --muted:#94a3b8;
-      --line:rgba(56,189,248,.42);
+      --line:rgba(33,230,255,.42);
       --line2:rgba(129,140,248,.38);
     }
 
@@ -37,12 +37,14 @@
       -webkit-tap-highlight-color:transparent;
     }
 
+    ::selection { background: rgba(33,230,255,.28); color: #fff; }
+
     html {
       width:100%;
       min-height:100%;
       margin:0;
       padding:0;
-      background:#030712;
+      background:#04060b;
       font-size:15px;
       -webkit-text-size-adjust:100%;
       text-size-adjust:100%;
@@ -54,9 +56,9 @@
       margin:0;
       padding:6.8px 5.4px calc(23.1px + env(safe-area-inset-bottom));
       background:
-        radial-gradient(circle at 10% 0%, rgba(56,189,248,.24), transparent 32%),
+        radial-gradient(circle at 10% 0%, rgba(33,230,255,.24), transparent 32%),
         radial-gradient(circle at 92% 0%, rgba(129,140,248,.26), transparent 34%),
-        linear-gradient(180deg,#020617 0%,#030712 42%,#050816 100%);
+        linear-gradient(180deg,#020409 0%,#04060b 42%,#060d16 100%);
       color:var(--text);
       font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
       overflow-x:hidden;
@@ -80,7 +82,7 @@
       background:rgba(2,6,23,.97);
       border-radius:15px;
       margin-bottom:10.9px;
-      box-shadow:0 0 16.3px rgba(56,189,248,.22);
+      box-shadow:0 0 16.3px rgba(33,230,255,.22);
     }
 
     .title h1 {
@@ -89,7 +91,7 @@
       font-size:21.8px;
       line-height:1.05;
       letter-spacing:1.4px;
-      text-shadow:0 0 10.9px rgba(56,189,248,.55);
+      text-shadow:0 0 10.9px rgba(33,230,255,.55);
     }
 
     .title .sub {
@@ -108,7 +110,7 @@
       background:rgba(11,18,40,.95);
       border-radius:15px;
       box-shadow:
-        0 0 15px rgba(56,189,248,.12),
+        0 0 15px rgba(33,230,255,.12),
         inset 0 0 16.3px rgba(15,23,42,.45);
     }
 
@@ -253,7 +255,7 @@
       display:flex;
       align-items:center;
       gap:6.8px;
-      text-shadow:0 0 8.2px rgba(56,189,248,.35);
+      text-shadow:0 0 8.2px rgba(33,230,255,.35);
     }
 
     .section::before {
@@ -281,7 +283,7 @@
     .expand-card.open {
       border-color:rgba(103,232,249,.75);
       box-shadow:
-        0 0 19px rgba(56,189,248,.24),
+        0 0 19px rgba(33,230,255,.24),
         inset 0 0 19px rgba(15,23,42,.55);
     }
 
@@ -524,7 +526,7 @@
       font-size:13.6px;
       letter-spacing:1.3px;
       font-family:inherit;
-      box-shadow:0 0 12.2px rgba(56,189,248,.14);
+      box-shadow:0 0 12.2px rgba(33,230,255,.14);
     }
 
     .footer {
@@ -586,7 +588,7 @@
   font-size: 19px;
   background: rgba(15, 23, 42, 0.88);
   border: 1px solid rgba(255,255,255,.12);
-  box-shadow: 0 0 10.9px rgba(56,189,248,.10);
+  box-shadow: 0 0 10.9px rgba(33,230,255,.10);
 }
 
 .attr-discipline {
@@ -594,7 +596,7 @@
 }
 
 .attr-knowledge {
-  border-color: rgba(56,189,248,.55);
+  border-color: rgba(33,230,255,.55);
 }
 
 .attr-health {
@@ -626,7 +628,7 @@
 }
 
 .attr-knowledge .attr-icon {
-  box-shadow: 0 0 12.2px rgba(56,189,248,.28);
+  box-shadow: 0 0 12.2px rgba(33,230,255,.28);
 }
 
 .attr-health .attr-icon {
@@ -683,26 +685,26 @@
   position: relative;
   border: 1px solid rgba(103,232,249,.72);
   background:
-    radial-gradient(circle at 50% 0%, rgba(56,189,248,.18), transparent 42%),
+    radial-gradient(circle at 50% 0%, rgba(33,230,255,.18), transparent 42%),
     linear-gradient(180deg, rgba(2,6,23,.98), rgba(15,23,42,.96));
   border-radius: 16.3px;
   padding: 16.3px 12.2px 15px;
   box-shadow:
-    0 0 23.1px rgba(56,189,248,.22),
-    inset 0 0 19px rgba(56,189,248,.06);
+    0 0 23.1px rgba(33,230,255,.22),
+    inset 0 0 19px rgba(33,230,255,.06);
   animation: systemDirectivePulseV4 3.6s ease-in-out infinite;
 }
 
 @keyframes systemDirectivePulseV4 {
   0%, 100% {
     box-shadow:
-      0 0 19px rgba(56,189,248,.18),
-      inset 0 0 19px rgba(56,189,248,.05);
+      0 0 19px rgba(33,230,255,.18),
+      inset 0 0 19px rgba(33,230,255,.05);
   }
   50% {
     box-shadow:
-      0 0 29.9px rgba(56,189,248,.32),
-      inset 0 0 23.1px rgba(56,189,248,.09);
+      0 0 29.9px rgba(33,230,255,.32),
+      inset 0 0 23.1px rgba(33,230,255,.09);
   }
 }
 
@@ -840,7 +842,7 @@
   padding: 12.2px 6.8px;
   border-radius: 13.6px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(56,189,248,.16), transparent 48%),
+    radial-gradient(circle at 50% 0%, rgba(33,230,255,.16), transparent 48%),
     linear-gradient(180deg, rgba(2,6,23,.20), rgba(15,23,42,.06));
 }
 
@@ -853,15 +855,15 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(56,189,248,.35) 8%,
+    rgba(33,230,255,.35) 8%,
     rgba(103,232,249,1) 22%,
     rgba(96,165,250,1) 50%,
     rgba(103,232,249,1) 78%,
-    rgba(56,189,248,.35) 92%,
+    rgba(33,230,255,.35) 92%,
     transparent 100%
   );
   box-shadow:
-    0 0 12.2px rgba(56,189,248,.75),
+    0 0 12.2px rgba(33,230,255,.75),
     0 0 23.1px rgba(59,130,246,.45);
   animation: notificationRailPulseV4 3.2s ease-in-out infinite;
 }
@@ -916,11 +918,11 @@
   border: 1px solid rgba(190,242,255,.62);
   background:
     linear-gradient(rgba(103,232,249,.025) 50%, rgba(2,6,23,.025) 50%),
-    radial-gradient(circle at 50% 0%, rgba(56,189,248,.10), transparent 46%),
+    radial-gradient(circle at 50% 0%, rgba(33,230,255,.10), transparent 46%),
     linear-gradient(180deg, rgba(8,18,38,.70), rgba(2,6,23,.78));
   background-size: 100% 2.7px, auto, auto;
   box-shadow:
-    0 0 15px rgba(56,189,248,.22),
+    0 0 15px rgba(33,230,255,.22),
     inset 0 0 19px rgba(103,232,249,.05);
   backdrop-filter: blur(2px);
 }
@@ -1060,7 +1062,7 @@
   text-shadow:
     0 0 2.7px rgba(255, 255, 255, 0.45),
     0 0 6.8px rgba(103, 232, 249, 0.42),
-    0 0 13.6px rgba(56, 189, 248, 0.22) !important;
+    0 0 13.6px rgba(33, 230, 255, 0.22) !important;
 }
 
 .notification-message strong {
@@ -1080,7 +1082,7 @@
   text-shadow:
     0 0 4.1px rgba(255,255,255,.45),
     0 0 9.5px rgba(103,232,249,.70),
-    0 0 17.7px rgba(56,189,248,.35) !important;
+    0 0 17.7px rgba(33,230,255,.35) !important;
 }
 
 @media (max-width: 430px) {
@@ -1108,7 +1110,7 @@
   text-shadow:
     0 0 4.1px rgba(255,255,255,.70),
     0 0 9.5px rgba(103,232,249,.75),
-    0 0 17.7px rgba(56,189,248,.42) !important;
+    0 0 17.7px rgba(33,230,255,.42) !important;
 }
 
 .notification-title {
@@ -1117,7 +1119,7 @@
   text-shadow:
     0 0 4.1px rgba(255,255,255,.65),
     0 0 10.9px rgba(103,232,249,.80),
-    0 0 20.4px rgba(56,189,248,.44) !important;
+    0 0 20.4px rgba(33,230,255,.44) !important;
 }
 
 .notification-icon {
@@ -1172,12 +1174,12 @@
   border-radius: 16.3px !important;
   margin-bottom: 13.6px !important;
   background:
-    radial-gradient(circle at 50% 0%, rgba(56,189,248,.16), transparent 48%),
+    radial-gradient(circle at 50% 0%, rgba(33,230,255,.16), transparent 48%),
     linear-gradient(180deg, rgba(2,6,23,.98), rgba(15,23,42,.96)) !important;
-  border: 1px solid rgba(56,189,248,.46) !important;
+  border: 1px solid rgba(33,230,255,.46) !important;
   box-shadow:
-    0 0 19px rgba(56,189,248,.22),
-    inset 0 0 17.7px rgba(56,189,248,.06) !important;
+    0 0 19px rgba(33,230,255,.22),
+    inset 0 0 17.7px rgba(33,230,255,.06) !important;
 }
 
 .title h1 {
@@ -1189,7 +1191,7 @@
   text-shadow:
     0 0 5.4px rgba(255,255,255,.35),
     0 0 12.2px rgba(103,232,249,.78),
-    0 0 23.1px rgba(56,189,248,.38) !important;
+    0 0 23.1px rgba(33,230,255,.38) !important;
 }
 
 .title .sub {
@@ -1225,9 +1227,9 @@
 
 .title {
   background: rgba(2, 6, 23, 0.97) !important;
-  border: 1px solid rgba(56,189,248,.46) !important;
+  border: 1px solid rgba(33,230,255,.46) !important;
   box-shadow:
-    0 0 16.3px rgba(56,189,248,.20),
+    0 0 16.3px rgba(33,230,255,.20),
     inset 0 0 16.3px rgba(15,23,42,.55) !important;
 }
 
@@ -1247,14 +1249,14 @@
   border: 1px solid var(--line);
   background: rgba(11,18,40,.95);
   border-radius: 15px;
-  box-shadow: 0 0 15px rgba(56,189,248,.12);
+  box-shadow: 0 0 15px rgba(33,230,255,.12);
 }
 .state-msg b { color: var(--cyan2); }
 .state-msg .setup-cta { display: inline-block; margin-top: 12.2px; padding: 8.2px 13.6px;
   border: 1px solid var(--cyan); border-radius: 8.2px; color: var(--cyan2);
   text-decoration: none; font-weight: 700; letter-spacing: 1px;
-  box-shadow: 0 0 12.2px rgba(56,189,248,.14); }
-.state-msg .setup-cta:hover { background: rgba(56,189,248,.1); }
+  box-shadow: 0 0 12.2px rgba(33,230,255,.14); }
+.state-msg .setup-cta:hover { background: rgba(33,230,255,.1); }
 
 /* ─── PROFILE ROW: never let the mode badge overflow the viewport ─── */
 .profile { flex-wrap: nowrap; }
@@ -1298,7 +1300,7 @@
   overflow: hidden;
   opacity: 0;
   clip-path: inset(48% 45% 48% 45% round 15px);
-  box-shadow: 0 0 15px rgba(56,189,248,.14);
+  box-shadow: 0 0 15px rgba(33,230,255,.14);
   animation: skDraw .62s cubic-bezier(.55,0,.3,1) forwards;
   animation-delay: calc(var(--i,0) * .13s);
 }
@@ -1316,7 +1318,7 @@
   z-index: 0;
   opacity: 0;
   background:
-    radial-gradient(circle at 50% 0%, rgba(56,189,248,.10), transparent 62%),
+    radial-gradient(circle at 50% 0%, rgba(33,230,255,.10), transparent 62%),
     linear-gradient(180deg, rgba(11,18,40,.55), rgba(11,18,40,.95));
   animation: skFill .6s ease forwards;
   animation-delay: calc(var(--i,0) * .13s + .5s);
@@ -1429,7 +1431,7 @@
   font-size: 11px;
   letter-spacing: 2.6px;
   text-transform: uppercase;
-  text-shadow: 0 0 10px rgba(56,189,248,.25);
+  text-shadow: 0 0 10px rgba(33,230,255,.25);
 }
 .sk-status .dot { color: var(--cyan2); animation: bootDots 1.4s steps(1) infinite; }
 .sk-status .dot.d2 { animation-delay: .18s; }

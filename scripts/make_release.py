@@ -49,7 +49,7 @@ _ROOT_FILES = [
     "calendar_bridge.gs",
     "hunter_dashboard.gs", "hunter_verify.gs",
 ]
-_WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.html", "setup-email.html", "setup-linkedin.html", "setup-sms.html", "setup-voicemail.html", "setup-hunter.html", "hunter-dashboard.html", "sw.js", "manifest.json", "icon.png", "icon-maskable.png", "icon.ico"]
+_WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.html", "setup-email.html", "setup-linkedin.html", "setup-sms.html", "setup-voicemail.html", "setup-hunter.html", "hunter-dashboard.html", "sw.js", "manifest.json", "icon.png", "icon-maskable.png", "icon.ico", "logo.png"]
 _SCRIPT_FILES = [
     "setup.py", "doctor.py", "make_release.py", "make_release.ps1", "apply_update.py",
     "self_update.py", "publish-release.ps1",
@@ -320,6 +320,11 @@ def check_tree_clean(rels: list[str]) -> None:
     for rel in rels:
         if rel.startswith(_BRAIN_DIR + "/"):
             continue  # brain/ is covered (base + local terms) by check_brain_clean
+        if rel == "LICENSE":
+            # The EULA must name its licensor — the owner's public legal name
+            # there (same as the site colophon) is deliberate, not a leak.
+            # Everything else stays guarded, including brain/LICENSE.
+            continue
         if Path(rel).suffix.lower() in _BINARY_EXTS:
             continue
         try:

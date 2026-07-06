@@ -33,27 +33,38 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Adam" />
+<meta name="theme-color" content="#04060b" />
 <link rel="manifest" href="/manifest.json" />
 <link rel="apple-touch-icon" href="/icon.png" />
 <title>Adam</title>
 <link rel="icon" href="/icon.png" type="image/png" />
 <style>
+  /* Design tokens shared with the landing site (site/index.html) — the app and
+     the site are one brand surface now. --dim/--faint are teal-tinted text tones;
+     borders use the cyan --edge pair or a soft neutral, never full-strength --dim. */
   :root {
-    --bg: #05070d;
-    --panel: #0b1220;
+    --bg: #04060b;
+    --bg-soft: #071019;
+    --panel: #0a1420;
+    --edge: rgba(33, 230, 255, .15);
+    --edge-hi: rgba(33, 230, 255, .4);
     --cyan: #21e6ff;
+    --cyan-soft: #8df2ff;
     --purple: #8a5cff;
-    --dim: #5c6b85;
-    --text: #d7e3f4;
+    --ink: #eefafd;
+    --dim: #8fb9c6;
+    --faint: #5d8894;
+    --text: #c9e4ec;
     --danger: #ff4d6d;
     --amber: #ffaa3c;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; height: 100%; background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: "Segoe UI Variable Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     overflow: hidden; user-select: none; -webkit-user-select: none;
   }
+  ::selection { background: rgba(33,230,255,.28); color: #fff; }
   /* Ambient background motes — fixed full-screen layer behind everything, never
      interactive. The dark body background paints first; motes sit above it, UI above them. */
   #bgfield {
@@ -76,11 +87,24 @@
   /* Absolutely center the brand on the viewport. The right cluster has two buttons
      vs. one on the left, so on narrow mobile its wider grid track pushed "Adam"
      left. Anchoring it to 50% keeps it centered regardless of side-button width. */
-  .brand { position: absolute; left: 50%; transform: translateX(-50%); font-size: 18px; letter-spacing: 6px; color: var(--cyan); font-weight: 600; }
+  .brand { position: absolute; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 10px; }
+  /* Children are decoration only — clicks/keys are handled by the .brand button
+     itself (its handler stops propagation), so they stay pointer-transparent. */
+  .brand img { width: 26px; height: 26px; pointer-events: none;
+    filter: drop-shadow(0 0 8px rgba(33,230,255,.45)); }
+  .brand .wm {
+    pointer-events: none;
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: 17px; font-weight: 800; letter-spacing: 6px; text-indent: 2px;
+    background: linear-gradient(100deg, #fff 30%, var(--cyan-soft) 70%, var(--cyan));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
   .gear {
     background: none; border: none; color: var(--dim); font-size: 22px;
-    cursor: pointer; padding: 4px 8px;
+    cursor: pointer; padding: 4px 8px; transition: color .2s;
   }
+  .gear:hover { color: var(--ink); }
   /* --- Orb (canvas-rendered energy core) --- */
   .orb-wrap { display: flex; flex-direction: column; align-items: center; gap: 26px; }
   .orb { width: 200px; height: 200px; position: relative; cursor: pointer; }
@@ -96,7 +120,7 @@
   }
   .transcript .you { color: var(--dim); margin-bottom: 8px; }
   .transcript .you:not(:first-child) {
-    margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(92,107,133,.25);
+    margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(33,230,255,.12);
   }
   .transcript .adam { color: var(--cyan); }
   .transcript .interim { color: var(--dim); font-style: italic; opacity: .65; margin-top: 8px; }
@@ -114,18 +138,25 @@
   body[data-state="processing"] .label { color: #7aa9ff; }
   body[data-state="speaking"]   .label { color: var(--amber); }
   body[data-state="warming"]    .label { color: var(--dim); }
-  /* --- Activate button --- */
+  /* --- Activate button — the one true primary action, so it gets the site's
+         CTA gradient. Once engaged it flips to a quiet outlined "deactivate". --- */
   .activate {
     width: 100%; max-width: 480px; padding: 18px; border-radius: 16px;
-    border: 1px solid var(--cyan); background: rgba(33,230,255,.08);
-    color: var(--cyan); font-size: 17px; letter-spacing: 2px; font-weight: 600;
-    cursor: pointer; transition: background .2s;
+    border: 1px solid transparent;
+    background: linear-gradient(105deg, #eafcff, #8df2ff 55%, #21e6ff);
+    color: #03222a; font-size: 16px; letter-spacing: 2px; font-weight: 800;
+    box-shadow: 0 0 34px rgba(33,230,255,.16), 0 4px 18px rgba(0,0,0,.35);
+    cursor: pointer; transition: background .2s, box-shadow .25s, filter .25s;
   }
-  .activate.on { border-color: var(--danger); color: var(--danger); background: rgba(255,77,109,.08); }
+  .activate:hover { filter: brightness(1.06); }
+  .activate.on {
+    border-color: var(--danger); color: var(--danger); background: rgba(255,77,109,.08);
+    box-shadow: none; filter: none; font-weight: 600; font-size: 17px;
+  }
   /* --- Mute button (shorter than activate; grey = live, orange = muted) --- */
   .mute {
     width: 100%; max-width: 480px; padding: 10px; border-radius: 12px;
-    border: 1px solid var(--dim); background: rgba(92,107,133,.08);
+    border: 1px solid rgba(143,185,198,.3); background: rgba(143,185,198,.06);
     color: var(--dim); font-size: 13px; letter-spacing: 2px; font-weight: 600;
     cursor: pointer; transition: border-color .2s, color .2s, background .2s;
   }
@@ -133,12 +164,12 @@
   /* --- Work mode toggle (same shape as mute; cyan when engaged) --- */
   .mode {
     width: 100%; max-width: 480px; padding: 10px; border-radius: 12px;
-    border: 1px solid var(--dim); background: rgba(92,107,133,.08);
+    border: 1px solid rgba(143,185,198,.3); background: rgba(143,185,198,.06);
     color: var(--dim); font-size: 13px; letter-spacing: 2px; font-weight: 600;
     cursor: pointer; transition: border-color .2s, color .2s, background .2s;
     position: relative; overflow: hidden;   /* clip the hold-to-escalate fill to the rounded box */
   }
-  .mode.work { border-color: #3fd0e0; color: #6fe3ef; background: rgba(63,208,224,.12); }
+  .mode.work { border-color: var(--cyan); color: var(--cyan-soft); background: rgba(33,230,255,.12); }
   /* Claude Code mode — the active CHAT runs as raw Claude Code (full tools, no
      approval gate). Amber so it can never be mistaken for cyan operator mode. */
   .mode.code { border-color: #ffb454; color: #ffd79a; background: rgba(255,180,84,.14); }
@@ -157,7 +188,7 @@
   /* Replay last readout — same shape as mode/mute; violet so it's distinct from cyan work mode */
   .replay {
     width: 100%; max-width: 480px; padding: 10px; border-radius: 12px;
-    border: 1px solid var(--dim); background: rgba(92,107,133,.08);
+    border: 1px solid rgba(143,185,198,.3); background: rgba(143,185,198,.06);
     color: var(--dim); font-size: 13px; letter-spacing: 2px; font-weight: 600;
     cursor: pointer; transition: border-color .2s, color .2s, background .2s;
     position: relative; overflow: hidden;   /* clip the hold-progress line to the rounded box */
@@ -180,20 +211,20 @@
   .chips { width: 100%; max-width: 480px; display: flex; flex-wrap: wrap; gap: 6px; }
   .chips:empty { display: none; }
   .chip { display: inline-flex; align-items: center; gap: 6px; max-width: 220px; padding: 4px 8px;
-    border-radius: 8px; background: rgba(63,208,224,.12); border: 1px solid #3fd0e0;
+    border-radius: 8px; background: rgba(33,230,255,.1); border: 1px solid var(--edge-hi);
     color: #9fe9f2; font-size: 12px; }
   .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .chip button { background: none; border: none; color: #9fe9f2; cursor: pointer;
     font-size: 15px; line-height: 1; padding: 0; }
   .composer .attach { flex: 0 0 auto; align-self: stretch; padding: 0 12px; border-radius: 10px;
-    border: 1px solid var(--dim); background: rgba(92,107,133,.08); color: var(--dim);
+    border: 1px solid rgba(143,185,198,.3); background: rgba(143,185,198,.06); color: var(--dim);
     font-size: 17px; cursor: pointer; }
   /* --- Sessions drawer --- */
   .drawer-scrim { position: fixed; inset: 0; background: rgba(0,0,0,.5); opacity: 0;
     pointer-events: none; transition: opacity .2s; z-index: 40; }
   .drawer-scrim.open { opacity: 1; pointer-events: auto; }
   .drawer { position: fixed; top: 0; left: 0; height: 100%; width: 82%; max-width: 320px;
-    background: #0a0f1a; border-right: 1px solid #1c2740; transform: translateX(-100%);
+    background: var(--bg-soft); border-right: 1px solid rgba(33,230,255,.12); transform: translateX(-100%);
     transition: transform .22s ease; z-index: 41; display: flex; flex-direction: column;
     padding: 14px; box-sizing: border-box;
     /* Lift the pinned Archived section clear of the iPhone home indicator so it
@@ -203,50 +234,58 @@
   .drawer.open { transform: translateX(0); }
   .drawer-head { display: flex; justify-content: space-between; align-items: center;
     color: var(--dim); font-size: 13px; letter-spacing: 2px; margin-bottom: 12px; }
-  .newchat { background: rgba(63,208,224,.12); border: 1px solid #3fd0e0; color: #6fe3ef;
+  .newchat { background: rgba(33,230,255,.1); border: 1px solid var(--edge-hi); color: var(--cyan-soft);
     border-radius: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer; letter-spacing: 1px; }
   .session-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
   .session-row { display: flex; align-items: center; gap: 4px; border-radius: 10px; padding: 2px;
     border: 1px solid transparent; }
-  .session-row.active { border-color: #3fd0e0; background: rgba(63,208,224,.08); }
-  .session-title { flex: 1; text-align: left; background: none; border: none; color: #cdd6e6;
+  .session-row.active { border-color: var(--edge-hi); background: rgba(33,230,255,.07); }
+  .session-title { flex: 1; text-align: left; background: none; border: none; color: var(--text);
     font-size: 14px; padding: 8px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .sbadge { color: #6fe3ef; font-size: 10px; letter-spacing: 1px; }
+  .sbadge { color: var(--cyan-soft); font-size: 10px; letter-spacing: 1px; }
   .sbadge.code { color: #ffd79a; }
-  .udot { color: #3fd0e0; font-size: 9px; vertical-align: middle; }
+  .udot { color: var(--cyan); font-size: 9px; vertical-align: middle; }
   .session-ico { background: none; border: none; color: var(--dim); font-size: 15px; cursor: pointer; padding: 4px 6px; }
   /* Archived sessions — pinned below the live list; deleted chats recoverable for the retention window. */
-  .archive-section { flex: none; border-top: 1px solid #1c2740; margin-top: 8px; padding-top: 8px; }
+  .archive-section { flex: none; border-top: 1px solid rgba(33,230,255,.1); margin-top: 8px; padding-top: 8px; }
   .archive-head { display: flex; align-items: center; gap: 6px; width: 100%; background: none; border: none;
     color: var(--dim); font-size: 11px; letter-spacing: 1.5px; cursor: pointer; padding: 4px 2px; text-align: left; }
   .archive-head .chev { transition: transform .18s; font-size: 10px; }
   .archive-head.open .chev { transform: rotate(90deg); }
-  .archive-head .acount { color: #6a7690; }
+  .archive-head .acount { color: var(--faint); }
   .archive-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px;
     max-height: 34vh; overflow-y: auto; }
   .archive-row { display: flex; align-items: center; gap: 4px; border-radius: 10px; padding: 2px;
     border: 1px solid transparent; opacity: .82; }
-  .archive-row .session-title { color: #9aa6bd; }
-  .archive-meta { font-size: 10px; color: #6a7690; padding: 0 4px; white-space: nowrap; }
-  .archive-revive { background: none; border: none; color: #6fe3ef; font-size: 15px; cursor: pointer; padding: 4px 6px; }
+  .archive-row .session-title { color: var(--dim); }
+  .archive-meta { font-size: 10px; color: var(--faint); padding: 0 4px; white-space: nowrap; }
+  .archive-revive { background: none; border: none; color: var(--cyan-soft); font-size: 15px; cursor: pointer; padding: 4px 6px; }
   .archive-purge { background: none; border: none; color: #e2607a; font-size: 14px; cursor: pointer; padding: 4px 6px; }
-  .archive-empty { color: #55607a; font-size: 11px; padding: 6px 2px; }
+  .archive-empty { color: var(--faint); font-size: 11px; padding: 6px 2px; }
   /* --- Settings modal --- */
   .modal {
-    position: fixed; inset: 0; background: rgba(0,0,0,.8);
+    position: fixed; inset: 0; background: rgba(0,0,0,.72);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
     display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10;
   }
   .modal.show { display: flex; }
   .card {
-    background: var(--panel); border: 1px solid var(--dim); border-radius: 16px;
+    background: rgba(10, 20, 30, .82); border: 1px solid var(--edge); border-radius: 18px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 18px 60px rgba(0,0,0,.5);
     padding: 24px; width: 100%; max-width: 420px;
   }
-  .card h2 { margin: 0 0 18px; font-size: 16px; letter-spacing: 2px; color: var(--cyan); }
+  /* Site-style section label: a short cyan dash before the card title. */
+  .card h2 { margin: 0 0 18px; font-size: 14px; letter-spacing: 3.5px; font-weight: 700; color: var(--cyan); }
+  .card h2::before { content: ""; display: inline-block; width: 22px; height: 1px;
+    background: var(--cyan); opacity: .7; vertical-align: middle; margin-right: 10px; }
   .card label { display: block; font-size: 12px; color: var(--dim); margin: 14px 0 6px; letter-spacing: 1px; }
   .card input {
-    width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--dim);
-    background: #060b16; color: var(--text); font-size: 16px;  /* 16px stops iOS zoom-on-focus */
+    width: 100%; padding: 14px; border-radius: 10px; border: 1px solid rgba(33,230,255,.18);
+    background: #060d16; color: var(--text); font-size: 16px;  /* 16px stops iOS zoom-on-focus */
+    transition: border-color .2s;
   }
+  .card input:focus { outline: none; border-color: var(--edge-hi); }
   .card .reveal {
     margin-top: 8px; background: none; border: none; color: var(--cyan);
     font-size: 12px; letter-spacing: 1px; cursor: pointer; padding: 4px 0;
@@ -268,14 +307,17 @@
   .card .adv-fields.show { display: block; }
   .card .save {
     margin-top: 22px; width: 100%; padding: 14px; border-radius: 10px; border: none;
-    background: var(--cyan); color: #03121a; font-weight: 700; font-size: 15px; cursor: pointer;
+    background: linear-gradient(105deg, #eafcff, #8df2ff 55%, #21e6ff);
+    color: #03222a; font-weight: 700; font-size: 15px; cursor: pointer;
+    transition: filter .2s;
   }
+  .card .save:hover { filter: brightness(1.06); }
   .hint { font-size: 11px; color: var(--dim); margin-top: 10px; line-height: 1.4; }
   /* --- Text composer (type / paste, same pipeline + Adam voice) --- */
   .composer { width: 100%; display: flex; gap: 8px; align-items: flex-end; }
   .composer textarea {
     flex: 1; resize: none; height: 46px; max-height: 120px; padding: 12px 14px;
-    border-radius: 12px; border: 1px solid rgba(92,107,133,.3); background: rgba(6,11,22,.015);
+    border-radius: 12px; border: 1px solid rgba(143,185,198,.22); background: rgba(6,13,22,.015);
     color: var(--text); font-size: 15px; line-height: 1.4; font-family: inherit;
     user-select: text; -webkit-user-select: text;
     transition: border-color .2s, background .2s;
@@ -291,7 +333,7 @@
   .composer .send:disabled { opacity: .35; cursor: default; }
   /* While the bar holds typed text, everything snaps back to the solid look;
      emptying it (incl. after send) drops back to the see-through state. */
-  .composer.has-text textarea { border-color: var(--dim); background: #060b16; }
+  .composer.has-text textarea { border-color: var(--edge-hi); background: #060d16; }
   .composer.has-text .send {
     border-color: var(--cyan); background: rgba(33,230,255,.1); color: var(--cyan);
   }
@@ -337,7 +379,7 @@
   <div id="app">
     <header>
       <button class="gear" id="menuBtn" aria-label="Sessions">☰</button>
-      <div class="brand" id="brandBtn" role="button" tabindex="0" aria-haspopup="menu" aria-expanded="false" title="Switch view">A D A M</div>
+      <div class="brand" id="brandBtn" role="button" tabindex="0" aria-haspopup="menu" aria-expanded="false" title="Switch view"><img src="/logo.png" alt=""><span class="wm">ADAM</span></div>
       <div class="hdr-right">
         <button class="gear" id="approvalsBtn" aria-label="Pending approvals" title="Pending approvals" style="position:relative;">✓<span id="pendingBadge" style="display:none;position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;line-height:16px;font-size:10px;background:#c0392b;color:#fff;border-radius:8px;padding:0 4px;">0</span></button>
         <button class="gear" id="gear" aria-label="Settings">⚙</button>
@@ -348,7 +390,8 @@
     <style>
       .brand { cursor: pointer; }
       #viewMenu, #gearMenu { position: fixed; top: 52px; left: 50%; transform: translateX(-50%);
-        background: #08151b; border: 1px solid var(--cyan); border-radius: 10px;
+        background: rgba(7,16,25,.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        border: 1px solid var(--edge-hi); border-radius: 12px;
         box-shadow: 0 8px 28px rgba(0,0,0,.55); z-index: 60; display: none; min-width: 200px;
         overflow: hidden; }
       #gearMenu { left: auto; right: 8px; transform: none; }   /* drops from the gear, top-right */
@@ -365,11 +408,12 @@
         flex-direction: column; }
       #dashOverlay.show, #addonsOverlay.show, #consoleOverlay.show { display: flex; }
       #dashOverlay .dash-bar, #addonsOverlay .dash-bar, #consoleOverlay .dash-bar { flex: none; display: flex; align-items: center; gap: 10px;
-        padding: 8px 12px; background: #020617; border-bottom: 1px solid rgba(33,230,255,.25); }
+        padding: 8px 12px; background: rgba(4,6,11,.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        border-bottom: 1px solid rgba(33,230,255,.14); }
       #dashOverlay .dash-bar button, #addonsOverlay .dash-bar button, #consoleOverlay .dash-bar button { background: none; border: 1px solid rgba(33,230,255,.3);
         color: var(--cyan); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px;
         letter-spacing: 1px; cursor: pointer; }
-      #dashOverlay .dash-bar .dash-title, #addonsOverlay .dash-bar .dash-title, #consoleOverlay .dash-bar .dash-title { color: #7fb6c4; font-size: 12px; letter-spacing: 2px; }
+      #dashOverlay .dash-bar .dash-title, #addonsOverlay .dash-bar .dash-title, #consoleOverlay .dash-bar .dash-title { color: var(--dim); font-size: 11px; letter-spacing: 3px; font-weight: 600; }
       #dashFrame, #addonsFrame, #consoleFrame { flex: 1; width: 100%; border: 0; }
     </style>
     <div id="viewMenu" role="menu" aria-label="Switch view">
@@ -387,7 +431,7 @@
       <button id="gearSound" role="menuitem" title="Interface sounds — the boot cue, send/reply chimes, operator toggle, thinking pulse and fault tone. All synthesized on-device; turn off for silence."><span class="mi">🎚</span>Interface sound: <span id="soundState">…</span></button>
       <button id="gearVoice" role="menuitem" style="display:none" title="You're on your browser's built-in robotic voice. For the real Adam voice (a natural on-device voice), double-click INSTALL-VOICE in your Adam folder (a one-time ~340 MB download), then restart Adam. This row disappears once the real voice is installed."><span class="mi">🔊</span>Real voice: <span id="voiceState">…</span></button>
       <button id="gearConsole" role="menuitem"><span class="mi">▦</span>Operator Console</button>
-      <div id="gearVersion" style="padding:9px 16px 10px;font-size:11px;letter-spacing:1px;color:#5f8a96;border-top:1px solid rgba(33,230,255,.14);">Adam <span id="gearVersionNum">—</span></div>
+      <div id="gearVersion" style="padding:9px 16px 10px;font-size:11px;letter-spacing:1px;color:var(--faint);border-top:1px solid rgba(33,230,255,.14);">Adam <span id="gearVersionNum">—</span></div>
     </div>
     <div id="dashOverlay" aria-hidden="true">
       <div class="dash-bar">
@@ -436,14 +480,14 @@
         <button class="send" id="send">SEND</button>
       </div>
       <div class="err" id="err"></div>
-      <div id="updateBanner" style="display:none;margin:6px 0;padding:8px 10px;border-radius:8px;background:#13351f;border:1px solid #2f7d4f;color:#cdebd6;font-size:13px;">
+      <div id="updateBanner" style="display:none;margin:6px 0;padding:8px 10px;border-radius:10px;background:rgba(61,220,151,.09);border:1px solid rgba(61,220,151,.4);color:#cdebd6;font-size:13px;">
         <span id="updateMsg"></span>
-        <button type="button" id="updateNowBtn" style="margin-left:8px;padding:3px 10px;border-radius:6px;border:1px solid #2f7d4f;background:#1c8b4d;color:#fff;cursor:pointer;">Update now</button>
-        <button type="button" id="updateDismissBtn" title="Hide until next time" style="margin-left:4px;padding:3px 8px;border-radius:6px;border:1px solid #2f7d4f;background:transparent;color:#cdebd6;cursor:pointer;">Later</button>
+        <button type="button" id="updateNowBtn" style="margin-left:8px;padding:3px 10px;border-radius:6px;border:1px solid rgba(61,220,151,.55);background:rgba(61,220,151,.18);color:#d9f7e8;cursor:pointer;">Update now</button>
+        <button type="button" id="updateDismissBtn" title="Hide until next time" style="margin-left:4px;padding:3px 8px;border-radius:6px;border:1px solid rgba(61,220,151,.4);background:transparent;color:#cdebd6;cursor:pointer;">Later</button>
       </div>
-      <div id="voiceBanner" style="display:none;margin:6px 0;padding:8px 10px;border-radius:8px;background:#0e2a33;border:1px solid #2f6d7d;color:#cdeaf0;font-size:13px;">
+      <div id="voiceBanner" style="display:none;margin:6px 0;padding:8px 10px;border-radius:10px;background:rgba(33,230,255,.07);border:1px solid rgba(33,230,255,.3);color:#cdeaf0;font-size:13px;">
         <span id="voiceMsg"></span>
-        <button type="button" id="voiceDismissBtn" title="Hide" style="margin-left:8px;padding:3px 10px;border-radius:6px;border:1px solid #2f6d7d;background:transparent;color:#cdeaf0;cursor:pointer;">Got it</button>
+        <button type="button" id="voiceDismissBtn" title="Hide" style="margin-left:8px;padding:3px 10px;border-radius:6px;border:1px solid rgba(33,230,255,.3);background:transparent;color:#cdeaf0;cursor:pointer;">Got it</button>
       </div>
       <div class="btnrow">
         <button class="mode half" id="modeBtn" aria-pressed="false" title="Operator mode: full agent — long on-screen replies, only the spoken summary read aloud. Lights up cyan when engaged. If Claude Code mode is enabled in settings, press and hold until the bar fills to escalate THIS chat to raw Claude Code (amber); hold again to exit.">OPERATOR MODE</button>
@@ -475,22 +519,23 @@
 
   <!-- AI plan — the two-door choice: Claude subscription vs pay-as-you-go -->
   <style>
-    .plan-door { display:block; width:100%; text-align:left; padding:11px 12px; border-radius:10px;
-      border:1px solid rgba(33,230,255,.22); background:rgba(10,30,38,.6); color:#cdeaf0; cursor:pointer; }
-    .plan-door b { display:block; font-size:14px; letter-spacing:.5px; }
-    .plan-door small { display:block; margin-top:4px; font-size:12px; line-height:1.45; color:#7fb6c4; }
-    .plan-door.sel { border-color:#21e6ff; background:rgba(18,60,74,.75); box-shadow:0 0 0 1px rgba(33,230,255,.35) inset; }
+    .plan-door { display:block; width:100%; text-align:left; padding:11px 12px; border-radius:12px;
+      border:1px solid var(--edge); background:rgba(10,20,30,.55); color:var(--text); cursor:pointer;
+      transition:border-color .2s, background .2s; }
+    .plan-door b { display:block; font-size:14px; letter-spacing:.5px; color:var(--ink); }
+    .plan-door small { display:block; margin-top:4px; font-size:12px; line-height:1.45; color:var(--dim); }
+    .plan-door.sel { border-color:#21e6ff; background:rgba(18,60,74,.6); box-shadow:0 0 0 1px rgba(33,230,255,.35) inset; }
     .plan-door .pd-badge { float:right; font-size:10px; letter-spacing:1px; color:#21e6ff; }
     .model-row { display:flex; align-items:baseline; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer;
-      border:1px solid transparent; color:#cdeaf0; font-size:13px; }
+      border:1px solid transparent; color:var(--text); font-size:13px; }
     .model-row.sel { border-color:rgba(33,230,255,.4); background:rgba(18,60,74,.5); }
-    .model-row .m-note { color:#7fb6c4; font-size:11.5px; }
+    .model-row .m-note { color:var(--dim); font-size:11.5px; }
     .model-row .m-rec { color:#21e6ff; font-size:10px; letter-spacing:1px; margin-left:auto; }
   </style>
   <div class="modal" id="aiPlanModal">
     <div class="card" style="max-width:416px; text-align:left;">
       <h2 style="margin:0 0 6px;">AI PLAN</h2>
-      <div style="font-size:12.5px;color:#7fb6c4;margin-bottom:12px;">How Adam's AI time is paid for. Pick a door — you can switch anytime.</div>
+      <div style="font-size:12.5px;color:var(--dim);margin-bottom:12px;">How Adam's AI time is paid for. Pick a door — you can switch anytime.</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <button type="button" class="plan-door" id="doorSub">
           <b>Sign in with Claude <span class="pd-badge" id="doorSubBadge"></span></b>
@@ -502,7 +547,7 @@
         </button>
       </div>
       <div id="keyFields" style="display:none;margin-top:12px;">
-        <label for="apiKeyInput">Anthropic API key <span id="keySetHint" style="color:#5f8a96;font-weight:normal;"></span></label>
+        <label for="apiKeyInput">Anthropic API key <span id="keySetHint" style="color:var(--faint);font-weight:normal;"></span></label>
         <input id="apiKeyInput" type="password" placeholder="sk-ant-…" autocomplete="off"
                autocapitalize="off" autocorrect="off" spellcheck="false" />
         <div class="hint" style="margin-top:4px;">Create one at console.anthropic.com → API keys, and buy credit up front. Leave auto-reload off and overspending is impossible.</div>
@@ -517,7 +562,7 @@
       <div class="err" id="aiPlanErr" style="margin-top:8px;"></div>
       <div style="display:flex;gap:8px;margin-top:14px;">
         <button class="save" id="aiPlanSave" style="flex:1;margin-top:0;">SAVE</button>
-        <button type="button" id="aiPlanClose" style="flex:0 0 auto;padding:0 18px;border-radius:8px;border:1px solid rgba(33,230,255,.3);background:transparent;color:#7fb6c4;cursor:pointer;">CLOSE</button>
+        <button type="button" id="aiPlanClose" style="flex:0 0 auto;padding:0 18px;border-radius:8px;border:1px solid rgba(33,230,255,.3);background:transparent;color:var(--dim);cursor:pointer;">CLOSE</button>
       </div>
     </div>
   </div>
@@ -532,7 +577,7 @@
         <button type="button" class="pbtn close" id="approvalsClose" title="Close this panel">✕ Close</button>
       </span>
       <div id="approvalsList" style="max-height:60vh;overflow:auto;font-size:13px;line-height:1.4;">Loading…</div>
-      <label style="display:flex;align-items:center;gap:6px;margin:14px 0 0;padding-top:12px;border-top:1px solid var(--dim);font-size:11px;white-space:nowrap;cursor:pointer;">
+      <label style="display:flex;align-items:center;gap:6px;margin:14px 0 0;padding-top:12px;border-top:1px solid rgba(33,230,255,.14);font-size:11px;white-space:nowrap;cursor:pointer;">
         <input type="checkbox" id="autoApplyToggle" style="width:12px;height:12px;flex:none;transform:scale(0.75);transform-origin:left center;">
         <span style="white-space:nowrap;">Auto-apply changes <span style="color:var(--amber);">(incl. overwrites/deletes)</span></span>
       </label>
@@ -589,7 +634,7 @@
       else if (line.startsWith("@@")) col = "#79c0ff";
       return `<span style="color:${col};display:block;white-space:pre-wrap;word-break:break-all;">${esc(line) || "&nbsp;"}</span>`;
     }).join("");
-    return `<pre style="margin:6px 0 0;padding:8px;background:#0b1020;border:1px solid #1f2940;border-radius:6px;max-height:40vh;overflow:auto;font-size:11px;line-height:1.35;font-family:ui-monospace,Menlo,Consolas,monospace;">${lines}</pre>`;
+    return `<pre style="margin:6px 0 0;padding:8px;background:#060d16;border:1px solid rgba(33,230,255,.14);border-radius:6px;max-height:40vh;overflow:auto;font-size:11px;line-height:1.35;font-family:ui-monospace,Menlo,Consolas,monospace;">${lines}</pre>`;
   }
 
   // One proposed-change card. `c` is the list record; `detail` is {d: diff, s: status}.
@@ -627,7 +672,7 @@
 
     const backupLine = c.backup_path ? `<div style="opacity:.6;font-size:11px;">backup: ${esc(c.backup_path)}</div>` : "";
 
-    return `<div style="border:1px solid #2a3550;border-radius:8px;padding:10px;margin:8px 0;">
+    return `<div style="border:1px solid rgba(33,230,255,.15);border-radius:8px;padding:10px;margin:8px 0;">
       <div style="font-weight:600;">${title}</div>
       ${c.target_path ? `<div style="opacity:.7;word-break:break-all;font-size:12px;">${esc(c.target_path)}</div>` : ""}
       ${c.new_path ? `<div style="opacity:.7;word-break:break-all;font-size:12px;">→ ${esc(c.new_path)}</div>` : ""}
@@ -644,7 +689,7 @@
 
   function approvalCard(a) {
     const risk = a.risk_level || "";
-    return `<div style="border:1px solid #2a3550;border-radius:8px;padding:10px;margin:8px 0;">
+    return `<div style="border:1px solid rgba(33,230,255,.15);border-radius:8px;padding:10px;margin:8px 0;">
       <div style="font-weight:600;">${(esc(a.action_type || "action")).toUpperCase()} — ${esc(a.action_summary || a.id)}</div>
       ${a.target ? `<div style="opacity:.7;word-break:break-all;font-size:12px;">${esc(a.target)}</div>` : ""}
       <div style="margin:6px 0;"><span style="color:${riskColor(risk)};font-size:11px;text-transform:uppercase;">${esc(risk)}</span></div>

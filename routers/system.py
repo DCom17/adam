@@ -224,6 +224,16 @@ async def icon():
     raise HTTPException(status_code=404, detail="icon.png not found")
 
 
+@router.get("/logo.png")
+async def logo():
+    # The waveform-A brand mark (transparent cutout) used in page headers —
+    # same art as the landing site's nav logo.
+    path = server.FRONTEND.parent / "logo.png"
+    if path.exists():
+        return FileResponse(path, media_type="image/png")
+    raise HTTPException(status_code=404, detail="logo.png not found")
+
+
 @router.get("/icon-maskable.png")
 async def icon_maskable():
     # Android launcher icon (manifest purpose "maskable"): same art padded

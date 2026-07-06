@@ -13,67 +13,116 @@
 <title>Adam — Operator Console</title>
 <link rel="icon" href="/icon.png" type="image/png" />
 <style>
-  :root { color-scheme: dark; }
+  /* Adam brand tokens (shared design spec 2026-07-06). Body stays monospace on
+     purpose — this is an operator console; headings/brand take the Segoe stack. */
+  :root {
+    color-scheme: dark;
+    --bg: #04060b;
+    --bg-soft: #071019;
+    --panel: rgba(10, 20, 30, .55);
+    --panel-solid: #0a1420;
+    --edge: rgba(33, 230, 255, .15);
+    --edge-hi: rgba(33, 230, 255, .4);
+    --cyan: #21e6ff;
+    --cyan-soft: #8df2ff;
+    --ink: #eefafd;
+    --text: #c9e4ec;
+    --dim: #8fb9c6;
+    --faint: #5d8894;
+    --amber: #ffaa3c;
+    --danger: #ff4d6d;
+    --ok: #3ddc97;
+  }
   * { box-sizing: border-box; }
+  ::selection { background: rgba(33,230,255,.28); color: #fff; }
   body {
     margin: 0; font: 14px/1.45 ui-monospace, "Cascadia Code", Consolas, monospace;
-    background: #0e1116; color: #d7dde5;
+    background: var(--bg); color: var(--text);
   }
+  a { color: var(--cyan); }
   header {
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    padding: 12px 18px; background: #151a22; border-bottom: 1px solid #232a35;
+    padding: 12px 18px; background: rgba(4,6,11,.7); backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(33,230,255,.08);
     position: sticky; top: 0; z-index: 5;
   }
-  header h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .3px; }
+  /* Brand row: glowing mark + gradient wordmark; the existing h1 renders as the
+     page micro-label ("OPERATOR CONSOLE"). verTag inside it stays as-is. */
+  header .brandLogo { width: 24px; height: 24px; filter: drop-shadow(0 0 8px rgba(33,230,255,.45)); }
+  header .wordmark {
+    font: 800 15px/1 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    letter-spacing: 6px; padding-right: 2px;
+    background: linear-gradient(100deg, #fff 30%, #8df2ff 70%, #21e6ff);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  header h1 {
+    font: 700 11px/1.45 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    margin: 0; letter-spacing: 3px; text-transform: uppercase; color: var(--faint);
+  }
+  header h1 .muted { text-transform: none; letter-spacing: normal; }
   header .spacer { flex: 1; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: #555; display: inline-block; }
-  .dot.ok { background: #2ecc71; } .dot.bad { background: #e74c3c; } .dot.warn { background: #e0a020; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--faint); display: inline-block; }
+  .dot.ok { background: var(--ok); } .dot.bad { background: var(--danger); } .dot.warn { background: var(--amber); }
   main { max-width: 1100px; margin: 0 auto; padding: 18px; }
-  section { background: #141922; border: 1px solid #232a35; border-radius: 8px; margin: 0 0 18px; }
+  section { background: var(--panel); border: 1px solid var(--edge); border-radius: 16px; margin: 0 0 18px; }
   section > .head {
     display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-    border-bottom: 1px solid #232a35; font-weight: 600;
+    border-bottom: 1px solid var(--edge);
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-weight: 700; letter-spacing: -0.01em; color: var(--ink);
   }
+  section > .head::before { content: ""; width: 22px; height: 1px; background: var(--cyan); flex: none; opacity: .7; }
   section > .body { padding: 12px 14px; overflow: auto; }
   button, select, input {
-    font: inherit; background: #1c232e; color: #d7dde5; border: 1px solid #2c3542;
-    border-radius: 6px; padding: 5px 9px;
+    font: 14px/1.45 ui-monospace, "Cascadia Code", Consolas, monospace;
+    color: var(--text); border-radius: 8px; padding: 5px 9px;
   }
-  button { cursor: pointer; } button:hover { background: #232c39; }
-  button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
-  label { color: #9aa6b3; margin-right: 4px; }
+  select, input { background: #060d16; border: 1px solid rgba(33,230,255,.18); border-radius: 10px; }
+  select:focus, input:focus { border-color: var(--edge-hi); outline: none; }
+  button { cursor: pointer; background: transparent; border: 1px solid var(--edge); color: var(--dim); }
+  button:hover { color: var(--ink); border-color: var(--edge-hi); background: rgba(33,230,255,.06); }
+  button.primary {
+    background: linear-gradient(105deg, #eafcff, #8df2ff 55%, #21e6ff);
+    color: #03222a; font-weight: 700; border: none; border-radius: 10px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  button.primary:hover { color: #03222a; }
+  label { color: var(--dim); margin-right: 4px; }
+  code { background: rgba(33,230,255,.08); border: 1px solid var(--edge); border-radius: 6px; padding: 1px 6px; color: #b9ecf5; }
   table { border-collapse: collapse; width: 100%; font-size: 13px; }
-  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #1f2733; vertical-align: top; }
-  th { color: #8b97a5; font-weight: 600; position: sticky; top: 0; background: #141922; }
-  tr.click { cursor: pointer; } tr.click:hover td { background: #1a212c; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid rgba(33,230,255,.08); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; position: sticky; top: 0; background: var(--panel-solid); }
+  tr.click { cursor: pointer; } tr.click:hover td { background: rgba(33,230,255,.05); }
   .kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; }
-  .kv .k { color: #8b97a5; } .kv .v { word-break: break-word; white-space: pre-wrap; }
-  .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; border: 1px solid #2c3542; }
-  .s-complete, .s-applied, .s-approved { color: #2ecc71; border-color: #1e5631; }
-  .s-failed, .s-interrupted, .s-conflict, .s-denied { color: #e74c3c; border-color: #5c2222; }
-  .s-running, .s-queued, .s-pending { color: #e0a020; border-color: #5c4410; }
-  .s-cancelled, .s-expired { color: #9aa6b3; }
-  .muted { color: #7c8794; }
-  .warnbox { color: #e0a020; border: 1px solid #5c4410; border-radius: 6px; padding: 6px 9px; margin: 6px 0; white-space: pre-wrap; }
-  .errbox  { color: #e74c3c; border: 1px solid #5c2222; border-radius: 6px; padding: 6px 9px; margin: 6px 0; white-space: pre-wrap; }
-  .okbox   { color: #2ecc71; border: 1px solid #1e5631; border-radius: 6px; padding: 6px 9px; margin: 6px 0; white-space: pre-wrap; }
-  button.danger { border-color: #5c2222; color: #f1a1a1; }
-  pre.diff { margin: 6px 0 0; padding: 8px; background: #0c0f14; border: 1px solid #232a35; border-radius: 6px;
+  .kv .k { color: var(--dim); } .kv .v { word-break: break-word; white-space: pre-wrap; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; border: 1px solid var(--edge); }
+  .s-complete, .s-applied, .s-approved { color: var(--ok); border-color: rgba(61,220,151,.4); }
+  .s-failed, .s-interrupted, .s-conflict, .s-denied { color: var(--danger); border-color: rgba(255,77,109,.4); }
+  .s-running, .s-queued, .s-pending { color: var(--amber); border-color: rgba(255,170,60,.4); }
+  .s-cancelled, .s-expired { color: var(--faint); }
+  .muted { color: var(--faint); }
+  .warnbox { color: var(--amber); border: 1px solid rgba(255,170,60,.4); background: rgba(255,170,60,.06); border-radius: 10px; padding: 6px 9px; margin: 6px 0; white-space: pre-wrap; }
+  .errbox  { color: var(--danger); border: 1px solid rgba(255,77,109,.4); background: rgba(255,77,109,.06); border-radius: 10px; padding: 6px 9px; margin: 6px 0; white-space: pre-wrap; }
+  .okbox   { color: var(--ok); border: 1px solid rgba(61,220,151,.4); background: rgba(61,220,151,.06); border-radius: 10px; padding: 6px 9px; margin: 6px 0; white-space: pre-wrap; }
+  button.danger { border-color: rgba(255,77,109,.4); color: #ff8ba0; }
+  button.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,77,109,.06); }
+  pre.diff { margin: 6px 0 0; padding: 8px; background: #060d16; border: 1px solid var(--edge); border-radius: 10px;
              max-height: 380px; overflow: auto; font-size: 12px; }
   pre.diff div { white-space: pre-wrap; word-break: break-word; }
-  .d-add { color: #3fb950; } .d-del { color: #f85149; } .d-hunk { color: #58a6ff; } .d-meta { color: #8b97a5; }
+  .d-add { color: var(--ok); } .d-del { color: var(--danger); } .d-hunk { color: var(--cyan); } .d-meta { color: var(--dim); }
   .gate { max-width: 460px; margin: 12vh auto; }
-  .gate .body p { color: #9aa6b3; }
+  .gate .body p { color: var(--dim); }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
   .hidden { display: none !important; }
-  .detail { background: #0c0f14; border: 1px solid #232a35; border-radius: 6px; padding: 10px 12px; margin-top: 10px; }
+  .detail { background: var(--panel-solid); border: 1px solid var(--edge); border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
+  .detail > .head { font-weight: 700; color: var(--ink); }
 </style>
 </head>
 <body>
 
 <!-- v0.9 secure-context advisory. Self-contained: no console state, no network, no
      remote asset, no token. Fixed overlay; isolated from the console's action code. -->
-<div id="secCtxBanner" hidden style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#5c2a00;color:#ffd9b0;font:13px/1.4 ui-monospace,Consolas,monospace;padding:8px 34px 8px 12px;box-shadow:0 1px 6px rgba(0,0,0,.45);">
+<div id="secCtxBanner" hidden style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#231404;color:#ffc98d;border-bottom:1px solid rgba(255,170,60,.35);font:13px/1.4 ui-monospace,Consolas,monospace;padding:8px 34px 8px 12px;box-shadow:0 1px 6px rgba(0,0,0,.45);">
   <span>&#9888; Insecure connection &mdash; some browser features need HTTPS. Reach this over https:// &mdash; Tailscale Serve is the supported path for remote access.</span>
   <button id="secCtxDismiss" type="button" aria-label="Dismiss" style="position:absolute;top:3px;right:6px;background:none;border:none;color:inherit;font-size:18px;line-height:1;cursor:pointer;">&times;</button>
 </div>
@@ -101,7 +150,10 @@
 <header>
   <a href="/" id="backToAdam" title="Back to Adam"
      onclick="if(window.parent&&window.parent!==window){event.preventDefault();window.parent.postMessage({jvl:'close-console'},'*');}"
-     style="color:#58a6ff;text-decoration:none;margin-right:8px;font-size:14px;white-space:nowrap;">‹ Adam</a>
+     style="color:var(--cyan);text-decoration:none;margin-right:8px;font-size:14px;white-space:nowrap;">‹ Adam</a>
+  <!-- Brand row (presentational only; no IDs, nothing JS-referenced) -->
+  <img src="/logo.png" alt="" class="brandLogo">
+  <span class="wordmark">ADAM</span>
   <span class="dot" id="reachDot" title="reachability"></span>
   <h1>Operator Console <span class="muted" id="verTag"></span></h1>
   <span class="spacer"></span>
@@ -235,7 +287,7 @@ off your own screen. Don't screenshot, photograph, or share it. Hide it when don
         <div class="row" style="margin-top:6px;">
           <button id="qrTokShow">Show token QR</button>
           <button id="qrReveal">Reveal token</button>
-          <code id="qrTokenText" class="hidden" style="word-break:break-all;color:#e0a020;"></code>
+          <code id="qrTokenText" class="hidden" style="word-break:break-all;color:var(--amber);"></code>
         </div>
         <div id="qrTokPanel" class="hidden">
           <div class="muted" style="margin:8px 0 4px;">Scan with Camera, then tap Copy and paste into the app.</div>
@@ -3307,7 +3359,7 @@ async function loadPhoneSetup(force) {
   if (best && best.secure) {
     // Ready — confirm it instead of silently disappearing.
     var box = $("phoneSetupBody"); box.textContent = "";
-    box.appendChild(_mk("div", "✓ Phone access is ready — your phone can reach Adam at:", "color:#7fe0a8;"));
+    box.appendChild(_mk("div", "✓ Phone access is ready — your phone can reach Adam at:", "color:#3ddc97;"));
     box.appendChild(_mk("div", best.url, "font-weight:bold;word-break:break-all;"));
     box.appendChild(_mk("div", "Scan the sign-in QR below with your phone to connect.", "margin-top:4px;"));
     return;
