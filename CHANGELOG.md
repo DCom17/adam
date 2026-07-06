@@ -3,6 +3,20 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.40 - The real license ships
+
+Small release with one purpose: the final v1.0 license terms replace the beta
+placeholder, so testers agree to the real thing from day one.
+
+- **Final license.** LICENSE is now the full end-user agreement (plain-English:
+  personal use on your own machines, your own Claude account, provided as-is).
+  The old file was a "terms TBD before v1.0" placeholder — this closes it.
+- **You can actually find it now.** README has a License section, and
+  START_HERE.txt says up front that installing means accepting the LICENSE
+  terms, with a one-line summary so nobody has to parse legalese.
+- **Correct privacy pointer.** The license references the privacy doc at the
+  path where it really lives in the install (docs/PRIVACY.md).
+
 ## 0.9.39 - Adam looks like Adam (and updates can undo themselves)
 
 The release where the last traces of the old name disappear and the update
