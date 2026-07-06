@@ -715,3 +715,9 @@ hardening: cold-install validation with outside testers, code signing (a signed
 installer), and final polish. The server intentionally keeps running in a visible
 window — no tray app, no hidden service, no autostart; per-device auth stays a
 post-1.0 idea. See `CHANGELOG.md` for the full history.
+
+## License
+
+Adam is proprietary software: free for personal use, not for redistribution.
+Full terms in [LICENSE](LICENSE); the privacy story is in
+[docs/PRIVACY.md](docs/PRIVACY.md).

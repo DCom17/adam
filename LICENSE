@@ -1,21 +1,53 @@
-Adam — All Rights Reserved (beta terms)
+Adam — End User License Agreement
 
 Copyright (c) 2026 Zachary Campos. All rights reserved.
 
-This software and its accompanying files (including the bundled Adam brain
-starter kit) are made available for evaluation and personal use by invited
-beta participants only.
+Adam is an AI assistant, powered by Claude. Your messages are processed by
+Anthropic's Claude under your own account; everything else runs on your PC.
 
-No license is granted to copy, redistribute, sublicense, sell, host as a
-service, or create derivative works from this software, in whole or in part.
+1. LICENSE GRANT. You are granted a personal, non-exclusive, non-transferable,
+revocable license to install and use this software (the "Software") on
+computers you own or control, for personal use. You may not redistribute,
+sell, rent, sublicense, or provide the Software as a service to others.
 Viewing the source code does not grant any of these rights.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+2. YOUR AI ACCOUNT. The Software orchestrates AI services using YOUR OWN
+Anthropic account (Claude subscription or API key). You are solely
+responsible for (a) complying with Anthropic's terms of service, (b) all
+usage and charges on your account, and (c) keeping your credentials private.
+Anthropic may change its terms or pricing at any time; the Software supports
+API-key mode as an alternative to subscription authentication. The Software
+is an independent product and is not affiliated with or endorsed by
+Anthropic. Access must remain single-user: do not share your Adam token or
+your Anthropic account with others.
 
-Final license terms will be set before any wider (v1.0) release. Until then,
-do not share, redistribute, or resell this software or any part of it.
+3. YOUR DATA, YOUR MACHINE. The Software runs locally and collects nothing
+(see docs/PRIVACY.md). You are responsible for your own backups. The
+Software's draft-only safety mode, backups, and audit log reduce — but
+cannot eliminate — the risk inherent in letting an AI agent propose changes
+to your files.
+
+4. UPDATES. The Software may check a public release feed for updates and, at
+your request, download and apply them. You can disable the check in settings.
+
+5. NO WARRANTY. THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT
+WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+NON-INFRINGEMENT. YOU USE IT AT YOUR OWN RISK.
+
+6. LIMITATION OF LIABILITY. TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO
+EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY — INCLUDING LOST DATA, LOST PROFITS, OR CONSEQUENTIAL DAMAGES —
+ARISING FROM OR IN CONNECTION WITH THE SOFTWARE OR ITS USE, EVEN IF ADVISED
+OF THE POSSIBILITY OF SUCH DAMAGES. WHERE LIABILITY CANNOT BE EXCLUDED, IT
+IS LIMITED TO THE AMOUNT YOU PAID FOR THE SOFTWARE (WHICH, FOR THE FREE
+BETA, IS ZERO).
+
+7. TERMINATION. This license terminates automatically if you breach it.
+Sections 5-6 survive termination.
+
+8. GOVERNING LAW. This agreement is governed by the laws of the State of
+Delaware, USA, without regard to conflict-of-law rules.
+
+9. ELIGIBILITY. You represent that you are legally permitted to use the
+Software in your jurisdiction and are at least 13 years old.

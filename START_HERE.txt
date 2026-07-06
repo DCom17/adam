@@ -154,4 +154,8 @@ IF SOMETHING GOES WRONG
 
 Your data stays on YOUR computer. Adam runs locally and uses
 your own Claude account. Nothing is shared or sent to anyone else.
+
+By installing and using Adam you accept the terms in the LICENSE
+file (short version: personal use, provided as-is, on your own
+Claude account). Privacy details: docs\PRIVACY.md.
 ===========================================================
