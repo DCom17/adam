@@ -408,13 +408,31 @@ default upgrade path, so these become mainline before v1.0)
 > decision: governing state = Arizona); dist/publish-site.ps1 one-shots the
 > gh-pages publish when the owner says go.
 
+> **STATUS 2026-07-05 (evening, post-v0.9.39-publish):** v0.9.39 PUBLISHED
+> (ZIP + installer, API-verified); SITE LIVE at adam.camposenterprises.org
+> (HTTP→HTTPS 301 verified); Azure ID validation SUBMITTED (clock: 1-20
+> business days). **MP3-P2-6 CLOSED: LICENSE ADOPTED** (owner chose Delaware
+> governing law; privacy ref fixed to docs/PRIVACY.md; README/START_HERE now
+> carry the pointers they were claimed to have; d14922d pushed). **v0.9.40
+> BUILT + TAGGED (71f6d04, license-only release)** so testers agree to the
+> real EULA — ZIP (Delaware EULA verified inside) + installer in dist/;
+> cold-install acceptance re-run on the 0.9.40 ZIP in a scratch dir: boots on
+> custom port, auth matrix 403/403/200, headers + icon routes 200, doctor
+> 24 checks 0 FAIL 0 WARN. Owner publishes via `dist\finish-v0.9.40.ps1`.
+> Phone runbook updated to 0.9.40 + fixed a wrong tts_url instruction
+> (sidecar endpoint is /tts, NOT /speak). winget manifests schema-validated
+> (yaml-only temp folder; see packaging/winget/README.md note). Tester
+> invite finalized (real links, verified). Owner plan: self-test on his
+> laptop + iPhone acceptance pass, THEN send invites.
+
 ## MP3 — the updated v1.0 gate (supersedes P4 list where they overlap)
 
-- [ ] MP3-P0 shipped as v0.9.39 → tester invites out
+- [x] MP3-P0 shipped (v0.9.39 published; v0.9.40 adds the final LICENSE) —
+      invites gated only on the owner's self-test now
 - [ ] Phone-half acceptance PASS (owner, runbook in dist/)
 - [ ] 2-3 cold testers complete ZIP→talking-phone unaided; punch list resolved
 - [ ] Signing live → installer + assets signed → MP3-P1 done → winget submitted
-- [ ] MP3-P2 items 1-6 done; LICENSE final
-- [ ] Site published (owner go-ahead) with corrected download link
+- [x] MP3-P2 items 1-6 done; LICENSE final (adopted 2026-07-05, Delaware)
+- [x] Site published with corrected download link (adam.camposenterprises.org)
 - Deferred to post-1.0 unless testers hit them: update-channel SHA256 (B2-H),
   per-device tokens, B2-J beyond the voice package.

@@ -14,8 +14,13 @@ routinely trip the Defender validation pipeline into manual-review purgatory.
 4. Fork microsoft/winget-pkgs → copy these files to
    `manifests/z/ZacharyCampos/AdamLocal/<ver>/` → PR. Or let the tool do it:
    `wingetcreate submit` / `komac submit`.
-5. Validate locally first: `winget validate --manifest packaging\winget` then
-   `winget install --manifest packaging\winget` on a spare machine/VM.
+5. Validate locally first — but NOTE: `winget validate` refuses a folder that
+   contains this README ("does not contain a valid root"). Copy the three
+   .yaml files to an empty temp folder and validate THAT:
+   `winget validate --manifest <temp-folder-with-only-the-yamls>` then
+   `winget install --manifest <same>` on a spare machine/VM.
+   (Schema validation of the current drafts PASSED 2026-07-05 this way —
+   only the three TODO fields remain.)
 
 Notes from the July 2026 policy research (sources in docs/ROADMAP.md MP3-P3):
 - Silent install/uninstall is REQUIRED and already satisfied: InstallerType
