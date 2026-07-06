@@ -14,7 +14,7 @@
  * fall back to cache only when the network fails), so a redeploy is picked up on
  * the next online launch. Only the static icon/manifest are served cache-first.
  */
-const CACHE = "adam-shell-v3";   // v3: waveform-logo icon set + brand-palette UI rework
+const CACHE = "adam-shell-v4";   // v4: bold flat-A logo, neon gear-menu icons, ACTIVATE ADAM caps
 const SHELL = ["/", "/manifest.json", "/icon.png", "/icon-maskable.png", "/logo.png"];
 
 self.addEventListener("install", (event) => {
