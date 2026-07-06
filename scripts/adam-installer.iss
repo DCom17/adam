@@ -44,7 +44,7 @@
 AppId={{6E9A2C54-71B3-4A8D-9F2E-0C5D8B7A4E13}
 AppName=Adam
 AppVersion={#AppVersion}
-AppPublisher=Zachary Campos
+AppPublisher=Zonte Campos
 AppSupportURL=https://github.com/DCom17/adam/issues
 AppUpdatesURL=https://github.com/DCom17/adam-releases/releases
 DefaultDirName={userpf}\Adam

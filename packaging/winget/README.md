@@ -7,12 +7,12 @@ routinely trip the Defender validation pipeline into manual-review purgatory.
 ## When the signed v1.0 installer exists
 
 1. Publish the release with the signed `adam-setup-v<ver>.exe` attached.
-2. Fill the three `TODO` fields in `ZacharyCampos.AdamLocal.installer.yaml`:
+2. Fill the three `TODO` fields in `ZonteCampos.AdamLocal.installer.yaml`:
    the tagged (never `latest`) asset URL, the file's SHA256
    (`Get-FileHash dist\adam-setup-v<ver>.exe`), and the version.
 3. Bump `PackageVersion` in all three files to match.
 4. Fork microsoft/winget-pkgs → copy these files to
-   `manifests/z/ZacharyCampos/AdamLocal/<ver>/` → PR. Or let the tool do it:
+   `manifests/z/ZonteCampos/AdamLocal/<ver>/` → PR. Or let the tool do it:
    `wingetcreate submit` / `komac submit`.
 5. Validate locally first — but NOTE: `winget validate` refuses a folder that
    contains this README ("does not contain a valid root"). Copy the three

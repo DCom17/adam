@@ -1,8 +1,8 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
-PackageIdentifier: ZacharyCampos.AdamLocal
+PackageIdentifier: ZonteCampos.AdamLocal
 PackageVersion: "1.0.0"   # TODO: match the signed release
 PackageLocale: en-US
-Publisher: Zachary Campos
+Publisher: Zonte Campos
 PublisherUrl: https://github.com/DCom17/adam
 PublisherSupportUrl: https://github.com/DCom17/adam/issues
 PackageName: Adam Local
@@ -10,7 +10,7 @@ PackageUrl: https://adam.camposenterprises.org/
 License: Proprietary
 LicenseUrl: https://github.com/DCom17/adam/blob/main/LICENSE
 PrivacyUrl: https://adam.camposenterprises.org/privacy.html
-Copyright: Copyright (c) 2026 Zachary Campos
+Copyright: Copyright (c) 2026 Zonte Campos
 ShortDescription: A local-first AI voice assistant for your own files, powered by your own Claude.
 Description: |-
   Adam Local is a personal AI voice assistant that runs entirely on your own

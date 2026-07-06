@@ -217,7 +217,7 @@ Adam already beats the field on telemetry (zero) and matches on auto-update.
    logic into one signed executable surface (fixes the AV-heuristic exposure of
    .cmd/.ps1 bootstrap too). GitHub Releases stays the artifact host + updater feed
    (2 GiB/file, no bandwidth caps — fine forever).
-2. **winget submission** (`ZacharyCampos.Adam` or post-rename equivalent) once the
+2. **winget submission** (`ZonteCampos.Adam` or post-rename equivalent) once the
    signed installer exists. `winget install adam` is real credibility, free.
 3. **Icon art + favicon** — known-size job: exactly 2 files (web/icon.png 512² +
    web/icon.ico) referenced from manifest.json:11–12, index.html:37, sw.js:18/59/85–86,
