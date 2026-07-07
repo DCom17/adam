@@ -99,6 +99,22 @@ def init(db_path: str | Path | None = None) -> dict:
                 conn.execute("UPDATE sessions SET seq=? WHERE key=?", (i, k))
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions(updated)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_seq ON sessions(seq)")
+        # Ground truth: which mode (hence which cwd/workspace) each Claude session was
+        # last run under. A Claude session only exists inside the cwd it was created in
+        # — code chats run in the vault, safe (voice/work) chats in the throwaway
+        # workspace. Resuming a session under a mode whose cwd differs from its origin
+        # makes the CLI error out or silently start fresh, wiping context. This map lets
+        # the server honor a session's TRUE origin mode when a stale client (e.g. a phone
+        # that hasn't synced a mode change) sends the wrong one. Server-owned, NOT synced.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS session_modes (
+                sid     TEXT PRIMARY KEY,
+                mode    TEXT,
+                updated INTEGER DEFAULT 0
+            )
+            """
+        )
         conn.commit()
         _SEQ = conn.execute("SELECT COALESCE(MAX(seq), 0) FROM sessions").fetchone()[0] or 0
         _CONN = conn
@@ -221,6 +237,37 @@ def purge_expired(ttl_ms: int, now: int | None = None) -> int:
         )
         conn.commit()
         return cur.rowcount or 0
+
+
+def record_session_mode(sid: str, mode: str) -> None:
+    """Remember the mode (hence cwd) a Claude session was last run under. Called after
+    every completed turn with the session_id the CLI returned. Best-effort — a failure
+    here must never break a finished turn."""
+    sid = str(sid or "").strip()
+    if not sid:
+        return
+    with _LOCK:
+        conn = _conn()
+        conn.execute(
+            "INSERT INTO session_modes (sid, mode, updated) VALUES (?,?,?) "
+            "ON CONFLICT(sid) DO UPDATE SET mode=excluded.mode, updated=excluded.updated",
+            (sid, str(mode or "voice"), now_ms()),
+        )
+        conn.commit()
+
+
+def get_session_mode(sid: str) -> str | None:
+    """The mode a Claude session was last run under, or None if we've never seen it
+    (a brand-new session, or one predating this map). None means 'no ground truth —
+    trust the client's requested mode.'"""
+    sid = str(sid or "").strip()
+    if not sid:
+        return None
+    with _LOCK:
+        row = _conn().execute(
+            "SELECT mode FROM session_modes WHERE sid=?", (sid,)
+        ).fetchone()
+        return (row[0] if row else None) or None
 
 
 def now_ms() -> int:

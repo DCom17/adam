@@ -3,6 +3,32 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.41 - Voice reads to the end; no more lost first replies
+
+Three reliability fixes for the voice loop — and the first release where Adam
+wears the new look everywhere.
+
+- **Long replies read all the way through.** On the first reply after Adam had
+  been sitting idle, a long answer could cut off after a sentence or two while
+  the orb briefly froze — and then Replay would happily say the whole thing. A
+  safety timer was mistaking the first (cold) voice render for a wedged readout
+  and tearing it down mid-sentence. It now tells the difference and leaves an
+  actively-rendering reply alone. (Tapping to interrupt, switching chats, and
+  Stop still cut off instantly — that's by design.)
+- **Your first reply doesn't error out anymore.** Now and then a reply came
+  back "Connection error, sir." and you had to send it a second time for it to
+  work. That happened when Adam tried to resume an earlier conversation the
+  assistant could no longer find; instead of failing and making you re-send, it
+  now quietly starts a fresh one and answers the first time.
+- **Phone and computer stop fighting over mode.** If one device hadn't caught
+  up to a mode change you made on the other, replying from the stale device
+  could answer in the wrong mode and wipe the chat's context. The server now
+  remembers which mode each conversation actually lives in and keeps it there,
+  so context survives and the toggle re-syncs itself.
+- **Adam looks like Adam — everywhere.** The brand redesign lands: the new
+  voice-waveform "A" logo, the ADAM header, refreshed gear-menu icons, the neon
+  composer, and a matching orb-hero landing page.
+
 ## 0.9.40 - The real license ships
 
 Small release with one purpose: the final v1.0 license terms replace the beta

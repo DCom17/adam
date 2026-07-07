@@ -3,6 +3,22 @@
 **Date:** 2026-07-05 · **Baseline:** v0.9.37 shipped (latest in DCom17/adam-releases)
 **Internal doc — deny-globbed by make_release.py, never ships.**
 
+> **STATUS UPDATE 2026-07-07:** **v0.9.41 cut** — three voice-loop reliability
+> fixes folded in. (1) Long first-reply cut off after ~2 sentences: the
+> `speakRenderGen` guard now protects the ctx-stall backstop + `recoverForeground`
+> the same way the watchdog already was (`web/index.html`). (2) First reply
+> "Connection error, sir." when resuming a session the CLI can't find: the server
+> retries once as a fresh session instead of 502-ing (`run_claude` +
+> `_is_session_not_found`, `server.py`). (3) Phone↔computer mode desync wiping
+> context: server-authoritative mode — `session_modes` table + `_cwd_bucket`
+> resume-override (`server.py`/`session_store.py`) + client `job.mode` adoption.
+> Bugs 1 & 2 were uncommitted work recovered from a prior session; bug 3 new this
+> run. **v0.9.40 was cut locally but never published — customers are on v0.9.39**,
+> so 0.9.41 also ships the brand/app/site redesign (10 unpushed commits) for the
+> first time. Pending: test suite → live-server restart + smoke-test → commit →
+> publish (owner-gated: outward-facing, and `gh` is not installed). Ledger:
+> `KNOWN_ISSUES.md`.
+
 > **STATUS UPDATE 2026-07-06 (overnight autonomous run):** **P0 — ALL DONE**,
 > **P2a/P2b/P2c/P2d — ALL DONE**, P3 items 4 (privacy — PRIVACY.md ships; EULA
 > draft in dist/), 7 (no crash reporting; diagnostics completed) and 8 (consumer

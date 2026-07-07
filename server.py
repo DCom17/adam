@@ -342,6 +342,14 @@ def _normalize_mode(mode: str | None) -> str:
     return m if m in ("work", "code") else "voice"
 
 
+def _cwd_bucket(mode: str) -> str:
+    """Which working directory a mode's turns run in — the boundary a Claude session
+    can't be resumed across. 'code' runs in the vault; voice/work run in the throwaway
+    agent workspace (see run_claude). Two modes in the same bucket share a cwd, so a
+    session created under one resumes cleanly under the other; across buckets it can't."""
+    return "vault" if _normalize_mode(mode) == "code" else "safe"
+
+
 # Draft-mode addendum (safe agent modes): Claude has no file-editing or shell
 # tools, so it must PROPOSE changes for the server to apply, never edit directly.
 # The <<PROPOSE>> blocks are parsed out of the reply into proposed-change records.
@@ -438,6 +446,28 @@ def _is_claude_auth_failure(err: str) -> bool:
     other crash). Keyword match on the CLI's own wording."""
     e = (err or "").lower()
     return any(m in e for m in _AUTH_FAILURE_MARKERS)
+
+
+# A --resume whose session the CLI can't find in the current cwd — it aged out of the
+# CLI's store, or was created in another workspace (code=vault vs safe=agent sandbox).
+# The turn exits with this class of message. Recover by re-running fresh so the user's
+# FIRST reply still lands, instead of dead-ending on "Connection error, sir." and making
+# them re-send (the manual retry only works because the client then drops the sid).
+_SESSION_GONE_MARKERS = (
+    "no conversation found",
+    "no such session",
+    "session not found",
+)
+
+
+def _is_session_not_found(err: str) -> bool:
+    """True if Claude's error means the --resume session id is gone/unknown (as opposed
+    to any other failure). Keyword match on the CLI's own wording, with a loose
+    'session … not found' catch so minor wording drift still recovers."""
+    e = (err or "").lower()
+    if any(m in e for m in _SESSION_GONE_MARKERS):
+        return True
+    return "session" in e and "not found" in e
 
 
 # A subscription plan hitting its usage window used to surface as either silence
@@ -1301,6 +1331,34 @@ async def run_claude(
     can reach, and whether the whole reply or just a <<SPEAK>> summary is spoken.
     `attachments` are uploaded file paths injected for the Read tool to view."""
     mode = _normalize_mode(mode)
+
+    # Mode authority on resume. A Claude session lives only in the cwd it was created
+    # in (code=vault, voice/work=agent workspace). If a client sends a mode whose cwd
+    # differs from where this session actually lives — the classic case is a phone that
+    # hasn't synced a mode change the PC made, so it replies in stale 'voice' to a chat
+    # the PC switched to 'code' — resuming it verbatim either errors out ("no
+    # conversation found") or silently starts fresh, WIPING the conversation's context.
+    # Honor the session's true origin mode instead, so context survives and the reply
+    # lands in the right workspace. The corrected mode is returned to the client, which
+    # repaints its toggle to match. Only overrides a session we've actually run before;
+    # a deliberate mode switch clears the sid client-side, so it arrives with no
+    # session_id and is honored as a clean fresh start (never overridden here).
+    if session_id and session_store is not None:
+        try:
+            origin = session_store.get_session_mode(session_id)
+        except Exception:  # noqa: BLE001 — a broken map must never break a turn
+            origin = None
+        if origin and _cwd_bucket(origin) != _cwd_bucket(mode):
+            # Don't resurrect code mode on an install where it's since been disabled —
+            # there we can't honor a code origin anyway, so fall through as requested.
+            if not (origin == "code" and not config.AGENT_ALLOW_CODE_MODE):
+                log.info(
+                    "mode-authority: session %s lives in %s mode; client asked %s — "
+                    "resuming as %s to preserve context",
+                    str(session_id)[:12], origin, mode, origin,
+                )
+                mode = _normalize_mode(origin)
+
     if mode == "code" and not config.AGENT_ALLOW_CODE_MODE:
         # Never degrade silently into a different capability level — the user must
         # know they are NOT in Claude Code mode. Flip agent_safety.allow_code_mode
@@ -1533,6 +1591,17 @@ async def run_claude(
                     # Surfaced to the user as clear sign-in guidance, not "connection error".
                     raise HTTPException(status_code=502,
                                         detail=f"{AUTH_REQUIRED_SENTINEL} {AUTH_REQUIRED_MESSAGE}")
+                if session_id and _is_session_not_found(err):
+                    # The resume id points at a session the CLI can't find here. Re-run this
+                    # turn ONCE as a fresh session (session_id=None → can't loop, and a spawn
+                    # with no --resume can't raise session-not-found) so the first reply lands
+                    # instead of erroring. That session's context is already unrecoverable;
+                    # fresh is the only forward path — the same recovery the client does on the
+                    # user's manual retry, moved server-side so they never see the failure.
+                    log.info("resume %s not found — retrying once as a fresh session",
+                             str(session_id)[:12])
+                    return await run_claude(message, None, timeout=timeout, mode=mode,
+                                            attachments=attachments, job_id=job_id)
                 raise HTTPException(status_code=502, detail=f"Claude failed: {err[:500]}")
 
             raw = stdout.decode("utf-8", errors="replace").strip()
@@ -1572,10 +1641,27 @@ async def run_claude(
         if _is_claude_auth_failure(err_text):
             raise HTTPException(status_code=502,
                                 detail=f"{AUTH_REQUIRED_SENTINEL} {AUTH_REQUIRED_MESSAGE}")
+        if session_id and _is_session_not_found(err_text):
+            # Defensive twin of the returncode path above: should a gone resume ever
+            # surface as an exit-0 error result rather than a non-zero exit, recover the
+            # same way — one fresh re-run so the first reply still lands.
+            log.info("resume %s not found (result error) — retrying once fresh",
+                     str(session_id)[:12])
+            return await run_claude(message, None, timeout=timeout, mode=mode,
+                                    attachments=attachments, job_id=job_id)
         raise HTTPException(status_code=502, detail=f"Claude failed: {err_text[:300]}")
 
     display, spoken = _extract_spoken(data.get("result", ""), mode)
     sid = data.get("session_id", session_id or "")
+
+    # Record which mode (hence cwd) this session now lives under, so a later turn from
+    # a stale device can be steered back to the right workspace instead of wiping
+    # context (see the mode-authority block above). Best-effort — never fail a turn.
+    if session_store is not None and sid:
+        try:
+            session_store.record_session_mode(sid, mode)
+        except Exception:  # noqa: BLE001
+            log.warning("record_session_mode failed", exc_info=True)
 
     # In a safe mode, pull any <<PROPOSE>> blocks out of the reply and turn them into
     # pending proposed changes (or auto-apply brain self-writes). Runs in BOTH modes:

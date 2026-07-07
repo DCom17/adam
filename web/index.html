@@ -883,6 +883,7 @@
     clearActiveSid() { this.clearSidFor(this.activeKey()); },
     setSidFor(key, sid) { if (!sid) return; const l = this._all(); const s = this._find(l, key); if (s) { s.sid = sid; s.used = this._now(); this._bump(s); this._save(l); } },
     clearSidFor(key) { const l = this._all(); const s = this._find(l, key); if (s) { s.sid = null; this._bump(s); this._save(l); } },
+    setModeFor(key, mode) { if (!mode) return; const l = this._all(); const s = this._find(l, key); if (s && s.mode !== mode) { s.mode = mode; this._bump(s); this._save(l); } },
     keyForSid(sid) { if (!sid) return ""; const s = this._all().find((x) => x.sid === sid && !x.deleted); return s ? s.key : ""; },
     // Per-session dedupe high-water mark. MUST be per-session: a global one lets one
     // chat's reply suppress another concurrent chat's reply (the 2026-06-20 lost-reply bug).
@@ -1284,6 +1285,11 @@
   let ttsSources = [];              // all sources scheduled for the current utterance
   let speakWatchdog = null;
   let speakGen = 0;                 // bumped on every speak()/stop so a stale invocation bails
+  let speakRenderGen = -1;          // == speakGen while speak() is still scheduling THIS readout's
+                                    // sentences. The automatic settle paths (ctx-stall backstop,
+                                    // spurious foreground recovery) must not tear a readout down
+                                    // during that window — a clock gap then is a cold Kokoro render,
+                                    // not a wedge. Gen-keyed so a superseded invocation can't stick it.
   let ttsPaused = false;            // true while a replay is paused (its AudioContext suspended)
   let keepAlive = null;             // near-silent keepalive node ({osc,gain}) that holds the iOS
                                     // output route open from the unlocking tap until real audio plays
@@ -2192,6 +2198,13 @@
     if (ts && ts <= Sessions.lastTs(key)) { if (isActive) afterSpeak(); return; }   // already delivered to THIS chat
     if (ts) Sessions.setLastTs(key, ts);
     if (job.session_id) Sessions.setSidFor(key, job.session_id);
+    // The server owns which workspace a session lives in and may have corrected a
+    // stale mode this turn (e.g. this device hadn't synced a mode change). Adopt the
+    // effective mode so the toggle stops lying — and the correction re-syncs onward.
+    if (job.mode) {
+      Sessions.setModeFor(key, job.mode);
+      if (isActive) applyChatMode(Sessions.active());
+    }
     const reply = (job.result || "").trim() || "No response, sir.";
     const spokenText = (job.spoken && job.spoken.trim()) ? job.spoken.trim() : reply;
     Sessions.setLastSpoken(key, spokenText);   // so the Resume button can replay THIS chat later
@@ -2668,6 +2681,7 @@
       let pending = fetchSentence(sentences[0]);
 
       streaming = true;   // entering the scheduling loop — the safety timer must not settle yet
+      speakRenderGen = myGen;   // ...and neither may the ctx-stall backstop / foreground recovery
       for (let i = 0; i < sentences.length; i++) {
         let audioBuf;
         try {
@@ -2678,6 +2692,7 @@
           // nothing is lost, after what's already queued finishes.
           if (spokenCount === 0) throw err;
           settled = true;            // browser fallback now owns the afterSpeak
+          if (myGen === speakGen) speakRenderGen = -1;   // Kokoro loop aborted — disarm the render guard
           clearTimeout(speakWatchdog);
           const remaining = sentences.slice(i).join(" ");
           if (lastSource) lastSource.onended = () => speakBrowser(remaining);
@@ -2711,12 +2726,14 @@
         speakWatchdog = setTimeout(settle, (nextStart - audioCtx.currentTime + 3) * 1000);
       }
       streaming = false;   // all sentences scheduled — the watchdog / final onended may now settle for real
+      if (myGen === speakGen) speakRenderGen = -1;   // rendering done → the auto backstops may settle again
 
       // Settle when the final clip ends.
       if (lastSource) lastSource.onended = settle;
       else settle();
     } catch (err) {
       settled = true;
+      if (myGen === speakGen) speakRenderGen = -1;   // render threw — disarm the guard so backstops work
       clearTimeout(speakWatchdog);
       ttsViaAnalyser = false;
       stopTtsSources();
@@ -3253,6 +3270,13 @@
   function setCodeMode(on) {
     codeMode = !!on;
     Sessions.setActiveMode(codeMode ? "code" : (workMode ? "work" : "voice"));
+    // Crossing the code↔safe cwd boundary: this chat's Claude session lives in the
+    // OTHER workspace and can't be resumed here. Drop the resume id so the next turn
+    // starts a clean session in the new mode — matching the "code starts fresh"
+    // contract, and avoiding a doomed cross-cwd --resume that would 502 then reset.
+    // work↔voice share one cwd, so setWorkMode deliberately does NOT clear the sid
+    // (context continues across that toggle).
+    Sessions.clearSidFor(Sessions.activeKey());
     paintModeBtn();
   }
   // The one warning shown before a chat crosses INTO Claude Code mode — from EITHER
@@ -3763,7 +3787,11 @@
     clearTimeout(micFlipTimer);
   }
   function recoverForeground() {
-    forceSettleSpeaking();
+    // Only force-settle a readout wedged by an ACTUAL background transition (bgInterrupted,
+    // set on hidden/pagehide). focus/pageshow also fire spuriously while foregrounded — on
+    // desktop especially — and must not nuke a healthy in-progress readout. The ctx-stall
+    // backstop remains the safety net if a real wedge slips past without the hidden event.
+    if (bgInterrupted) forceSettleSpeaking();
     // Reconcile chats with other devices, THEN pull any SMS/push reply that arrived
     // while away (the iOS tap is unreliable). Sync-first so a synced turn's full
     // transcript wins over a reply-only push surface (no input-less chat).
@@ -3798,6 +3826,10 @@
     }
     const t = (audioCtx && audioCtx.state === "running") ? audioCtx.currentTime : -1;
     if (t > lastCtxTime + 0.05) { lastCtxTime = t; ctxStallTicks = 0; return; }  // alive → progressing
+    // Still scheduling this readout's sentences? A frozen clock here is a cold render gap
+    // (first reply, Kokoro warming — later clips not queued yet), NOT a wedge. Same reason
+    // the settle watchdog extends instead of ending. Don't false-settle a live readout.
+    if (speakRenderGen === speakGen) { ctxStallTicks = 0; lastCtxTime = t; return; }
     if (++ctxStallTicks >= 2) { ctxStallTicks = 0; forceSettleSpeaking(); }       // ~2s frozen → wedged
     lastCtxTime = t;
   }, 1000);
