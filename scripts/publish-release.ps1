@@ -35,7 +35,9 @@ if (-not $Repo) {
     } catch {}
 }
 if (-not $Repo) {
-    $cm = Select-String -Path (Join-Path $root "config.py") -Pattern 'update_repo\D+"([^"]+)"' | Select-Object -First 1
+    # Match the ACTUAL default in the _as(...) call, not the "owner/name" example in
+    # the comment above it (the old 'update_repo\D+"..."' matched the comment first).
+    $cm = Select-String -Path (Join-Path $root "config.py") -Pattern '_as\("update_repo",\s*"([^"]+)"' | Select-Object -First 1
     if ($cm) { $Repo = $cm.Matches.Groups[1].Value }
 }
 if (-not $Repo) { $Repo = "DCom17/adam-releases" }
