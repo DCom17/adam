@@ -31,8 +31,8 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 try:
     from pywebpush import webpush, WebPushException
@@ -76,7 +76,7 @@ from models import (  # noqa: F401 — re-exports
     SmsTestRequest, SpeakRequest, UiPrefs, VoicemailEnableRequest,
     VoicemailGreetingRequest, VoicemailTestRequest, VoicemailWireRequest,
 )
-from rate_limit import limiter
+from rate_limit import limiter, rate_limit_handler
 from security import require_token  # noqa: F401 — re-export; routes Depends() on it
 
 # --- Configuration ----------------------------------------------------------
@@ -173,6 +173,20 @@ def _load_ui_prefs() -> dict:
 
 def _get_auto_apply() -> bool:
     return bool(_load_ui_prefs().get("auto_apply_proposed", False))
+
+
+def _effective_auto_apply() -> bool:
+    """The live EFFECTIVE apply posture for a typical change: do file/brain changes
+    apply immediately, or wait for a tap? True when EITHER the global Auto-apply toggle
+    is on OR the capability tier auto-applies every write class (Unrestricted). Mirrors
+    the server's own auto-apply decision (the proposed-change apply loop), so every
+    per-turn note that describes 'what happens to your changes' tells the same, true
+    story — never a phantom approval panel when nothing waits. The mixed Powerful tier
+    (non-destructive auto, destructive still gated) stays on the safe 'propose' story."""
+    return _get_auto_apply() or not (
+        permissions.requires_approval("", is_write=True, destructive=False)
+        or permissions.requires_approval("", is_write=True, destructive=True)
+    )
 
 
 def _set_auto_apply(on: bool) -> None:
@@ -279,8 +293,10 @@ OWNER_PHONE = config.OWNER_PHONE
 TTS_URL = config.TTS_URL
 TTS_TIMEOUT_SECONDS = config.TTS_TIMEOUT_SECONDS
 
-# How long to wait on a single Claude turn. First call of a session loads the
-# full vault/CLAUDE.md startup protocol (~8-20s); give it generous headroom.
+# How long to wait on a single Claude turn. The first call of a session runs the
+# brain's startup protocol — reading the identity/memory files named in the injected
+# brain bootstrap note (see _brain_bootstrap_note) — which can take ~8-20s; give it
+# generous headroom.
 CLAUDE_TIMEOUT_SECONDS = config.CLAUDE_TIMEOUT_SECONDS
 # Async (fire-and-poll) jobs aren't bound by the edge HTTP timeout — only polls are.
 ASYNC_CLAUDE_TIMEOUT_SECONDS = config.ASYNC_CLAUDE_TIMEOUT_SECONDS
@@ -353,28 +369,51 @@ def _cwd_bucket(mode: str) -> str:
 # Draft-mode addendum (safe agent modes): Claude has no file-editing or shell
 # tools, so it must PROPOSE changes for the server to apply, never edit directly.
 # The <<PROPOSE>> blocks are parsed out of the reply into proposed-change records.
-DRAFT_MODE_NOTE = (
-    "\n\nSAFETY MODE: You are running WITHOUT any file-editing or shell tools "
-    "(Write/Edit/Bash are disabled) and your working directory is a throwaway "
-    "sandbox, not the user's files. You CANNOT modify the user's files directly. "
-    "When a file should be created or changed, do NOT try to edit it — PROPOSE the "
-    "change so the server can apply it after the user approves. Emit each proposed "
-    "file change as a block in EXACTLY this format, each marker on its own line:\n"
-    "<<PROPOSE path=\"name.ext\" action=\"create\" risk=\"low\" summary=\"one line\">>\n"
-    "the full proposed file content goes here\n"
-    "<<END_PROPOSE>>\n"
-    "action is one of create|edit|replace|delete|rename. For delete and rename, "
-    "include no body (for rename add newpath=\"...\"). Explain the proposal in your "
-    "normal reply; the blocks are extracted automatically, so keep them exact.\n"
-    "IMPORTANT — you do NOT approve or apply changes. The user reviews each proposal in "
-    "an on-screen panel (an Approve & Apply / Deny control) that you cannot see or "
-    "operate. So: never say a change was approved, applied, saved, written, or 'on its "
-    "way' — it is only PROPOSED until the user acts. Do not ask the user to approve it, "
-    "and do not tell them to confirm 'so we can carry on'. Just describe what you "
-    "proposed and stop. Do not nag for approval or chase a pending proposal: if and "
-    "when the user resolves it, you'll be told the outcome at the start of a later "
-    "turn (applied/denied) — acknowledge it then, and never re-pitch a denied change."
-)
+def _draft_mode_note(auto_apply: bool) -> str:
+    """Draft-mode addendum (safe agent modes): Claude has no file-editing/shell tools,
+    so it PROPOSES changes and the server applies them. The trailing apply-posture
+    paragraph is written to match the CURRENT auto-apply toggle, so the agent never
+    narrates an approval panel that isn't in play. When auto-apply is ON (the
+    'unrestricted' posture in the UI), proposed changes apply immediately — there is no
+    panel and nothing waits — so the agent must confirm in past tense, not hedge."""
+    base = (
+        "\n\nSAFETY MODE: You are running WITHOUT any file-editing or shell tools "
+        "(Write/Edit/Bash are disabled) and your working directory is a throwaway "
+        "sandbox, not the user's files. You CANNOT modify the user's files directly. "
+        "When a file should be created or changed, do NOT try to edit it — PROPOSE the "
+        "change so the server can apply it. Emit each proposed "
+        "file change as a block in EXACTLY this format, each marker on its own line:\n"
+        "<<PROPOSE path=\"name.ext\" action=\"create\" risk=\"low\" summary=\"one line\">>\n"
+        "the full proposed file content goes here\n"
+        "<<END_PROPOSE>>\n"
+        "action is one of create|edit|replace|delete|rename. For delete and rename, "
+        "include no body (for rename add newpath=\"...\"). Explain the proposal in your "
+        "normal reply; the blocks are extracted automatically, so keep them exact.\n"
+    )
+    if auto_apply:
+        return base + (
+            "APPLY POSTURE — AUTO-APPLY IS ON (the user turned on 'Auto-apply changes'): "
+            "every change you propose is applied by the server IMMEDIATELY. There is NO "
+            "approval panel and nothing waits for a tap. So confirm naturally, in past "
+            "tense (e.g. 'Done — saved that to memory.'). Never say a change is pending, "
+            "waiting, or 'in your approval panel' — it isn't. Never tell the user to "
+            "approve, check, or verify the change, and never offer to 'read the file back "
+            "to confirm' — the user has no way to do that. If a write is refused (a "
+            "protected file like .env/settings.json) or hits a conflict, you'll be told "
+            "the outcome at the start of a later turn — correct it then. Otherwise it took."
+        )
+    return base + (
+        "APPLY POSTURE — auto-apply is OFF. You do NOT approve or apply changes yourself. "
+        "The user reviews each proposal in an on-screen panel (an Approve & Apply / Deny "
+        "control) that you cannot see or operate. So: never say a change was approved, "
+        "applied, saved, written, or 'on its way' — it is only PROPOSED until the user "
+        "acts. Do not ask the user to approve it, do not tell them to confirm 'so we can "
+        "carry on', and never tell them to check or verify it themselves or offer to "
+        "'read the file back to confirm'. Just describe what you proposed and stop. Do "
+        "not nag for approval or chase a pending proposal: if and when the user resolves "
+        "it, you'll be told the outcome at the start of a later turn (applied/denied) — "
+        "acknowledge it then, and never re-pitch a denied change."
+    )
 
 
 def _addon_awareness_note() -> str:
@@ -388,7 +427,8 @@ def _addon_awareness_note() -> str:
     parts = ["\n\nADD-ONS (optional capabilities):"]
     if enabled:
         parts.append(
-            "Enabled (you may use these; any write still needs the user's approval): "
+            "Enabled (you may use these; whether a staged action runs immediately or waits for "
+            "approval follows the action rules and your current settings, below): "
             + "; ".join(f"{a['name']} — {a['short_description']}" for a in enabled) + "."
         )
     else:
@@ -597,6 +637,98 @@ def _action_proposal_note(auto_run_calendar: bool = False, auto_run_hunter: bool
     return "\n".join(lines)
 
 
+# Cache for the per-turn "today's calendar" read: keyed on (local date, calendar
+# write generation) so an event Adam just created — or any calendar write this
+# process ran — forces a fresh read next turn, while a burst of quick turns inside
+# a planning session reuses one read. Short TTL is the backstop for out-of-band
+# edits (the user editing Google Calendar directly on their phone).
+_CAL_TODAY_CACHE: dict = {"key": None, "ts": 0.0, "note": ""}
+_CAL_TODAY_TTL_S = 45
+
+
+def _fmt_local_time(iso: str | None) -> str:
+    """A bridge UTC ISO timestamp ('...Z') → a short local clock time ('3:15 PM').
+    Best-effort; returns '' on anything unparseable so a note never breaks."""
+    if not iso:
+        return ""
+    try:
+        from datetime import datetime
+        dt = datetime.fromisoformat(str(iso).replace("Z", "+00:00")).astimezone()
+        return dt.strftime("%I:%M %p").lstrip("0")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _calendar_today_note() -> str:
+    """Live, read-only snapshot of TODAY's Google Calendar events WITH their event
+    IDs, injected each turn when the connector is configured. This is what lets Adam
+    MOVE or edit an existing event — one it created earlier this chat OR one the user
+    already had — by emitting a calendar.update with the right event_id. Without it,
+    Adam knows an event exists but not its id, so it cannot stage an edit and wrongly
+    falls back to 'I need your go-ahead' even when calendar auto-run is on.
+
+    Fail-soft, cached, and bounded: a bad/slow bridge contributes nothing (never
+    breaks a turn), a short write-keyed cache keeps a planning burst snappy, and the
+    read timeout is capped so a hung bridge can't stall the turn. The user's own
+    local calendar data."""
+    import time as _t
+    try:
+        if not google_calendar.is_configured():
+            return ""
+    except Exception:  # noqa: BLE001
+        return ""
+    from datetime import datetime, timedelta
+    now_local = datetime.now().astimezone()
+    try:
+        gen = google_calendar.write_generation()
+    except Exception:  # noqa: BLE001
+        gen = 0
+    key = f"{now_local:%Y-%m-%d}#{gen}"
+    if (_CAL_TODAY_CACHE["key"] == key
+            and (_t.monotonic() - _CAL_TODAY_CACHE["ts"]) < _CAL_TODAY_TTL_S):
+        return _CAL_TODAY_CACHE["note"]
+
+    note = ""
+    try:
+        start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        end = start + timedelta(days=1)
+        # isoformat() carries the local UTC offset, so the bridge's date window is
+        # unambiguous regardless of the Apps Script timezone. 8s cap on the read.
+        events = google_calendar.list_events(start.isoformat(), end.isoformat(), timeout=8)
+        events = sorted(events, key=lambda e: str(e.get("start", "")))
+        rows: list[str] = []
+        for e in events[:25]:  # a sane cap; a real day has far fewer
+            eid = str(e.get("event_id") or "").strip()
+            if not eid:
+                continue
+            title = str(e.get("title") or "(untitled)").strip()
+            if e.get("all_day"):
+                when = "all day"
+            else:
+                s, en = _fmt_local_time(e.get("start")), _fmt_local_time(e.get("end"))
+                when = f"{s}–{en}" if (s and en) else (s or "time TBD")
+            rows.append(f'  - "{title}" {when} — event_id={eid}')
+        if rows:
+            note = (
+                "\n\nTODAY'S CALENDAR (a live read of the user's Google Calendar, with "
+                "the real event IDs):\n" + "\n".join(rows) + "\n"
+                "To MOVE, retime, or rename any of these, stage a calendar.update block "
+                'using the exact event_id shown — {"event_id": "<id above>", "changes": '
+                '{ "start": "...", "end": "...", "title": "..." }}. This works whether Adam '
+                "created the event earlier this chat or the user already had it, so never say "
+                "you can't edit a calendar event you can see here. Calendar has no delete path "
+                "— to cancel one, tell the user to remove it in Google Calendar themselves."
+            )
+        else:
+            note = ("\n\nTODAY'S CALENDAR: the user's Google Calendar has nothing scheduled "
+                    "today (live read).")
+    except Exception:  # noqa: BLE001 — a calendar read must never break a turn
+        note = ""
+
+    _CAL_TODAY_CACHE.update(key=key, ts=_t.monotonic(), note=note)
+    return note
+
+
 def _extract_actions(text: str) -> tuple[str, list[dict]]:
     """Pull <<ACTION ...>>{json}<<END_ACTION>> blocks from a work-mode reply and
     park each VALID one as a pending external-action approval. Returns (cleaned
@@ -744,6 +876,10 @@ async def _auto_run_actions_matching(actions: list[dict], predicate) -> None:
             )
             approvals.record_execution(a["id"], ok=True, result=result)
             a["status"] = "executed"
+            # Carry the executor result (e.g. the calendar event IDs just created)
+            # on the record so it flows back in the response instead of being kept
+            # server-side only — the client/logs can then reference what was made.
+            a["result"] = result
         except external_actions.ActionError as e:
             approvals.record_execution(a["id"], ok=False, error=str(e))
             a["status"] = "failed"
@@ -765,24 +901,112 @@ async def _auto_run_hunter_actions(actions: list[dict]) -> None:
     await _auto_run_actions_matching(actions, lambda t: t == "hunter.sync")
 
 
-def _brain_write_note(vault_path: str) -> str:
+def _brain_write_note(vault_path: str, auto_apply: bool = False) -> str:
     """Tell the agent how to update the user's brain. Convention = ABSOLUTE vault
     paths: a non-destructive write whose path is inside the vault auto-applies
-    through the server's guardrails; anything else is reviewed (default behavior)."""
+    through the server's guardrails; anything else is reviewed (default behavior).
+    When auto_apply is ON, EVERY brain write applies immediately, so the guidance on
+    what the agent may claim is written to match the live posture — otherwise the
+    agent hedges on writes that actually landed."""
+    # What actually happens to a brain write, stated so the agent doesn't invent a
+    # pending-approval story for a write that already took (the recurring bug).
+    if auto_apply:
+        posture = (
+            "AUTO-APPLY IS ON: every brain update you propose — new file, edit, delete, or "
+            "rename — is applied by the server IMMEDIATELY. Confirm it in past tense (e.g. "
+            "'Saved that to memory.'). Never say it's pending or 'in your approval panel'.\n"
+        )
+    else:
+        posture = (
+            "Creating a NEW brain file applies automatically — you may confirm it saved. "
+            "Editing an EXISTING brain file, or deleting/renaming one, is reviewed by the "
+            "user first — for those, say you've proposed it, not that it saved yet.\n"
+        )
     return (
         "\n\nBRAIN UPDATES — the user's Adam brain (memory, daily logs, tasks, profile) lives "
         "in this folder:\n"
         f"  {vault_path}\n"
         "To update the brain, PROPOSE the change with the FULL ABSOLUTE path to the file inside "
-        "that folder. Creating a NEW brain file applies automatically; editing an EXISTING brain "
-        "file is reviewed by the user first.\n"
+        "that folder. " + posture +
         "CRITICAL — a proposed edit REPLACES THE ENTIRE FILE with the content in your block. To "
         "ADD to an existing brain file you MUST first read its current contents and include ALL "
         "of it PLUS your addition; otherwise everything else in that file is ERASED. Preserve "
         "what is already there and append a new section rather than rewriting. When unsure, read "
-        "the file first. Never claim a change was saved — just propose it and describe it. "
-        "Deleting or renaming a brain file, or writing ANYWHERE outside this folder, also requires "
-        "the user's approval — propose those with a plain filename, not the absolute brain path."
+        "the file first. Never tell the user to check or verify a memory update themselves, and "
+        "never offer to 'read the file back to confirm what took' — they have no way to do that; "
+        "either it applied (say so) or you'll be told next turn that it didn't.\n"
+        + (
+            "Writing ANYWHERE outside this folder is refused unless it's on the server's "
+            "write allow-list — if one is refused you'll be told the outcome next turn."
+            if auto_apply else
+            "Deleting or renaming a brain file, or writing ANYWHERE outside this folder, "
+            "requires the user's approval — propose those with a plain filename, not the "
+            "absolute brain path."
+        )
+    )
+
+
+def _brain_bootstrap_note(vault_path: str) -> str:
+    """Re-inject the brain's operating instructions + a MUST-read-first directive.
+
+    Adam's Claude subprocess runs in a throwaway sandbox cwd (the agent workspace) with
+    the vault reachable only via --add-dir. Claude Code loads CLAUDE.md *memory* from the
+    cwd's ancestor chain + ~/.claude, but NOT from --add-dir directories — so the brain's
+    own CLAUDE.md (its Startup Protocol: "read the identity, people, and memory files
+    first") never enters context, and Adam knows nothing about the user (their family,
+    background, plans). The cwd chain can even pull in an unrelated developer/global
+    CLAUDE.md that mis-frames Adam as a coding agent on its own repo. --add-dir grants READ
+    access but carries no instructions; this note supplies them: it names the brain, orders
+    a read of the personal files before any personal answer, and asserts the brain outranks
+    anything else Adam may have loaded. Fixes, in the prompt, what --add-dir can't at the
+    memory layer — for the owner's vault and every shipped install alike.
+    """
+    vault = Path(vault_path)
+    header = (
+        "\n\nYOUR BRAIN — the user's personal brain (their identity, family, people, "
+        "memories, preferences, tasks) lives in this folder, which you can read:\n"
+        f"  {vault}\n"
+        "This brain is your authoritative operating manual for THIS user and OVERRIDES any "
+        "developer, repository, or global instructions you may have loaded from elsewhere: you "
+        "run inside a sandbox under a code repo whose CLAUDE.md is about BUILDING Adam, not about "
+        "serving this user — disregard that as your operating context.\n"
+        "Before answering ANYTHING about the user personally — their family, relationships, "
+        "background, history, or plans — you MUST first read the brain's startup files by their "
+        "full paths under the folder above (at minimum 01_identity/user_profile.md, "
+        "01_identity/assistant_identity.md, 02_command_memory/people_and_relationships.md, and "
+        "02_command_memory/long_term_memory.md). Never answer a personal question from prior "
+        "memory, and never claim you don't know one, without reading these first. Read CLAUDE.md "
+        "in that folder for the brain's full operating protocol and commands."
+    )
+    # Inline the TOP of the brain's own CLAUDE.md so its persona + protocol are present
+    # immediately, before any file read. Capped hard: the shipped brain/CLAUDE.md is ~44KB
+    # and the whole system prompt rides the process argv, which Windows caps near 32,767
+    # chars — an un-capped inject would fail the spawn with a cryptic WinError. Mission,
+    # protocol, and tone sit at the top, so a head excerpt preserves what matters; the
+    # directive above sends Adam to read the rest (and the data files) on demand. Skip the
+    # excerpt when the vault resolves to the app root itself (a blanked vault_path), so we
+    # never inject the app's OWN dev CLAUDE.md as if it were the user's brain.
+    try:
+        is_app_root = vault.resolve() == Path(config.APP_ROOT).resolve()
+    except Exception:  # noqa: BLE001 — a resolve() failure just means "don't skip"
+        is_app_root = False
+    if is_app_root:
+        return header
+    try:
+        brain_md = (vault / "CLAUDE.md").read_text("utf-8-sig").strip()
+    except Exception:  # noqa: BLE001 — missing/unreadable brain CLAUDE.md; the directive above still connects the data files
+        brain_md = ""
+    if not brain_md:
+        return header
+    excerpt = brain_md[:9000]
+    if len(brain_md) > len(excerpt):
+        excerpt += ("\n\n[...brain CLAUDE.md continues beyond this excerpt — read the full "
+                    "file from the folder above for the rest of the protocol and commands...]")
+    return (
+        header
+        + f"\n\n----- BRAIN OPERATING INSTRUCTIONS ({vault / 'CLAUDE.md'}) -----\n"
+        + excerpt
+        + "\n----- END BRAIN OPERATING INSTRUCTIONS -----"
     )
 
 
@@ -824,16 +1048,101 @@ def _self_edit_offer_note() -> str:
     )
 
 
-def _capability_awareness_note() -> str:
+def _trackers_snapshot_note() -> str:
+    """A compact, live snapshot of the user's Finance + Health trackers, injected
+    each turn so daily planning and voice questions ("how's my protein / spending
+    today?") are answered from REAL local numbers, never guesses (Phase H4). It's
+    the read-only counterpart to the full $ Finance and + Health views.
+
+    Best-effort and fail-soft: a tracker that isn't set up (or errors) contributes
+    nothing, so this is empty and cheap for a user who doesn't use them, and a
+    broken store can never break a turn. All data is local + private."""
+    import time as _t
+    today = _t.strftime("%Y-%m-%d", _t.localtime())
+    lines: list[str] = []
+
+    try:
+        import health_store as _hs
+        import health_metrics as _hm
+        _hs.init()
+        ds = _hm.day_summary(_hs, today)
+        tot, rings = ds["totals"], ds["rings"]
+        wat = ds.get("water") or {}
+        if tot.get("meals") or ds.get("weight") or wat.get("ml"):
+            seg = []
+            if tot.get("kcal"):
+                k = rings["kcal"]
+                seg.append(f"{int(tot['kcal'])}" + (f"/{int(k['target'])}" if k.get("target") else "") + " kcal")
+            if tot.get("protein_g"):
+                p = rings["protein_g"]
+                seg.append(f"{int(tot['protein_g'])}" + (f"/{int(p['target'])}" if p.get("target") else "") + "g protein")
+            if wat.get("ml"):
+                seg.append(f"{wat['amount']:g}" + (f"/{wat['target_amount']:g}" if wat.get("target_amount") else "")
+                           + f" {wat.get('unit', 'oz')} water")
+            if ds.get("weight"):
+                seg.append(f"weight {ds['weight']['weight']}{ds['weight']['unit']}")
+            dm = ds.get("daily_metric") or {}
+            if dm.get("steps") is not None:
+                seg.append(f"{dm['steps']} steps")
+            if dm.get("sleep_min") is not None:
+                seg.append(f"{dm['sleep_min'] // 60}h{dm['sleep_min'] % 60:02d} sleep")
+            if seg:
+                lines.append("Health today: " + ", ".join(seg) + ".")
+    except Exception:  # noqa: BLE001 — a tracker snapshot must never break a turn
+        pass
+
+    try:
+        import finance_store as _fs
+        import finance_metrics as _fm
+        _fs.init()
+        if _fs.latest_snapshot_date():
+            s = _fm.summary(_fs)
+            cs = s.get("cash_safety", {})
+            seg = [f"net worth ${s['net_worth']:,.0f}",
+                   f"liquid ${s['liquid_cash']:,.0f}",
+                   f"debt ${s['total_debt']:,.0f}"]
+            if cs.get("investable_cash") is not None:
+                seg.append(f"investable ${cs['investable_cash']:,.0f}")
+            top = (s.get("spending_by_category") or [])[:1]
+            if top:
+                seg.append(f"top spend {top[0]['category']} ${top[0]['spend']:,.0f}")
+            lines.append(f"Finance ({s.get('month', '')}): " + ", ".join(seg) + ".")
+    except Exception:  # noqa: BLE001
+        pass
+
+    if not lines:
+        return ""
+    return (
+        "\n\nYOUR TRACKERS (live, private, on this machine — use these for daily "
+        "planning and to answer the user's money/health questions with real "
+        "numbers, never guesses; the full views are the $ Finance Tracker and + "
+        "Health Tracker items in the top menu):\n- " + "\n- ".join(lines)
+    )
+
+
+def _capability_awareness_note(auto_apply: bool = False) -> str:
     """Make Adam self-aware of the capability-tier system and how it itself works,
     so it can answer 'what can you do', 'what mode am I on', and 'how do the tiers
     differ' accurately — and never claim a power the active tier forbids. The current
-    tier is read live from config, so this always reflects the real posture."""
+    tier is read live from config; `auto_apply` is the live EFFECTIVE apply posture
+    (tier OR the Auto-apply toggle), threaded in so the 'what happens to my changes'
+    answer matches reality even when the toggle overrides the tier's usual review."""
     tier = config.CAPABILITY_TIER or "custom"
     current = {
         "safe": "Safe", "powerful": "Powerful",
         "unrestricted": "Unrestricted", "custom": "Custom",
     }.get(tier, "Custom")
+    # The live, effective answer to "what happens when you change a file?" — this is
+    # the truth the user actually experiences, above whatever the tier bullet implies.
+    effective = (
+        "YOUR CURRENT EFFECTIVE POSTURE: the changes you make to files or the brain apply "
+        "IMMEDIATELY, with no approval tap (the tier and/or the Auto-apply toggle are set that "
+        "way). Confirm changes in past tense; never say something is waiting in an approval panel.\n"
+        if auto_apply else
+        "YOUR CURRENT EFFECTIVE POSTURE: changes you make wait for the user to approve each one in "
+        "an on-screen panel — EXCEPT creating a NEW brain file, which applies automatically. Say "
+        "you've proposed a change, not that it saved, unless it's a new brain file.\n"
+    )
     return (
         "\n\nCAPABILITY TIERS — you run under a capability tier the user sets in the gear menu "
         f"(⚡ Capability). You are CURRENTLY on: {current}. The tier decides how much you may do on "
@@ -845,19 +1154,23 @@ def _capability_awareness_note() -> str:
         "  • Powerful — you AUTO-APPLY non-destructive changes across the user's vault with no tap; "
         "destructive ones (delete/rename) still ask first. Connectors are on. Still no shell, still "
         "no self-edit.\n"
-        "  • Unrestricted — full power: you may edit your OWN code, run shell commands, and write "
-        "across the vault and the app, auto-approving everything. This is the ONLY tier that enables "
-        "self-edit (changing Adam itself), and turning it on requires an explicit confirmation.\n"
+        "  • Unrestricted — full power: file, brain, and app changes you propose apply immediately "
+        "with no tap (auto-approved), and this is the ONLY tier that enables self-edit (changing Adam "
+        "itself); turning it on requires an explicit confirmation. NOTE: in this voice/operator chat "
+        "you still work by PROPOSING — running shell commands or editing files directly happens in a "
+        "separate Claude Code chat (long-press Operator Mode), not here.\n"
         "ALWAYS-ON RAILS (true at EVERY tier, even Unrestricted, and cannot be disabled): every write "
         "is backed up first, everything is written to an audit log, secret files (.env, settings.json, "
         "keys) are never readable or writable, and a self-edit that breaks the app auto-rolls-back. So "
         "full power stays recoverable.\n"
-        "HOW YOU WORK — you never write files directly: you PROPOSE changes and the server applies the "
-        "approved ones (it is the sole writer, which is what makes the tiers enforceable rather than "
-        "just advice). Your 'brain' — memory, daily logs, tasks, profile — is a folder of files you "
-        "keep updated. Add-ons (calendar, email, SMS, etc.) are opt-in and off by default. Be accurate "
-        "about the CURRENT tier: don't offer to do something it forbids; if the user wants more, tell "
-        "them to raise the tier in the gear menu."
+        "HOW YOU WORK — you never write files directly: you PROPOSE changes and the server applies them "
+        "(it is the sole writer, which is what makes the tiers enforceable rather than just advice). "
+        "Whether an applied change needed a tap or not is your EFFECTIVE POSTURE below. Your 'brain' — "
+        "memory, daily logs, tasks, profile — is a folder of files you keep updated. Add-ons (calendar, "
+        "email, SMS, etc.) are opt-in and off by default. Be accurate about the CURRENT tier: don't "
+        "offer to do something it forbids; if the user wants more, tell them to raise the tier in the "
+        "gear menu.\n"
+        + effective
     )
 
 
@@ -1024,7 +1337,14 @@ _ensure_vapid_keypair()
 
 app = FastAPI(title="Adam")
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# Graceful 429 (plain-language body + Retry-After) instead of slowapi's bare one.
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+
+# Baseline rate limit on EVERY route. slowapi skips this for any route that
+# carries its own @limiter.limit decorator, so the tighter per-route values in
+# routers/chat.py and routers/voice_push.py still win and nothing double-counts.
+# See rate_limit.py for the sizing rationale.
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -1098,6 +1418,23 @@ async def _seed_update_baseline():
             log.info("update baseline seeded from current install (%d files)", n)
     except Exception as e:  # noqa: BLE001 - baseline seeding must never block startup
         log.warning("update baseline seed skipped: %s", e)
+
+
+@app.on_event("shutdown")
+async def _drain_on_shutdown():
+    """On a GRACEFUL stop — Ctrl+C on the server window, or SIGTERM — finish the
+    in-flight turn(s) before the event loop tears their workers down, so a long
+    code turn survives a deliberate restart instead of dying with a lost-job
+    message. Bounded by the drain cap (press Ctrl+C again to force — uvicorn
+    force-exits on the second signal). A hard window-close (X) / taskkill / reboot
+    never reaches this: Windows terminates the process outright, and that path
+    falls back to the recoverable 'restarted mid-task — ask again' message."""
+    if not RUNNING_PROCS:
+        return
+    log.warning("shutdown: draining %d in-flight turn(s) before exit (cap %ss)",
+                len(RUNNING_PROCS), config.DRAIN_MAX_WAIT_SECONDS)
+    res = await drain_inflight()
+    log.warning("shutdown drain complete: %s", res)
 
 
 # Request models now live in models.py; require_token in security.py. Both
@@ -1206,8 +1543,116 @@ def keep_task(task: asyncio.Task) -> asyncio.Task:
     return task
 
 
+# --- Graceful drain (preserve an in-flight turn across a cooperative restart) --
+# A code turn's worker is a child of this process, so a restart normally kills it
+# mid-flight and the turn is lost (KNOWN_ISSUES 2026-07-19). When a restart is
+# COOPERATIVE — Ctrl+C on the server window (→ the shutdown handler) or the
+# token-gated POST /drain (restart-adam / the updater) — we stop taking new turns
+# and wait for the running one(s) to finish first, bounded by the drain cap. A
+# hard window-close / taskkill / reboot can't be intercepted (Windows terminates
+# the process outright); those still fall back to the recoverable "restarted
+# mid-task — ask again" message. `_DRAINING` also gates /ask_async so the wait can
+# actually reach zero instead of chasing freshly-started turns.
+_DRAINING = False
+
+
+def is_draining() -> bool:
+    """True once a cooperative drain has begun — /ask_async refuses new turns."""
+    return _DRAINING
+
+
+def inflight_count() -> int:
+    """How many turns have a live Claude worker right now (the drain waits on this;
+    a turn between/after its subprocess isn't holding work we'd lose)."""
+    return len(RUNNING_PROCS)
+
+
+async def drain_inflight(max_wait: float | None = None) -> dict:
+    """Stop accepting new turns, then wait for live workers to finish, bounded by
+    max_wait seconds (default config.DRAIN_MAX_WAIT_SECONDS). Never raises; safe to
+    call more than once. Returns a small summary for logging."""
+    global _DRAINING
+    _DRAINING = True
+    if max_wait is None:
+        max_wait = config.DRAIN_MAX_WAIT_SECONDS
+    started_with = len(RUNNING_PROCS)
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + max(0.0, float(max_wait))
+    while RUNNING_PROCS:
+        if loop.time() >= deadline:
+            log.warning("drain: %d worker(s) still live at the %ss cap — proceeding",
+                        len(RUNNING_PROCS), max_wait)
+            return {"drained": False, "started_with": started_with,
+                    "left_running": len(RUNNING_PROCS)}
+        await asyncio.sleep(0.5)
+    if started_with:
+        log.info("drain: %d in-flight turn(s) finished cleanly before exit", started_with)
+    return {"drained": True, "started_with": started_with, "left_running": 0}
+
+
+def begin_drain_and_exit(max_wait: float | None = None) -> int:
+    """Kick off a background drain that hard-exits the process once it finishes (or
+    hits the cap), so a launcher/supervisor waiting on the port sees Adam come down
+    and can relaunch. Jobs are durable in SQLite (WAL), so os._exit is safe here.
+    Returns the live-worker count at call time. Used by POST /drain."""
+    running = len(RUNNING_PROCS)
+
+    async def _run() -> None:
+        res = await drain_inflight(max_wait)
+        log.warning("drain endpoint: exiting after drain (%s)", res)
+        await asyncio.sleep(0.2)   # let the /drain HTTP response flush first
+        os._exit(0)
+
+    keep_task(asyncio.create_task(_run()))
+    return running
+
+
+def begin_relaunch_and_exit(max_wait: float | None = None) -> int:
+    """Like begin_drain_and_exit, but first spawns a detached relauncher that waits
+    for THIS process to come down and then starts Adam again from the freshly-updated
+    files. Used by POST /update/apply so a self-update finishes on its own: the old
+    launcher window closes on our clean exit, and a fresh one opens running the new
+    version - no manual 'close the black window and reopen'. Returns worker count."""
+    running = len(RUNNING_PROCS)
+
+    def _spawn_relauncher() -> None:
+        try:
+            relaunch = os.path.join(str(config.ROOT), "scripts", "relaunch-adam.ps1")
+            if not os.path.exists(relaunch):
+                log.error("update relaunch: script missing at %s", relaunch)
+                return
+            flags = 0
+            if os.name == "nt":
+                flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+            subprocess.Popen(
+                ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                 "-WindowStyle", "Hidden", "-File", relaunch, "-Port", str(config.PORT)],
+                cwd=str(config.ROOT), close_fds=True, creationflags=flags,
+            )
+            log.warning("update relaunch: detached relauncher spawned (port %s)", config.PORT)
+        except Exception:
+            log.exception("update relaunch: failed to spawn relauncher")
+
+    async def _run() -> None:
+        _spawn_relauncher()
+        res = await drain_inflight(max_wait)
+        log.warning("update apply: exiting after drain for relaunch (%s)", res)
+        await asyncio.sleep(0.3)   # let the /update/apply HTTP response flush first
+        os._exit(0)
+
+    keep_task(asyncio.create_task(_run()))
+    return running
+
+
 class TurnStopped(Exception):
     """The user stopped this turn via POST /jobs/{id}/stop."""
+
+
+class SessionNotFound(Exception):
+    """A code-mode (--output-format stream-json) turn exited because its --resume
+    session id is gone/unknown. Signals run_claude to re-run ONCE fresh — the same
+    recovery the non-stream path does inline — so a code chat's first reply still
+    lands instead of dead-ending on "Connection error, sir." (see _is_session_not_found)."""
 
 
 def _tool_activity_line(name: str, tool_input: dict) -> str:
@@ -1313,6 +1758,13 @@ async def _read_stream_result(proc, job_id: str | None, timeout: int) -> dict:
         if _is_claude_auth_failure(stderr):
             raise HTTPException(status_code=502,
                                 detail=f"{AUTH_REQUIRED_SENTINEL} {AUTH_REQUIRED_MESSAGE}")
+        if _is_session_not_found(stderr):
+            # A gone resume id: the CLI can't find this session in the code cwd (it
+            # aged out, or the sid was minted in another workspace). The non-stream
+            # path recovers inline; the stream path can't (no message/session_id here),
+            # so signal run_claude to re-run once fresh instead of raising a crash the
+            # user sees as "Connection error, sir." on every code turn until they resend.
+            raise SessionNotFound(stderr)
         raise HTTPException(status_code=502, detail=f"Claude failed: {stderr[:500]}")
     if not isinstance(result_event, dict):
         log.error("Claude stream ended without a result event")
@@ -1409,13 +1861,28 @@ async def run_claude(
         # set elsewhere — not in which write lanes exist.) Without this, a brain/self-
         # edit PROPOSE block emitted in voice mode would leak into the chat unparsed
         # and never save.
-        prompt = prompt + DRAFT_MODE_NOTE
+        # The live apply posture, so the agent's story about what happens to a change
+        # matches reality — never a phantom "waiting in your approval panel" when nothing
+        # waits. See _effective_auto_apply for the exact rule (toggle OR tier).
+        auto_apply = _effective_auto_apply()
+        prompt = prompt + _draft_mode_note(auto_apply)
+        # Reconnect the brain: --add-dir gives READ access to the vault but Claude Code
+        # loads no CLAUDE.md memory from it, so without this Adam never learns the user's
+        # brain (family, identity, memory) exists. Voice + work only; a 'code' chat runs
+        # cwd=vault and loads it natively. (Not gated on BRAIN_WRITE_ENABLED — reading the
+        # brain is unrelated to whether self-writes into it are allowed.)
+        if VAULT_PATH:
+            prompt = prompt + _brain_bootstrap_note(VAULT_PATH)
         if config.BRAIN_WRITE_ENABLED and VAULT_PATH:
-            prompt = prompt + _brain_write_note(VAULT_PATH)
+            prompt = prompt + _brain_write_note(VAULT_PATH, auto_apply)
         prompt = prompt + _action_proposal_note(
             auto_run_calendar=_get_auto_run_calendar(),
             auto_run_hunter=_get_auto_run_hunter(),
         )
+        # Live read of today's calendar WITH event IDs, so Adam can move/edit an
+        # existing event (its own or the user's) instead of falsely claiming it
+        # needs approval. Empty + cheap when the connector isn't configured.
+        prompt = prompt + _calendar_today_note()
         if config.PERM_ALLOW_APP_SELF_EDIT:
             prompt = prompt + _self_edit_note()
         else:
@@ -1435,7 +1902,10 @@ async def run_claude(
     # Skipped in a code chat — it describes the restricted posture, which is exactly
     # what a code chat is NOT running under; CODE_SYSTEM_PROMPT is the truth there.
     if mode != "code":
-        prompt = prompt + _capability_awareness_note()
+        prompt = prompt + _capability_awareness_note(_effective_auto_apply())
+        # Live Finance + Health snapshot, so planning + money/health questions use
+        # real local numbers (empty + cheap when the trackers aren't used). H4.
+        prompt = prompt + _trackers_snapshot_note()
 
     # config.VOICE_MODEL (not the module-load copy): the AI-plan endpoint changes
     # the model live, and the next turn must pick it up without a restart.
@@ -1554,6 +2024,18 @@ async def run_claude(
                 await proc.wait()
                 log.error("Claude turn timed out after %ss (mode=%s)", timeout, mode)
                 raise HTTPException(status_code=504, detail="Claude timed out")
+            except SessionNotFound:
+                # Resume target is gone. Re-run this turn ONCE as a fresh session
+                # (session_id=None can't loop, and a spawn with no --resume can't raise
+                # session-not-found) so the first reply still lands — the same recovery
+                # the non-stream returncode/result-error branches already do. The dead
+                # proc has already exited, so there's no tree to kill.
+                if session_id:
+                    log.info("resume %s not found (code) — retrying once as a fresh session",
+                             str(session_id)[:12])
+                    return await run_claude(message, None, timeout=timeout, mode=mode,
+                                            attachments=attachments, job_id=job_id)
+                raise HTTPException(status_code=502, detail="Claude returned no result")
             except (HTTPException, TurnStopped):
                 raise
             except Exception:
@@ -1761,7 +2243,9 @@ async def run_claude(
         ],
         "proposed_actions": [
             {"id": r["id"], "action_type": r["action_type"], "risk_level": r["risk_level"],
-             "summary": r["action_summary"], "status": r.get("status", "pending")}
+             "summary": r["action_summary"], "status": r.get("status", "pending"),
+             # Present only for actions that auto-ran; carries e.g. created event IDs.
+             **({"result": r["result"]} if r.get("result") is not None else {})}
             for r in actions
         ],
     }
@@ -2025,13 +2509,15 @@ def _voice_pkg_installed() -> bool:
 # the `server` module (run_claude, the live-turn registry, push helpers, ...)
 # is already defined. Each router reads server.<name> at request time, so a
 # test that monkeypatches an attribute on this module patches every route.
-from routers import chat, integrations, reviews, system, voice_push  # noqa: E402
+from routers import chat, finance, health, integrations, reviews, system, voice_push  # noqa: E402
 
 app.include_router(system.router)
 app.include_router(chat.router)
 app.include_router(reviews.router)
 app.include_router(voice_push.router)
 app.include_router(integrations.router)
+app.include_router(finance.router)
+app.include_router(health.router)
 
 
 if __name__ == "__main__":

@@ -52,6 +52,15 @@ ACTIVE_STATUSES = (STATUS_QUEUED, STATUS_RUNNING)
 # Terminal statuses — safe to sweep once old enough.
 TERMINAL_STATUSES = (STATUS_COMPLETE, STATUS_FAILED, STATUS_INTERRUPTED, STATUS_CANCELLED)
 
+# Prefixed onto an interrupted job's /poll wire error so the phone can tell a
+# mid-task server restart (the worker died with the old process — a long code
+# turn is the usual victim) apart from a real turn failure, and show a clear
+# "restarted mid-task — ask again" instead of dead-ending on a generic
+# "Connection error, sir." Mirrors server.AUTH_REQUIRED_SENTINEL / LIMIT_SENTINEL;
+# kept here (not imported from server) to avoid a server<-job_store import cycle —
+# the PWA matches the literal string, same as it does for the other two.
+INTERRUPTED_SENTINEL = "JVL_INTERRUPTED:"
+
 # Map canonical status -> the wire vocabulary the existing PWA poll loop expects:
 #   "running" keeps polling, "done" delivers, "error" resets the session.
 _WIRE_STATUS = {
@@ -427,6 +436,14 @@ def to_wire(job: dict) -> dict:
     err = job.get("error")
     if wire == "error" and not err:
         err = job.get("message") or "Job ended without a result."
+    # An interrupted job means the startup sweep found it still running after the
+    # server restarted mid-turn — the worker can't outlive its parent, so the turn
+    # is genuinely lost (long code turns are the common casualty). Tag it so the
+    # phone shows the clear restart-recovery message, not a generic connection
+    # error. Only interrupted — a cancelled job (user stop) and a failed job (real
+    # error) keep their own handling.
+    if status == STATUS_INTERRUPTED:
+        err = f"{INTERRUPTED_SENTINEL} {err}" if err else INTERRUPTED_SENTINEL
     return {
         "status": wire,
         "result": job.get("result"),

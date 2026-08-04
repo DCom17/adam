@@ -3,6 +3,431 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.60 - Days you missed stop vanishing, and you can fix any day by tapping it
+
+**The Trends charts quietly erased the days you didn't log.** Track Monday through
+Wednesday, skip four days, log again — and the charts drew those two stretches side
+by side as if they were consecutive. A gap in your week looked like an unbroken streak.
+
+- Every day now holds its place. A day you didn't log appears as a dashed, empty
+  slot with its date on it — visible, and clearly different from a day you logged
+  as zero. Those aren't the same thing, and the chart no longer pretends they are.
+- **Calories and water used to disagree with each other.** Each chart packed only
+  its own logged days together, so the third column could be one date in the calorie
+  chart and a different date in the water chart — even though they sit stacked on
+  the same screen. Both now run on one shared timeline.
+- **Half-finished days are visible for the first time.** If you drank water on a day
+  but never got around to logging your food, you can now see exactly that: water
+  filled in, calories empty, on the same date.
+- "Protein, last 7 days" counted the last seven *entries*, not the last seven days,
+  so with any gap it silently covered a longer stretch than it claimed. It now walks
+  real calendar days and shows — for a day with nothing logged.
+- Today's bar is striped, so a day you're still in the middle of logging no longer
+  looks like a day you failed.
+- The weight line spaced weigh-ins evenly however far apart they were, so one taken
+  after a five-day break sat as close as a next-day one — flattening or inventing the
+  slope between them. It's now plotted by real elapsed time.
+
+**Tap any day to fix it.** The charts used to be for looking at. Now every bar, every
+empty slot, and every point on the weight line opens that day.
+
+- See everything logged on that date — food with its macros, each drink, your
+  weigh-in — and edit or delete any of it.
+- Fill in a day you missed entirely. Tap its dashed slot and add what you remember;
+  it counts toward your trends exactly like a same-day entry.
+- Correct a mistyped number instead of deleting and starting over. Weigh-ins and
+  drinks could previously only be deleted; now they can be edited in place.
+- Move an entry to another day, for food logged onto the wrong date.
+
+## 0.9.59 - Your imported transactions actually show up, and meal macros stop running high
+
+**Finance: an import that looked like it did nothing.** You could import months of
+statements, approve the batch, and open the dashboard to find the same numbers as
+before. Everything had in fact been saved — you just couldn't see it.
+
+- The dashboard opened on whichever month had the *most* transactions, which parked
+  it in an old month and hid everything you'd just imported. It now opens on your
+  most recent month.
+- Net worth, liquid cash, and total debt come only from the balance snapshots you
+  enter by hand — importing transactions never moves them. That's still true, but
+  the dashboard now says so plainly when your balances are older than your newest
+  transaction, instead of quietly showing a months-old cash figure as if it were
+  current.
+- **Transfers now match themselves up.** Moving money between your own accounts
+  makes two halves, and they almost always arrive in separate statements, so Adam
+  could never pair them and every single one piled into the review queue. Adam now
+  matches transfer legs across your whole ledger — automatically after each import,
+  and retroactively over everything already there.
+- A transfer whose other half simply isn't imported is no longer flagged for review.
+  It's the normal result of exporting one account at a time, there's nothing to fix,
+  and it can't affect any figure — transfers are excluded from spending and income.
+  Only a genuinely broken pair is flagged now.
+- Statements that don't name an account no longer defeat transfer matching.
+
+**Health: meal estimates were running about 40% high.** Ask Adam to estimate a
+chorizo-and-egg breakfast and it would come back with numbers for a breakfast that
+fed a family, priced off the wrong kind of chorizo.
+
+- When you don't say how much you ate, Adam now assumes **one normal serving for one
+  adult** instead of inventing a large portion — and tells you, on screen, exactly
+  what portion it priced so you can correct it. Say "3 eggs" or "6 oz" and it still
+  scales up properly.
+- Adam now picks the *form* of a food the dish actually implies rather than the most
+  calorie-dense version in a generic database: fresh chorizo instead of cured, cooked
+  rice instead of dry, drained bacon instead of the fat left in the pan, the right
+  grind of beef, bone-in weights that include bone. It also still counts what people
+  usually forget — cooking oil, dressings, sauces, and restaurant-sized servings.
+- Calories are now checked against the protein/carbs/fat you're shown. If they don't
+  add up, the macros win, because those are three numbers agreeing instead of one.
+
+Measured against published nutrition labels, a set of everyday foods Adam had never
+been tuned against came back within a few percent.
+
+## 0.9.58 - Adam can move a calendar event it just made
+
+**No more phantom "I need your go-ahead" on a calendar edit.** When you asked
+Adam to shift an event it had put on your calendar a minute earlier, it would say
+moving it needed your approval — even with auto-approve calendar on. It wasn't
+really a permission gate: Adam simply didn't know the event's ID, so it couldn't
+edit it and fell back on a permission excuse.
+
+- Each turn, Adam now reads today's calendar with the real event IDs, so it can
+  retime, rename, or move any of today's events — ones it created earlier in the
+  chat *and* ones you already had — instead of claiming it can't.
+- The read is cached per turn and refreshes the instant anything on your calendar
+  changes, so a burst of planning stays fast without going stale.
+- Deleting still isn't something Adam does — to cancel an event, it points you to
+  Google Calendar, same as before.
+
+## 0.9.57 - A built-in guide on the Finance and Health trackers
+
+**A “?” guide on each tracker.** The Finance Tracker and Health Tracker now
+carry the same kind of self-serve help the main screen has: a “?” button in the
+top corner opens a slide-over that explains, tab by tab, what each view does —
+how importing and reviewing transactions works, where your numbers come from,
+how to log a meal or your water, what the rings and trends mean, and the fact
+that all of it is computed and kept privately on your own machine. It shows up
+only on the tracker it explains, closes with a tap or the Escape key, and is
+keyboard- and screen-reader-navigable.
+
+## 0.9.56 - A water counter, and a Finance review that finishes the job
+
+**A water counter in the Health Tracker.** Today's tab now has a water card:
+tap a glass, a bottle, or a jug and the gauge fills toward your daily target —
+no typing, no math. Everything stays on your machine like the rest of your
+health data.
+
+- One-tap amounts follow your unit (oz, ml, or cups), with **Undo last** on the
+  card for a mistap.
+- Log an exact amount — and see or remove each drink — in the Log tab.
+- Set a daily water target in Setup; watch water per day in Trends.
+- Adam sees your water in its daily planning snapshot, so "how much water have I
+  had today?" is answered from the real number.
+
+**Finance review: clearing an "unmatched transfer" now actually works.** In the
+Finance Tracker's Review tab, a transfer whose matching side wasn't imported (a
+credit-card payment, a savings move) had no way to clear — tapping Save on it did
+nothing. Now each one has a one-tap **"It's a transfer — don't flag"** that clears
+it for good.
+
+- Save no longer sits there doing nothing: on a transfer row it stays disabled
+  until you actually change the category, and every save or dismiss shows a quick
+  confirmation so nothing feels dead.
+- Recategorizing a row that isn't really a transfer works exactly as before.
+
+**Adam can move calendar events it just made — no more phantom "need your
+go-ahead."** When you asked Adam to shift an event it had put on your calendar a
+minute earlier, it would say moving it needed your approval — even with
+auto-approve calendar on. It wasn't really a permission gate: Adam simply didn't
+know the event's ID, so it couldn't edit it and fell back on a permission excuse.
+
+- Each turn, Adam now reads today's calendar with the real event IDs, so it can
+  retime, rename, or move any of today's events — ones it created earlier in the
+  chat *and* ones you already had — instead of claiming it can't.
+- The read is cached per turn and refreshes the instant anything on your calendar
+  changes, so a burst of planning stays fast without going stale.
+- Deleting still isn't something Adam does — to cancel an event, it points you to
+  Google Calendar, same as before.
+
+## 0.9.55 - Your watch data keeps up with your day
+
+**Your Garmin watch data stays current through the day.** The Health Tracker's
+"From your watch" panel used to freeze on the first reading it pulled — so by
+afternoon it might show 46 steps while your watch already showed nine thousand.
+Now the Tracker quietly re-checks Garmin each time you open it, so steps, active
+calories, stress, and Body Battery reflect the day as it actually is.
+
+- Opening the Health Tracker refreshes your watch metrics in the background —
+  at most once every few minutes, and never blocking the page. If Garmin is slow
+  or unreachable, you simply keep the last-known numbers.
+- Garmin sign-ins are now cached between syncs, so the more frequent refreshing
+  doesn't trip Garmin's rate limits.
+- A day's synced weight updates in place instead of stacking a duplicate weigh-in
+  on every refresh.
+
+This release also folds in fixes finished just after 0.9.54:
+
+- **A handful of actions no longer fail when you're going fast.** Some requests
+  (sending a message, uploading a file) could return an error the moment you hit
+  a rate limit, even on success. They now complete cleanly.
+- **Finance and Health tracker polish** — steadier day boundaries (dates no
+  longer slip across midnight in some time zones), a review view that surfaces
+  what matters, an always-reachable approve action, and multi-file uploads.
+
+## 0.9.54 - Adam works by keyboard, and locks its own door
+
+Adam can now be driven entirely from the keyboard, and read aloud properly by a
+screen reader.
+
+The orb — the thing you tap to talk — is a real button now, so you can reach it
+with Tab and trigger it with Enter or Space instead of needing a mouse or a
+touchscreen. Everything that changes on screen also announces itself: Adam
+saying it's listening, thinking, or speaking, each reply as it lands, and any
+error. There's a clear focus outline wherever you are on the page, and the
+typing box has a proper label.
+
+Voice also feels a little more patient: Adam now gives short replies a moment
+longer before it stops listening and starts thinking, so quick answers are less
+likely to get cut off. Longer, dictation-style turns are unchanged.
+
+And when Adam is working through a longer request, you can now watch it think.
+Small labels drift up around the orb as it goes — reading a file, searching the
+web, writing a note — so a turn that takes a moment feels alive instead of
+stalled. Each label reflects something Adam is genuinely doing; nothing is
+invented to fill the pause.
+
+Under the hood, Adam is stricter about its own front door:
+
+- **It listens only to your own PC by default.** New installs bind to loopback
+  instead of every network connection, so Adam isn't reachable from other
+  machines on a shared network like a hotel or cafe. Phone access over
+  Tailscale is unaffected — it already goes through your PC. If you deliberately
+  want other devices on your network to reach Adam directly, set
+  `"host": "0.0.0.0"` in `settings.json`. Existing installs keep whatever
+  they already have.
+- **Every request is rate limited**, not just the expensive ones, and hitting a
+  limit now returns a clear message telling you how long to wait rather than a
+  bare error.
+- **Every request is size-checked and schema-checked.** Unexpected fields are
+  rejected instead of silently ignored, and no single request can carry an
+  unbounded amount of text.
+- **A published way to report a security problem.** `SECURITY.md` now ships
+  with the app (and is mirrored on the website); it explains what's in scope and
+  gives the address to write to. Found something? Start there.
+
+Nothing about how you use Adam changes, and no data moves anywhere new.
+
+## 0.9.53 - A private Health Tracker
+
+A second new view joins Finance in the "Adam" menu at the top of the screen:
+**Health Tracker**.
+
+Your day is front and center — calories and protein as rings filling toward the
+targets you set, plus carbs, fat, weight, steps, and sleep. Log a meal by
+photographing it (Adam estimates the macros) or by typing them in, add your
+weight and daily stats, and watch your weight and calories trend over time. Set
+daily macro goals and a goal weight in Setup.
+
+Like everything in Adam, it's private and on-device: your health data lives on
+your own machine and is never sent to a health or fitness company. And because
+it lives alongside the rest of your Adam, it can factor into your daily planning.
+
+## 0.9.52 - A private Finance Tracker
+
+Adam has a new view. Tap the name at the top of the screen and you'll find
+**Finance Tracker** next to your Operating System.
+
+It's your whole money picture on one dashboard — net worth, cash on hand, debt,
+an emergency-fund readout, debt-to-income, and where this month's spending
+actually went — all figured out on your own machine. None of it is ever sent to
+a bank aggregator or any company; the numbers live and stay on your computer.
+
+To fill it in, open the **Import** tab and either upload a CSV/statement file or
+paste the transaction list from any bank or card. Adam reads it, sorts what it
+recognizes into categories, flags anything it's unsure about, and stages
+everything for you to look over — nothing is added to your ledger until you
+approve it. When you correct a category, Adam remembers that merchant so next
+time it sorts itself. The **Setup** tab is where you set your income, cash
+buffer, and account balances — the inputs behind your net worth, cash-safety,
+and debt-to-income readouts.
+
+The numbers are never guessed: every figure is computed by plain code from the
+transactions you approved, so what you see is exactly what you told it.
+
+## 0.9.51 - Updates that finish themselves
+
+Updating Adam used to leave one manual step. After you pressed Update, Adam
+downloaded the new version but kept running the old one until you fully closed
+the black Adam window and reopened it - and if you pressed Update from your
+phone, you couldn't finish it at all without walking over to the computer.
+
+Now the update finishes on its own. Adam installs the new version, closes
+itself, and reopens on the new version a few seconds later - nothing to close,
+nothing to reopen. Press Update from your phone and the computer takes care of
+the rest.
+
+Small touch-up too: the buttons in the top corner are a little cleaner.
+
+Nothing to do on your end; it takes effect after this update restarts Adam.
+
+## 0.9.50 - Step away without losing the thread
+
+Leave Adam mid-conversation — lock your phone, take a call, come back later — and it used
+to sometimes start fresh, having lost the plan or context you'd just built, even though
+the same chat was still on screen. That happened when a reply finished while your phone
+was asleep: Adam never saw it land, and on reopening it treated the turn as a timeout and
+reset the conversation. Adam now checks whether that turn actually finished before
+resetting anything — so it picks the reply back up and keeps your session. The
+conversation survives the gap.
+
+Daily planning is sturdier for the same reason: as you build the day, Adam writes the plan
+down as it goes instead of holding it only in the conversation, so if you step away before
+it's scheduled, the plan is still there when you come back — no rebuilding from scratch.
+
+Nothing to do on your end; it takes effect after the update restarts Adam.
+
+## 0.9.49 - A built-in guide, so you're never staring at a blank screen
+
+Adam can do a lot, but until now nothing in the app told you what to say. There's now a
+"?" in the top corner that opens a quick guide you can browse or search — daily planning,
+your second brain, the Operating System, connecting your calendar, and more — and every
+item shows the exact phrase to say, which you can tap to drop straight into the message
+box. The first time you open Adam, the empty screen also offers a few things to try, so
+there's always an obvious first move.
+
+## 0.9.48 - Adam reads your brain again
+
+Ask Adam about your own life — your family, your background, the people and
+projects in your notes — and it now actually knows. On recent versions Adam could
+reach your brain folder but was never told to read it when a conversation started,
+so it would draw a blank on things you had clearly written down. Adam now loads
+your brain's own instructions at the top of every conversation and reads your
+identity and people notes before answering anything personal, so it speaks from
+what's in your vault instead of guessing or coming up empty.
+
+Nothing to do on your end — it takes effect after the update restarts Adam. The
+first reply in a new conversation may take a few extra seconds while Adam reads
+your notes.
+
+## 0.9.47 - The launcher signs you in again
+
+On installs set up before Adam's rename — the ones whose saved settings still use
+the older token name — the Start Adam launcher was opening the app without signing
+you in, dropping you on the sign-in screen instead of a ready Adam. The launcher
+now recognizes that older name too, exactly as the rest of Adam already did, so it
+opens you straight in. New installs were never affected.
+
+The code-signed Windows installer is also back in the download alongside the ZIP.
+
+**A turn interrupted by a restart now explains itself instead of showing
+"Connection error."** If Adam restarts while it's still working on a turn — an
+update, a reboot, or its window being closed mid-task — that turn used to come back
+as a blunt "Connection error, sir." with no reason given. Now Adam says plainly that
+it restarted mid-task and to just ask again. (If you stop Adam with Ctrl+C in its
+window rather than closing it, it will also try to finish the current turn first.)
+
+## 0.9.46 - Accept the terms up front
+
+Adam now shows the End User Licence Agreement the first time you run it (and
+again if the agreement materially changes), with an "I agree" box you check
+before continuing. Your acceptance is recorded locally on your device — no
+account, no phone-home. You can read the EULA, Terms of Service, Privacy Policy,
+and Refund Policy any time from the new in-app Legal page. This release also
+folds in minor packaging, installer, setup-wizard, and console refinements.
+
+## 0.9.45 - A signed installer
+
+The Windows installer is now code-signed. Windows previously flagged it as
+coming from an unknown publisher; it now carries a verified signature, and the
+SmartScreen warning eases as the certificate builds reputation across downloads.
+Nothing about how Adam works changed: this is the same build as 0.9.44, now
+signed.
+
+## 0.9.44 - A proper installer, back in the download
+
+The download now includes a Windows installer again, alongside the ZIP. Run
+it and Adam installs to your account with a Start Menu entry and a clean
+uninstaller, no unzipping required. Prefer the plain ZIP? It is still there.
+
+Nothing about how Adam works changed here: this is the same build as 0.9.43,
+repackaged so it is easier to install and to remove.
+
+## 0.9.43 - Claude Code mode fixes, and a celebration when you level up
+
+0.9.42 aimed to stop entering Claude Code mode from spawning a duplicate chat,
+but the fix was incomplete — it leaned on a per-device timestamp guard that
+misses whenever the client's and the server's clock for the same reply disagree,
+or when the reply reached the chat by syncing from another device. The duplicate
+could still appear, holding only your last reply, and your next code turn would
+run in it instead of the real conversation.
+
+- **Root cause.** Entering code mode clears the chat's resume id (code starts
+  fresh in its own workspace) by *nulling* it — which erased the only link from
+  an in-flight reply's session id back to its chat. When the confirm dialog's
+  focus event re-pulled that last reply from the server, it no longer matched
+  any chat, so the app minted a fresh "srv-…" chat for it.
+- **Fix.** Entering code mode now *retires* the resume id — it's kept aside as
+  `prevSid` rather than destroyed — so a stray last reply is routed back into
+  its original chat instead of a duplicate. The turn itself still starts a clean
+  session, so code mode's fresh-start contract is unchanged. You stay in the
+  same chat, and it's the chat your code turn runs in.
+
+- **Entering Claude Code no longer yanks you to a different chat.** Beyond the
+  duplicate-chat case above: on a fresh tab, escalating to Claude Code could jump
+  you to whatever conversation held the *last* server reply — you'd land in an old
+  chat and have to reopen the code one from the menu. The culprit was the same
+  confirm-dialog focus event: it re-pulls the last reply from the server, and that
+  passive pull used to *switch* the active chat to show it. A passive pull now
+  delivers a stray reply into its own chat and flags it unseen (a dot in the
+  drawer) instead of stealing focus — only a real notification tap still jumps you
+  to a reply. You stay in the chat you're in.
+- **The "code" tag stays visible on long chat titles.** In the drawer, a long
+  chat name used to ellipsize the amber `CODE` badge off the end of the row, so
+  you couldn't tell which chats were in Claude Code mode. The title now truncates
+  on its own; the mode badge (and the unseen dot) are pinned and always visible,
+  and the code badge reads as a small amber pill so it's easy to scan for.
+- **Claude Code turns recover a lost session instead of erroring.** A code chat
+  whose resume id had gone stale (aged out of the CLI's store, or created in a
+  different workspace) died with "Connection error, sir." after a couple of
+  seconds, and you had to resend. Voice/operator turns already recovered from
+  this by quietly re-running fresh; code turns (which stream their output through
+  a different path) didn't. They now recover the same way — one fresh re-run so
+  the reply lands the first time.
+- **Slow commands say they're working.** Commands that run a whole workflow —
+  "start my day", "weekly review", "give me credit", "daily shutdown", "how did I
+  do today" — can take up to a minute. A calm gray note now appears under the
+  thinking bar for those turns ("Running your daily planning — …"), so you know
+  the command registered and Adam is working through it rather than stuck. Normal
+  conversation shows no note.
+
+**And something new — your progress finally gets a moment.**
+
+- **Level-ups now celebrate when you open your Operating System.** The first time
+  you open the dashboard after gaining a level, a short animation plays over it:
+  the attribute that leveled rises on a bar from its old level to the new one, then
+  the new level flashes big in the center. Tap anywhere to dismiss. It fires only
+  once — on the first open after the gain — so it always marks real, earned
+  progress and then it's just your dashboard again.
+- **Bigger gains get bigger moments.** Leveling your overall profile plays a
+  larger version, and **ranking up** — E → D → C → B → A → S → National — plays a
+  full-screen violet showpiece where the old rank shatters and the new one forms
+  over cosmic energy. Every fifth profile level counts as a milestone and gets its
+  own gold-lit celebration. Nothing is faked: the animation only ever reflects a
+  level or rank you've actually reached.
+
+## 0.9.42 - Switching into Claude Code no longer spawns a duplicate chat
+
+- **Fixed: switching a chat into Claude Code mode could split it into a second,
+  duplicate chat.** Asking Adam to "switch to Claude Code" (or holding the mode
+  button into it) sometimes minted a stray second chat that held only your last
+  reply — no question above it — and your next code turn ran there instead of in
+  the real conversation. Entering code mode deliberately clears the chat's resume
+  id (code runs in its own workspace and starts fresh); the confirm dialog's focus
+  event then re-pulled the last reply, whose id no longer matched any chat, so the
+  app created a new one for it. The app now marks a reply as "already shown" the
+  moment it renders on screen, so it can never be re-surfaced as a duplicate chat
+  after its session id changes. You stay in the same chat.
+
 ## 0.9.41 - Voice reads to the end; no more lost first replies
 
 Three reliability fixes for the voice loop — and the first release where Adam

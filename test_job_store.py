@@ -108,6 +108,8 @@ def main() -> int:
     check("complete -> done", js.to_wire(js.get_job("job1"))["status"] == "done")
     check("failed -> error", js.to_wire(js.get_job("job2"))["status"] == "error")
     check("running -> running", js.to_wire(js.get_job("job3"))["status"] == "running")
+    check("a real failure is NOT tagged as a restart interrupt",
+          js.INTERRUPTED_SENTINEL not in (js.to_wire(js.get_job("job2"))["error"] or ""))
     wire_done = js.to_wire(js.get_job("job1"))
     check("wire carries result/spoken/ts/session_id",
           wire_done["result"] == "Full report on screen." and wire_done["ts"] == 1718000000000
@@ -139,7 +141,24 @@ def main() -> int:
     check("interrupted maps to wire 'error' with a reason",
           js.to_wire(js.get_job("live1"))["status"] == "error"
           and bool(js.to_wire(js.get_job("live1"))["error"]))
+    # The phone tells a mid-task restart apart from a real failure by this tag, so
+    # it shows "restarted mid-task — ask again" instead of "Connection error, sir."
+    _intr_err = js.to_wire(js.get_job("live1"))["error"]
+    check("interrupted wire error carries the restart sentinel",
+          _intr_err.startswith(js.INTERRUPTED_SENTINEL))
+    check("interrupted sentinel still carries the human reason",
+          "restarted" in _intr_err.lower())
     check("recovery is idempotent (no active jobs left)", js.recover_interrupted() == [])
+
+    print("\n[8b] A user stop (cancelled) is NOT tagged as a restart interrupt")
+    js.create_job("stop1", mode="code", session_id="sess-D")
+    js.cancel_job("stop1", "Stopped by user.")
+    _cancel_wire = js.to_wire(js.get_job("stop1"))
+    check("cancelled maps to wire 'error'", _cancel_wire["status"] == "error")
+    check("cancelled is NOT tagged with the restart sentinel",
+          js.INTERRUPTED_SENTINEL not in (_cancel_wire["error"] or ""))
+    check("cancelled still reads as a user stop (client matches this)",
+          "stopped by user" in (_cancel_wire["error"] or "").lower())
 
     print("\n[9] Completed + failed jobs survive a restart")
     _reopen(db)

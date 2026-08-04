@@ -91,8 +91,7 @@ The assistant should:
 
    **Time-sensitive action items:** If a task has a required time (e.g., "Send team message at 8:05 AM"), create it as its own calendar event with a popup reminder — not just a note inside a larger block. The user relies on calendar notifications to execute these on time.
 
-8. Update:
-   - `06_calendar/latest_calendar_packet.md`
+8. Update `06_calendar/latest_calendar_packet.md` — **incrementally, the moment each part of the day's shape is agreed**, not only at the end. The packet is the durable copy of the plan; writing it in the moment (a local write, not an external commit) means an interrupted conversation is never lost and any later turn resumes from it instead of re-planning.
 
 9. **Sign-off triggers execution.** When the user ends the conversation with any natural closer ("that's it buddy," "see you later," "thanks have a good one"), run the full chain — validate, build the commit preview, emit a `calendar.create` block for today's events, emit a `hunter.sync` block for the dashboard, and Save. See CLAUDE.md → Sign-Off Execution Rule and `INTEGRATION_EXECUTION.md`. There is no fixed trigger phrase and no separate `INPUT`/`Do it` step required from the user. By default the calendar block is **staged for the user's approval tap** (or runs immediately if they've turned auto-run on) — report it accordingly, never as already done. Then leave a summary.
 

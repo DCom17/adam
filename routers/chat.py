@@ -13,7 +13,7 @@ import time
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 
 import config
 import job_store
@@ -61,7 +61,7 @@ def _sweep_uploads() -> None:
 
 @router.post("/upload", dependencies=[Depends(require_token)])
 @limiter.limit("30/minute")
-async def upload(request: Request, file: UploadFile = File(...)):
+async def upload(request: Request, response: Response, file: UploadFile = File(...)):
     """Accept one file (image or doc), store it off-vault, return its server path.
     The path is then sent as an attachment on a later /ask or /ask_async turn, where
     Claude's Read tool views it. iPhone HEIC photos are converted to JPEG first."""
@@ -118,7 +118,7 @@ async def upload(request: Request, file: UploadFile = File(...)):
 
 @router.post("/ask", dependencies=[Depends(require_token)])
 @limiter.limit("30/minute")
-async def ask(request: Request, body: AskRequest):
+async def ask(request: Request, response: Response, body: AskRequest):
     message = body.message.strip()
     if not message and not body.attachments:
         raise HTTPException(status_code=400, detail="Empty message")
@@ -130,12 +130,19 @@ async def ask(request: Request, body: AskRequest):
 
 @router.post("/ask_async", dependencies=[Depends(require_token)])
 @limiter.limit("30/minute")
-async def ask_async(request: Request, body: AskRequest):
+async def ask_async(request: Request, response: Response, body: AskRequest):
     """Kick off a Claude turn in the background; return a job_id immediately. The
     job is persisted before the task starts, so it survives a restart."""
     message = body.message.strip()
     if not message and not body.attachments:
         raise HTTPException(status_code=400, detail="Empty message")
+    # A cooperative restart is draining the in-flight turn(s) and about to exit —
+    # refuse new turns (503) so the drain can reach zero instead of chasing fresh
+    # work. The PWA surfaces this as a brief "Adam is restarting" note, not a
+    # connection error; polling an already-running turn is unaffected.
+    if server.is_draining():
+        raise HTTPException(status_code=503,
+                            detail="Adam is restarting — try again in a moment.")
     job_store.sweep(config.JOB_HISTORY_TTL_SECONDS)
     mode = server._normalize_mode(body.mode or "voice")
     job_id = uuid.uuid4().hex

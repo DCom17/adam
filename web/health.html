@@ -1,0 +1,1464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<base target="_top">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#04060b">
+<meta name="robots" content="noindex, nofollow">
+<title>Health — Adam</title>
+<link rel="icon" href="/icon.png" type="image/png" />
+<!-- In-app Health Tracker (Phase H1c). A private, on-device view of weight,
+     meals/macros, water, and daily metrics. Every number is computed server-side by
+     health_metrics and read from the token-gated /health/* API — nothing here
+     does arithmetic, and no health data leaves the machine. Token from
+     localStorage, sent only in the Authorization header. Values escaped. -->
+<style>
+  :root {
+    --bg:#04060b; --bg2:#071019;
+    --panel:rgba(12,20,32,.72); --panel-hi:rgba(16,28,42,.9);
+    --edge:rgba(33,230,255,.16); --edge-hi:rgba(33,230,255,.42);
+    --cyan:#21e6ff; --cyan-soft:#8df2ff; --violet:#a78bfa;
+    --ink:#eefafd; --text:#c9e4ec; --dim:#8fb9c6; --faint:#5d8894;
+    --green:#3ee6b0; --amber:#f7b955; --red:#ff6a8a; --blue:#4aa8ff;
+    --font:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; }
+  ::selection { background:rgba(33,230,255,.26); color:#fff; }
+  html { width:100%; min-height:100%; background:var(--bg); font-size:15.5px; -webkit-text-size-adjust:100%; }
+  body {
+    width:100%; min-height:100svh;
+    padding:16px 13px calc(30px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(ellipse 90% 44% at 50% -8%, rgba(62,230,176,.11), transparent 70%),
+      radial-gradient(ellipse 70% 42% at 92% 12%, rgba(33,230,255,.11), transparent 70%),
+      radial-gradient(ellipse 60% 46% at 6% 58%, rgba(129,140,248,.06), transparent 70%),
+      linear-gradient(180deg,#03050a 0%, var(--bg) 45%, #060d16 100%);
+    background-attachment:fixed;
+    color:var(--text); font-family:var(--font);
+    font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased;
+    overflow-x:hidden; line-height:1.5; letter-spacing:.1px;
+  }
+  .app { width:100%; max-width:640px; margin:0 auto; }
+
+  .title { text-align:center; padding:20px 12px 8px; margin-bottom:16px; }
+  .title .eyebrow { font-size:11px; font-weight:800; letter-spacing:6px; text-transform:uppercase;
+    color:var(--cyan); text-shadow:0 0 22px rgba(33,230,255,.5); }
+  .title h1 { margin:9px 0 0; font-size:36px; font-weight:750; letter-spacing:-.02em; line-height:1;
+    background:linear-gradient(105deg,#fff 12%, var(--cyan-soft) 58%, var(--cyan));
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .title .sub { margin-top:10px; font-size:11.5px; color:var(--faint); letter-spacing:.5px; }
+
+  .tabs { display:flex; gap:5px; margin-bottom:16px; padding:5px; border-radius:15px;
+    background:rgba(6,12,20,.55); border:1px solid var(--edge); }
+  .tabs button { flex:1; background:none; border:0; color:var(--dim); border-radius:11px;
+    padding:10px 5px; font:inherit; font-size:11px; font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; cursor:pointer; transition:.2s; }
+  .tabs button.on { color:#04121a; background:linear-gradient(105deg,#eafcff,#8df2ff 55%,#21e6ff);
+    box-shadow:0 0 18px rgba(33,230,255,.28); }
+
+  .frame { position:relative; border:1px solid var(--edge); background:var(--panel); border-radius:18px;
+    padding:17px 16px; margin-bottom:13px; overflow:hidden;
+    box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 12px 34px rgba(0,0,0,.38); }
+  .frame::after { content:""; position:absolute; top:0; left:12%; right:12%; height:1px;
+    background:linear-gradient(90deg,transparent,rgba(33,230,255,.45),transparent); }
+  .frame > h2 { display:flex; align-items:center; gap:10px; margin:0 0 14px;
+    font-size:11px; font-weight:800; letter-spacing:3px; text-transform:uppercase; color:var(--cyan); }
+  .frame > h2::before { content:""; width:22px; height:1px; background:var(--cyan); opacity:.7; flex:none; }
+
+  .hero { display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:13px; }
+  .stat { position:relative; border:1px solid var(--edge); background:var(--panel); border-radius:18px;
+    padding:16px; overflow:hidden; box-shadow:0 12px 34px rgba(0,0,0,.38); }
+  .stat::before { content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(ellipse 92% 72% at 50% -30%, rgba(33,230,255,.10), transparent 70%); }
+  .stat .k { position:relative; font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--faint); }
+  .stat .v { position:relative; display:block; margin-top:9px; font-size:30px; font-weight:750; line-height:1; letter-spacing:-.02em;
+    background:linear-gradient(115deg,#fff 8%, var(--cyan-soft) 58%, var(--cyan));
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .stat .v small { font-size:14px; -webkit-text-fill-color:var(--faint); }
+  .stat.protein .v { background:linear-gradient(115deg,#fff 8%, #9af5d3 55%, var(--green)); -webkit-background-clip:text; background-clip:text; }
+
+  .bar { height:10px; border-radius:8px; background:rgba(143,185,198,.13); border:1px solid rgba(33,230,255,.10); overflow:hidden; margin:11px 0 6px; }
+  .bar > span { display:block; height:100%; border-radius:8px; background:linear-gradient(90deg,var(--cyan),var(--violet)); box-shadow:0 0 12px rgba(33,230,255,.5); }
+  .bar.p > span { background:linear-gradient(90deg,var(--green),var(--cyan)); box-shadow:0 0 12px rgba(62,230,176,.5); }
+
+  .kv { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:9px 0;
+    border-bottom:1px solid rgba(143,185,198,.10); font-size:13.5px; }
+  .kv:last-child { border-bottom:0; }
+  .kv .label { color:var(--dim); } .kv .val { color:var(--ink); font-weight:650; }
+
+  /* colorful watch-stat chips */
+  .chips { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+  .chip { border:1px solid var(--edge); background:rgba(4,9,16,.5); border-radius:14px; padding:12px 8px; text-align:center; }
+  .chip .cl { font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--faint); }
+  .chip .cv { margin-top:6px; font-size:18px; font-weight:750; color:var(--ink); letter-spacing:-.01em; }
+  .chip .cv small { font-size:10px; color:var(--faint); font-weight:600; }
+  .chip.c-cyan .cv { color:var(--cyan-soft); } .chip.c-violet .cv { color:var(--violet); }
+  .chip.c-rose .cv { color:var(--red); } .chip.c-amber .cv { color:var(--amber); } .chip.c-green .cv { color:var(--green); }
+  @media (max-width:380px){ .chips { grid-template-columns:repeat(2,1fr); } }
+
+  label.fld { display:block; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:var(--faint); text-transform:uppercase; margin:14px 0 6px; }
+  textarea, input, select { width:100%; background:rgba(4,9,16,.7); border:1px solid var(--edge); color:var(--ink);
+    border-radius:12px; padding:12px 13px; font:inherit; font-size:14px; transition:border-color .2s, box-shadow .2s; }
+  textarea:focus, input:focus, select:focus { outline:none; border-color:var(--edge-hi); box-shadow:0 0 0 3px rgba(33,230,255,.12); }
+  input[type=file] { padding:9px 11px; font-size:12.5px; color:var(--dim); }
+  input[type=file]::file-selector-button { background:rgba(33,230,255,.12); color:var(--cyan);
+    border:1px solid var(--edge-hi); border-radius:9px; padding:7px 13px; margin-right:11px;
+    font:inherit; font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; cursor:pointer; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .grid4 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    background:linear-gradient(105deg,#eafcff,#8df2ff 55%,#21e6ff); color:#04121a; border:0; border-radius:12px;
+    padding:13px 18px; font:inherit; font-size:12px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase;
+    cursor:pointer; margin-top:12px; box-shadow:0 0 26px rgba(33,230,255,.20), 0 4px 16px rgba(0,0,0,.35); transition:transform .2s, filter .2s; }
+  .btn:hover { transform:translateY(-1px); filter:brightness(1.06); }
+  .btn.wide { width:100%; } .btn:disabled { opacity:.5; cursor:default; transform:none; filter:none; }
+  .btn.ghost { background:none; color:var(--cyan); border:1px solid var(--edge-hi); box-shadow:none; }
+
+  .mg-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:11px 0;
+    border-bottom:1px solid rgba(143,185,198,.10); font-size:13px; }
+  .mg-row:last-child { border-bottom:0; }
+  .mg-row .info { color:var(--ink); } .mg-row .info .sub { color:var(--faint); font-size:11px; }
+  .xbtn { flex:none; background:rgba(255,106,138,.08); border:1px solid rgba(255,106,138,.45); color:var(--red);
+    border-radius:10px; padding:7px 13px; font:inherit; font-size:11px; font-weight:700; cursor:pointer; }
+
+  /* The axis is every calendar day in the window, not just the logged ones — a
+     skipped day has to hold its slot or the chart implies days were consecutive
+     when they weren't. Columns flex to fill when there are few and fall back to
+     a legible min-width (scrolling) once the window gets dense. */
+  .tbar { display:flex; align-items:flex-end; gap:5px; height:118px; margin-top:12px;
+    overflow-x:auto; overflow-y:hidden; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .tbar::-webkit-scrollbar { display:none; }
+  .tbar .col { flex:1 0 auto; min-width:32px; display:flex; flex-direction:column; justify-content:flex-end;
+    align-items:center; height:100%; background:none; border:0; padding:0 1px; font:inherit; cursor:pointer;
+    border-radius:7px; -webkit-tap-highlight-color:transparent; }
+  .tbar .col:hover .bar2 { filter:brightness(1.18); }
+  .tbar .col:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+  .tbar .col .v2 { font-size:9px; color:var(--dim); margin-bottom:5px; white-space:nowrap; min-height:11px; }
+  .tbar .col .bar2 { width:66%; max-width:32px; min-height:4px; border-radius:5px 5px 0 0;
+    background:linear-gradient(180deg,var(--cyan),var(--violet)); box-shadow:0 0 10px rgba(33,230,255,.35); }
+  .tbar .col .lab { font-size:8.5px; color:var(--faint); margin-top:6px; white-space:nowrap; }
+
+  /* A day with nothing logged: a hollow dashed slot the height of a small bar,
+     which doubles as the tap target for backfilling it. Never a zero bar —
+     "no data" and "zero" are different claims. */
+  .tbar .col.empty .bar2 { background:none; box-shadow:none; height:26px !important;
+    border:1px dashed rgba(143,185,198,.34); border-radius:5px; }
+  .tbar .col.empty .lab { color:rgba(143,185,198,.42); }
+  .tbar .col.empty:hover .bar2 { border-color:var(--cyan); filter:none; }
+  /* Today is still being logged — hatch it so a half-finished day never reads
+     as a bad day. */
+  .tbar .col.today .bar2 { opacity:.72;
+    background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.16) 0 3px,transparent 3px 7px); }
+  .tbar .col.today .lab { color:var(--cyan-soft); font-weight:750; }
+  .chart-foot { display:flex; gap:10px; align-items:baseline; justify-content:space-between;
+    font-size:11.5px; margin-top:12px; }
+  .chart-hint { color:rgba(143,185,198,.55); font-size:10.5px; white-space:nowrap; }
+
+  /* ===== day sheet (tap a bar to fix that day) ===== */
+  .ds-panel { position:fixed; left:0; right:0; bottom:0; z-index:71; max-height:88vh;
+    display:flex; flex-direction:column;
+    /* Opaque on purpose: --panel is rgba(...,.72), which let the chart bleed
+       through the sheet and made the entry text hard to read. Matches .hp-panel. */
+    background:linear-gradient(180deg,#050b13,#04060b 60%);
+    border:1px solid var(--edge-hi); border-bottom:0; border-radius:20px 20px 0 0;
+    box-shadow:0 -14px 40px rgba(0,0,0,.5); transform:translateY(103%);
+    transition:transform .26s cubic-bezier(.22,.9,.3,1); }
+  .ds-panel.show { transform:translateY(0); }
+  .ds-panel:focus { outline:none; }
+  .ds-head { flex:none; display:flex; align-items:flex-start; gap:10px; padding:16px 18px 6px; }
+  .ds-head h2 { margin:2px 0 0; font-size:21px; font-weight:750; letter-spacing:-.02em; }
+  .ds-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:6px 18px 26px; }
+  .ds-sec { margin-top:16px; }
+  .ds-sec > h3 { margin:0 0 8px; font-size:10.5px; font-weight:800; letter-spacing:2.6px;
+    text-transform:uppercase; color:var(--faint); }
+  .ds-row { display:flex; align-items:center; gap:9px; padding:9px 11px; border-radius:12px;
+    border:1px solid var(--edge); background:rgba(143,185,198,.05); margin-bottom:7px; }
+  .ds-row .rmain { flex:1; min-width:0; }
+  .ds-row .rname { font-size:13px; font-weight:650; color:var(--ink);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ds-row .rsub { font-size:11px; color:var(--dim); margin-top:2px; }
+  .ds-ico { flex:none; background:none; border:1px solid var(--edge); color:var(--dim);
+    width:30px; height:30px; border-radius:9px; font-size:14px; line-height:1; cursor:pointer; }
+  .ds-ico:hover { color:var(--ink); border-color:var(--cyan); }
+  .ds-ico.danger:hover { color:var(--red); border-color:var(--red); }
+  .ds-empty { font-size:12px; color:var(--faint); padding:2px 0 4px; }
+  .ds-edit { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin:8px 0 2px; }
+  .ds-edit label { font-size:9.5px; color:var(--faint); letter-spacing:.6px; text-transform:uppercase; }
+  .ds-edit input { width:100%; box-sizing:border-box; background:rgba(2,6,12,.6); color:var(--ink);
+    border:1px solid var(--edge); border-radius:9px; padding:7px 8px; font:inherit; font-size:12.5px; }
+  .ds-edit .wide { grid-column:1 / -1; }
+  .ds-acts { display:flex; gap:8px; margin-top:9px; }
+  .ds-btn { background:linear-gradient(180deg,var(--cyan),var(--violet)); color:#04121a; border:0;
+    border-radius:10px; padding:8px 14px; font:inherit; font-size:12px; font-weight:750; cursor:pointer; }
+  .ds-btn.ghost { background:none; color:var(--dim); border:1px solid var(--edge); }
+  .ds-note { font-size:11px; color:var(--faint); margin-top:10px; line-height:1.5; }
+
+  .state-msg { text-align:center; color:var(--dim); padding:30px 18px; font-size:13.5px; line-height:1.6; }
+  .state-msg b { color:var(--cyan-soft); font-weight:700; }
+  .err { color:var(--red); font-size:12.5px; margin-top:9px; }
+  .muted { color:var(--faint); }
+  [hidden] { display:none !important; }
+
+  /* ===== app components ===== */
+  .ico { width:19px; height:19px; }
+  .hglyph { width:27px; height:27px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;
+    background:rgba(33,230,255,.10); border:1px solid var(--edge); color:var(--cyan); }
+  .hglyph .ico { width:15px; height:15px; }
+  .frame > h2.ic::before { display:none; }
+  .gauge { position:relative; flex:none; display:flex; align-items:center; justify-content:center; }
+  .gauge-c { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+  .gauge-c .gv { font-weight:800; color:var(--ink); letter-spacing:-.02em; }
+  .gauge-c .gv small { font-size:.5em; color:var(--faint); font-weight:700; }
+  .gauge-c .gl { font-size:8.5px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--faint); margin-top:2px; }
+
+  /* hero macro rings */
+  .rings2 { display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-bottom:13px; }
+  .ringcard { position:relative; border:1px solid var(--edge-hi); border-radius:20px; padding:15px 12px 13px; overflow:hidden;
+    background:linear-gradient(160deg, rgba(16,32,48,.92), rgba(9,16,28,.72)); box-shadow:0 16px 40px rgba(0,0,0,.46), 0 0 34px rgba(33,230,255,.05); }
+  .ringcard::before { content:""; position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse 90% 60% at 50% -18%, rgba(33,230,255,.14), transparent 65%); }
+  .rc-head { position:relative; display:flex; align-items:center; gap:7px; justify-content:center; color:var(--dim);
+    font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
+  .rc-head .ico { width:15px; height:15px; color:var(--cyan); }
+  .ringcard .gauge { margin:0 auto; }
+  .ringcard .gauge-c .gv { font-size:27px; }
+  .rc-sub { position:relative; text-align:center; margin-top:9px; font-size:11px; color:var(--faint); }
+
+  /* carbs / fat / meals */
+  .dual { display:flex; align-items:center; justify-content:space-around; gap:8px; }
+  .sg { text-align:center; }
+  .sg .dm-l { margin-top:7px; }
+  .dm-v { font-size:26px; font-weight:800; color:var(--cyan-soft); letter-spacing:-.02em; }
+  .dm-l { font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--faint); }
+
+  /* water — a one-tap counter: gauge on the left, quick-add glasses on the right */
+  .water-row { display:flex; align-items:center; gap:15px; }
+  .water-row .gauge { flex:none; }
+  .wq { flex:1; min-width:0; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .wq button { background:rgba(74,168,255,.10); border:1px solid rgba(74,168,255,.42); color:#a8d8ff;
+    border-radius:13px; padding:12px 3px; font:inherit; font-size:14px; font-weight:750; line-height:1.1;
+    cursor:pointer; transition:transform .15s, filter .15s; }
+  .wq button:hover { transform:translateY(-1px); filter:brightness(1.12); }
+  .wq button:disabled { opacity:.5; transform:none; }
+  .wq button .wqs { display:block; margin-top:4px; font-size:8.5px; font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; color:var(--faint); }
+  .wfoot { display:flex; align-items:center; justify-content:space-between; gap:10px;
+    margin-top:12px; font-size:11.5px; color:var(--faint); }
+  .linkbtn { background:none; border:0; padding:0; font:inherit; font-size:11.5px; font-weight:700;
+    color:var(--cyan); cursor:pointer; }
+  .linkbtn:disabled { opacity:.5; cursor:default; }
+
+  /* weight */
+  .wt-row { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+  .wt-now { font-size:32px; font-weight:800; letter-spacing:-.02em; color:var(--ink); }
+  .wt-now small { font-size:15px; color:var(--faint); font-weight:600; }
+  .wt-goal { font-size:12px; color:var(--dim); text-align:right; line-height:1.4; }
+  .mini-spark { height:62px; margin-top:12px; overflow:hidden; border-radius:10px; }
+
+  /* icon in watch chips */
+  .chip .cl { display:flex; align-items:center; justify-content:center; gap:5px; }
+  .chip .cl .ico { width:12px; height:12px; color:var(--faint); }
+
+  /* ===== forms + lists (Log / Setup) ===== */
+  .hint { color:var(--dim); font-size:12.5px; line-height:1.55; margin:-2px 0 4px; }
+  .qtynote { margin:2px 0 8px; padding:9px 11px; border-radius:9px; font-size:12.5px; line-height:1.5;
+             background:rgba(224,163,50,.12); border:1px solid rgba(224,163,50,.42); }
+  .fldrow { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .fldrow > div { min-width:0; }
+  .fld.cal { color:var(--cyan-soft); } .fld.prot { color:var(--green); } .fld.carb { color:var(--violet); } .fld.fat { color:var(--amber); }
+  .dz { position:relative; border:1.5px dashed var(--edge-hi); border-radius:16px; padding:22px 16px; text-align:center; background:rgba(33,230,255,.03); transition:.2s; }
+  .dz .dzi { width:28px; height:28px; color:var(--cyan); margin:0 auto; display:block; }
+  .dz .dzt { color:var(--dim); font-size:12.5px; margin-top:9px; } .dz .dzt b { color:var(--cyan-soft); font-weight:700; }
+  .dz .dzf { color:var(--cyan-soft); font-size:12px; margin-top:6px; min-height:15px; }
+  .dz input[type=file] { position:absolute; inset:0; opacity:0; width:100%; height:100%; cursor:pointer; border:0; padding:0; }
+  .or { display:flex; align-items:center; gap:12px; color:var(--faint); font-size:10.5px; letter-spacing:2px; text-transform:uppercase; margin:16px 0 4px; }
+  .or::before, .or::after { content:""; flex:1; height:1px; background:rgba(143,185,198,.14); }
+  .lcard { display:flex; align-items:center; gap:12px; padding:11px 13px; border:1px solid var(--edge); background:rgba(4,9,16,.42); border-radius:14px; margin-bottom:9px; }
+  .lcard:last-child { margin-bottom:0; }
+  .lcard .lav { width:38px; height:38px; border-radius:11px; flex:none; display:flex; align-items:center; justify-content:center;
+    background:rgba(33,230,255,.10); border:1px solid var(--edge); color:var(--cyan); font-weight:800; }
+  .lcard .lav .ico { width:17px; height:17px; }
+  .lcard .lmain { flex:1; min-width:0; }
+  .lcard .ltitle { color:var(--ink); font-weight:650; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lcard .lmeta { color:var(--faint); font-size:11px; margin-top:3px; display:flex; flex-wrap:wrap; gap:5px 7px; }
+  .mtag { font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; border:1px solid var(--edge); color:var(--dim); }
+  .mtag.p { color:var(--green); border-color:rgba(62,230,176,.35); } .mtag.c { color:var(--violet); border-color:rgba(167,139,250,.35); } .mtag.f { color:var(--amber); border-color:rgba(247,185,85,.35); }
+
+  /* expandable / editable meal card */
+  .meal { margin-bottom:9px; }
+  .meal:last-child { margin-bottom:0; }
+  .meal-head { margin-bottom:0; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .meal-head .chev { width:18px; height:18px; color:var(--faint); flex:none; transition:transform .2s; }
+  .meal.open .meal-head { border-bottom-left-radius:0; border-bottom-right-radius:0; }
+  .meal.open .meal-head .chev { transform:rotate(180deg); }
+  .meal-edit { border:1px solid var(--edge); border-top:0; border-radius:0 0 14px 14px; background:rgba(4,9,16,.55); padding:12px 13px 13px; }
+  .meal-edit label.fld:first-child { margin-top:2px; }
+  .meal-edit .btnrow { display:flex; gap:9px; margin-top:12px; }
+  .meal-edit .btnrow .btn { margin-top:0; flex:1; }
+  .meal-edit .btnrow .xbtn { flex:none; }
+
+  /* ===== page guide ("?" help) — how this tracker works, on this page only ===== */
+  .help-fab { position:fixed; top:calc(13px + env(safe-area-inset-top)); right:13px; z-index:60;
+    width:34px; height:34px; border-radius:50%; border:1px solid var(--edge-hi);
+    background:rgba(6,12,20,.72); color:var(--cyan); font-size:17px; font-weight:800; line-height:1;
+    cursor:pointer; -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px);
+    box-shadow:0 4px 16px rgba(0,0,0,.42); transition:.18s; }
+  .help-fab:hover { background:rgba(33,230,255,.14); border-color:var(--cyan); color:var(--cyan-soft); }
+  .help-fab:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+  .hp-scrim { position:fixed; inset:0; z-index:70; background:rgba(2,5,10,.55);
+    -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px);
+    opacity:0; pointer-events:none; transition:opacity .25s; }
+  .hp-scrim.show { opacity:1; pointer-events:auto; }
+  .hp-panel { position:fixed; top:0; right:0; height:100%; z-index:71; width:94%; max-width:430px;
+    display:flex; flex-direction:column; background:linear-gradient(180deg,#050b13,#04060b 60%);
+    border-left:1px solid var(--edge-hi); box-shadow:-18px 0 54px rgba(0,0,0,.55);
+    transform:translateX(101%); transition:transform .28s cubic-bezier(.4,0,.2,1); }
+  .hp-panel.show { transform:translateX(0); }
+  .hp-panel:focus { outline:none; }
+  .hp-head { flex:none; display:flex; align-items:center; gap:10px; padding:18px 18px 4px; }
+  .hp-head .eyebrow { flex:1; font-size:11px; font-weight:800; letter-spacing:5px; text-transform:uppercase;
+    color:var(--cyan); text-shadow:0 0 20px rgba(33,230,255,.45); }
+  .hp-x { flex:none; background:none; border:0; color:var(--dim); font-size:23px; line-height:1;
+    cursor:pointer; padding:2px 8px; border-radius:9px; }
+  .hp-x:hover { color:var(--ink); }
+  .hp-x:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+  .hp-title { flex:none; padding:0 18px 4px; }
+  .hp-title h2 { margin:0; font-size:25px; font-weight:750; letter-spacing:-.02em; line-height:1.05;
+    background:linear-gradient(105deg,#fff 14%, var(--cyan-soft) 58%, var(--cyan));
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hp-title p { margin:8px 0 0; font-size:12.5px; color:var(--dim); line-height:1.5; }
+  .hp-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch;
+    padding:14px 18px calc(30px + env(safe-area-inset-bottom)); }
+  .hp-card { border:1px solid var(--edge); background:var(--panel); border-radius:15px;
+    padding:13px 15px; margin-bottom:11px; }
+  .hp-card .tag { display:inline-block; font-size:10px; font-weight:800; letter-spacing:1.5px;
+    text-transform:uppercase; color:#04121a; padding:3px 9px; border-radius:999px; margin-bottom:9px;
+    background:linear-gradient(105deg,#eafcff,#8df2ff 55%,#21e6ff); }
+  .hp-card h3 { margin:0 0 5px; font-size:14.5px; font-weight:650; color:var(--ink); letter-spacing:.2px; }
+  .hp-card p { margin:0; font-size:13px; color:var(--text); line-height:1.55; }
+  .hp-card.note { border-style:dashed; border-color:rgba(62,230,176,.32); background:rgba(62,230,176,.05); }
+  .hp-card.note .tag { color:#04140e; background:linear-gradient(105deg,#eafff6,#6ff0c6 55%,#3ee6b0); }
+  .hp-card.note h3 { color:var(--green); }
+</style>
+</head>
+
+<div class="app">
+  <div class="title">
+    <div class="eyebrow">Adam</div>
+    <h1>Health</h1>
+    <div class="sub">Private · on-device · nothing leaves this machine</div>
+  </div>
+
+  <button type="button" class="help-fab" id="helpFab" aria-label="How the Health Tracker works"
+          aria-haspopup="dialog" title="How the Health Tracker works">?</button>
+
+  <div class="tabs">
+    <button id="tabToday" class="on">TODAY</button>
+    <button id="tabLog">LOG</button>
+    <button id="tabTrends">TRENDS</button>
+    <button id="tabSetup">SETUP</button>
+  </div>
+
+  <section id="todayView"><div id="todayBody"><div class="state-msg">Loading…</div></div></section>
+
+  <section id="logView" hidden>
+    <div class="frame">
+      <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a6 6 0 0 0 6-6c0-4.5-4.5-6.5-4-11-3.5 2-7 5.5-7 11a5 5 0 0 0 5 6z"/></svg></span>Log a meal</h2>
+      <p class="hint">Snap a photo and Adam estimates the macros — or type them in.</p>
+      <div class="dz" id="mealDz">
+        <svg class="dzi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.2-1.6a1 1 0 0 1 .8-.4h6a1 1 0 0 1 .8.4L19 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" transform="translate(-1 0)"/><circle cx="11" cy="12.5" r="3.4"/></svg>
+        <div class="dzt"><b>Photograph your meal</b></div>
+        <div class="dzf" id="mealPhotoName"></div>
+        <input type="file" id="mealPhoto" accept="image/*">
+      </div>
+      <button id="mealPhotoBtn" class="btn wide">ESTIMATE FROM PHOTO</button>
+      <div id="photoErr" class="err" hidden></div>
+      <div id="photoResult" hidden></div>
+
+      <div class="or">or type it</div>
+      <label class="fld" for="mName">Meal / food</label>
+      <input id="mName" placeholder="e.g. 1 banana" autocomplete="off">
+      <button id="mEstBtn" class="btn wide ghost" style="margin-top:9px">✦ ESTIMATE MACROS FOR ME</button>
+      <p class="hint" style="margin-top:7px">Just describe it (e.g. “1 banana”) and Adam fills in the calories and macros — tweak anything, then add. Say how much (“3 eggs”, “6 oz”) for a tighter number.</p>
+      <div id="mQtyNote" class="qtynote" hidden></div>
+      <div class="fldrow">
+        <div><label class="fld" for="mQty">Portion</label><input id="mQty" placeholder="1 bowl"></div>
+        <div><label class="fld cal" for="mKcal">Calories</label><input id="mKcal" type="number" inputmode="decimal" placeholder="0"></div>
+      </div>
+      <div class="grid4">
+        <div><label class="fld prot" for="mProt">Protein g</label><input id="mProt" type="number" inputmode="decimal" placeholder="0"></div>
+        <div><label class="fld carb" for="mCarb">Carbs g</label><input id="mCarb" type="number" inputmode="decimal" placeholder="0"></div>
+        <div><label class="fld fat" for="mFat">Fat g</label><input id="mFat" type="number" inputmode="decimal" placeholder="0"></div>
+      </div>
+      <button id="mealAddBtn" class="btn wide">ADD MEAL</button>
+      <div id="mealErr" class="err" hidden></div>
+    </div>
+
+    <div class="frame">
+      <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.3-1.4L14.4 21 12 19.6 9.6 21 7.3 19.6 5 21z"/><path d="M8.5 8.5h7M8.5 12.5h7"/></svg></span>Today's meals</h2>
+      <div id="mealList"><div class="muted" style="font-size:12.5px">None yet.</div></div>
+    </div>
+
+    <div class="frame">
+      <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2c3.3 3.9 5.6 6.9 5.6 9.8a5.6 5.6 0 0 1-11.2 0c0-2.9 2.3-5.9 5.6-9.8z"/></svg></span>Water</h2>
+      <p class="hint">Log any amount — the counter on Today has one-tap glasses too.</p>
+      <div class="fldrow">
+        <div><label class="fld" for="waAmt">Amount</label><input id="waAmt" type="number" inputmode="decimal" placeholder="16"></div>
+        <div><label class="fld" for="waUnit">Unit</label><select id="waUnit"><option value="oz">oz</option><option value="ml">ml</option><option value="cup">cups</option></select></div>
+      </div>
+      <button id="waAddBtn" class="btn wide ghost">LOG WATER</button>
+      <div id="waErr" class="err" hidden></div>
+      <div id="waList" style="margin-top:13px"></div>
+    </div>
+
+    <div class="frame">
+      <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M6 8h12"/><path d="M6 8l-2.6 6a2.7 2.7 0 0 0 5.2 0z"/><path d="M18 8l2.6 6a2.7 2.7 0 0 1-5.2 0z"/></svg></span>Weight &amp; daily stats</h2>
+      <div class="fldrow">
+        <div><label class="fld" for="wVal">Weight</label><input id="wVal" type="number" inputmode="decimal" placeholder="0"></div>
+        <div><label class="fld" for="wUnit">Unit</label><select id="wUnit"><option value="lb">lb</option><option value="kg">kg</option></select></div>
+      </div>
+      <button id="wAddBtn" class="btn wide ghost">LOG WEIGHT</button>
+      <div class="fldrow" style="margin-top:12px">
+        <div><label class="fld" for="dSteps">Steps</label><input id="dSteps" type="number" inputmode="numeric" placeholder="0"></div>
+        <div><label class="fld" for="dSleep">Sleep (min)</label><input id="dSleep" type="number" inputmode="numeric" placeholder="0"></div>
+      </div>
+      <button id="metricBtn" class="btn wide ghost">SAVE DAILY STATS</button>
+      <div id="wErr" class="err" hidden></div>
+    </div>
+  </section>
+
+  <section id="trendsView" hidden><div id="trendsBody"><div class="state-msg">Loading…</div></div></section>
+
+  <section id="setupView" hidden>
+    <div class="frame">
+      <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span>Daily targets</h2>
+      <p class="hint">Set the goals your rings fill toward. Leave any blank to hide that ring.</p>
+      <div class="fldrow">
+        <div><label class="fld cal" for="tKcal">Calories</label><input id="tKcal" type="number" inputmode="decimal" placeholder="e.g. 2200"></div>
+        <div><label class="fld prot" for="tProt">Protein g</label><input id="tProt" type="number" inputmode="decimal" placeholder="e.g. 160"></div>
+        <div><label class="fld carb" for="tCarb">Carbs g</label><input id="tCarb" type="number" inputmode="decimal" placeholder="e.g. 250"></div>
+        <div><label class="fld fat" for="tFat">Fat g</label><input id="tFat" type="number" inputmode="decimal" placeholder="e.g. 70"></div>
+      </div>
+      <div class="or">water</div>
+      <div class="fldrow">
+        <div><label class="fld" for="tWater">Daily water target</label><input id="tWater" type="number" inputmode="decimal" placeholder="e.g. 100"></div>
+        <div><label class="fld" for="tWaterUnit">Unit</label><select id="tWaterUnit"><option value="oz">oz</option><option value="ml">ml</option><option value="cup">cups</option></select></div>
+      </div>
+
+      <div class="or">weight goal</div>
+      <div class="fldrow">
+        <div><label class="fld" for="tGoal">Goal weight</label><input id="tGoal" type="number" inputmode="decimal" placeholder="0"></div>
+        <div><label class="fld" for="tUnit">Unit</label><select id="tUnit"><option value="lb">lb</option><option value="kg">kg</option></select></div>
+      </div>
+      <button id="tSaveBtn" class="btn wide">SAVE TARGETS</button>
+      <div id="tErr" class="err" hidden></div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== Page guide ("?" help) — self-serve explainer for the Health Tracker only ===== -->
+<div class="hp-scrim" id="helpScrim"></div>
+<aside class="hp-panel" id="helpPanel" role="dialog" aria-modal="true"
+       aria-labelledby="helpPanelTitle" aria-hidden="true" tabindex="-1">
+  <div class="hp-head">
+    <span class="eyebrow">Guide</span>
+    <button type="button" class="hp-x" id="helpClose" aria-label="Close guide">×</button>
+  </div>
+  <div class="hp-title">
+    <h2 id="helpPanelTitle">How the Health Tracker works</h2>
+    <p>Everything here is kept privately on your own machine — your weight, meals, water, and stats are never sent to a health company.</p>
+  </div>
+  <div class="hp-body" id="helpBody"></div>
+</aside>
+
+<div class="hp-scrim" id="dayScrim"></div>
+<aside class="ds-panel" id="dayPanel" role="dialog" aria-modal="true"
+       aria-labelledby="dayTitle" aria-hidden="true" tabindex="-1">
+  <div class="ds-head">
+    <div style="flex:1;min-width:0">
+      <span class="eyebrow" id="dayEyebrow" style="font-size:10.5px;font-weight:800;letter-spacing:4px;text-transform:uppercase;color:var(--faint)">Day</span>
+      <h2 id="dayTitle">—</h2>
+    </div>
+    <button type="button" class="hp-x" id="dayClose" aria-label="Close day">×</button>
+  </div>
+  <div class="ds-body" id="dayBody"><div class="state-msg">Loading…</div></div>
+</aside>
+
+<script>
+var LS = { get token(){ return localStorage.getItem("jarvis_token") || ""; },
+  get url(){ return (localStorage.getItem("jarvis_url") || location.origin).replace(/\/$/, ""); } };
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function $(id){ return document.getElementById(id); }
+// LOCAL calendar date (not UTC). toISOString() is UTC, so after ~5pm in a
+// negative-offset zone it rolls to tomorrow — which made "today" query an empty
+// future day and stamped new logs under the wrong date. Build it from local parts.
+function today(){ try { var d = new Date(); var m = d.getMonth() + 1, day = d.getDate();
+  return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+} catch(e){ return ""; } }
+function num(id){ var v = $(id).value.trim(); return v === "" ? null : parseFloat(v); }
+
+async function api(path, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({ "Authorization": "Bearer " + LS.token }, opts.headers || {});
+  if (opts.body && typeof opts.body !== "string"){ opts.body = JSON.stringify(opts.body); opts.headers["Content-Type"] = "application/json"; }
+  var r = await fetch(LS.url + path, opts);
+  var d = null; try { d = await r.json(); } catch(e){}
+  if (!r.ok) throw new Error((d && (d.detail || d.error)) || ("HTTP " + r.status));
+  return d;
+}
+function g(n){ return (n == null || isNaN(n)) ? "—" : Math.round(n); }
+function g1(n){ return (n == null || isNaN(n)) ? "—" : (Math.round(n * 10) / 10); }
+
+// Water is stored in ml server-side; these are the only conversions the page
+// does, and only to turn what the user typed into ml before sending it (every
+// displayed water number is computed by health_metrics, like everything else).
+var ML_PER = { ml: 1, oz: 29.5735295625, cup: 236.5882365 };
+function toMl(amount, unit){ return amount * (ML_PER[unit] || ML_PER.oz); }
+function unitLabel(u){ return u === "cup" ? "cups" : u; }
+
+// --- today -------------------------------------------------------------------
+async function loadToday(){
+  if (!LS.token){ $("todayBody").innerHTML = '<div class="state-msg">Sign in to Adam first.</div>'; return; }
+  try { renderToday(await api("/health/summary?date=" + today())); }
+  catch (e){ $("todayBody").innerHTML = '<div class="state-msg">Could not load.<br><span class="err">' + esc(e.message) + "</span></div>"; return; }
+  refreshWatch();  // pull the day's current watch totals in the background (fail-soft, server-throttled)
+}
+// Re-render Today from a fresh summary WITHOUT the Garmin round-trip — used
+// after a one-tap water add so the counter updates immediately.
+async function reloadToday(){
+  try { renderToday(await api("/health/summary?date=" + today())); } catch (e){}
+}
+// Ask Adam to re-pull Garmin so "From your watch" shows today's CURRENT totals,
+// not the first sync of the day. Throttled server-side; a no-op when Garmin is
+// off/recently-synced/unreachable. Only re-renders when it actually got fresh data.
+async function refreshWatch(){
+  try {
+    var r = await api("/health/garmin/refresh", { method: "POST", body: {} });
+    if (r && r.refreshed) renderToday(await api("/health/summary?date=" + today()));
+  } catch (e){ /* keep the cached numbers — never disrupt the page */ }
+}
+// --- visual components (icons, ring gauges) ----------------------------------
+var ICONS = {
+  flame:'<path d="M12 22a6 6 0 0 0 6-6c0-4.5-4.5-6.5-4-11-3.5 2-7 5.5-7 11a5 5 0 0 0 5 6z"/>',
+  protein:'<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9.5v5M20.5 9.5v5M6.5 12h11"/>',
+  carbs:'<path d="M12 3c-2 3-2 6 0 9 2-3 2-6 0-9z"/><path d="M11 12c-3-1-6.5.5-8 4 3.5 1 6.5-.5 8-4z"/><path d="M13 12c3-1 6.5.5 8 4-3.5 1-6.5-.5-8-4z"/>',
+  fat:'<path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/>',
+  scale:'<path d="M12 4v16M6 8h12"/><path d="M6 8l-2.6 6a2.7 2.7 0 0 0 5.2 0z"/><path d="M18 8l2.6 6a2.7 2.7 0 0 1-5.2 0z"/>',
+  steps:'<path d="M8.5 4c1.6 0 2.6 1.6 2.6 4.2S10 14 8.4 14 6 12.8 6 10.6 6.9 4 8.5 4z"/><path d="M6 13.5c0 2 .5 4 2.5 4"/><path d="M15.5 8c1.6 0 2.6 1.6 2.6 4.2S17 18 15.4 18 13 16.8 13 14.6 13.9 8 15.5 8z"/>',
+  moon:'<path d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5z"/>',
+  heart:'<path d="M12 20s-7-4.4-9-9a4.6 4.6 0 0 1 9-2 4.6 4.6 0 0 1 9 2c-2 4.6-9 9-9 9z"/>',
+  gauge:'<path d="M4 15a8 8 0 0 1 16 0"/><path d="M12 15l4-3.5"/><circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/>',
+  drop:'<path d="M12 3.2c3.3 3.9 5.6 6.9 5.6 9.8a5.6 5.6 0 0 1-11.2 0c0-2.9 2.3-5.9 5.6-9.8z"/>',
+  chev:'<path d="M6 9l6 6 6-6"/>'
+};
+function icon(n){ return '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[n] || "") + "</svg>"; }
+function hicon(n){ return '<span class="hglyph">' + icon(n) + "</span>"; }
+function gaugeSVG(frac, col, size, sw){
+  var c = size / 2, r = (size - sw) / 2, circ = 2 * Math.PI * r, p = Math.max(0, Math.min(1, frac || 0)), dash = circ * p;
+  return '<svg viewBox="0 0 ' + size + " " + size + '" width="' + size + '" height="' + size + '">' +
+    '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" fill="none" stroke="rgba(143,185,198,.13)" stroke-width="' + sw + '"/>' +
+    '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round" ' +
+    'stroke-dasharray="' + dash.toFixed(1) + " " + circ.toFixed(1) + '" transform="rotate(-90 ' + c + " " + c + ')" style="filter:drop-shadow(0 0 5px ' + col + ')"/></svg>';
+}
+function ringCard(label, ic, consumed, ring, col, unit){
+  ring = ring || {};
+  var frac = (ring.progress == null) ? 0 : Math.min(1, ring.progress);
+  var sub = (ring.target == null) ? "set a target in Setup" : (g(ring.remaining) + " left of " + g(ring.target));
+  var pctTxt = (ring.target != null) ? Math.round(frac * 100) + "%" : "—";
+  return '<div class="ringcard"><div class="rc-head">' + icon(ic) + "<span>" + esc(label) + "</span></div>" +
+    '<div class="gauge">' + gaugeSVG(frac, col, 134, 12) +
+    '<div class="gauge-c"><div class="gv">' + g(consumed) + (unit ? '<small>' + unit + "</small>" : "") + '</div><div class="gl">' + pctTxt + "</div></div></div>" +
+    '<div class="rc-sub">' + esc(sub) + "</div></div>";
+}
+function smallGauge(label, consumed, ring, col, unit){
+  ring = ring || {};
+  var frac = (ring.progress == null) ? 0 : Math.min(1, ring.progress);
+  return '<div class="sg"><div class="gauge">' + gaugeSVG(frac, col, 86, 9) +
+    '<div class="gauge-c"><div class="gv" style="font-size:15px">' + g(consumed) + (unit ? '<small>' + unit + "</small>" : "") + "</div></div></div>" +
+    '<div class="dm-l">' + esc(label) + "</div></div>";
+}
+// Water counter: a gauge toward the daily target plus one-tap glasses. The
+// presets follow the user's unit so a millilitre install never sees "+8".
+var WATER_QUICK = {
+  oz:  [[8, "glass"], [16, "bottle"], [32, "jug"]],
+  ml:  [[250, "glass"], [500, "bottle"], [1000, "litre"]],
+  cup: [[1, "cup"], [2, "2 cups"], [4, "quart"]]
+};
+function waterCard(w, rows){
+  var unit = w.unit || "oz", ul = unitLabel(unit);
+  var frac = (w.progress == null) ? 0 : Math.min(1, w.progress);
+  var pct = (w.target_amount != null) ? Math.round(frac * 100) + "%"
+          : ((w.logs || 0) + ((w.logs === 1) ? " drink" : " drinks"));
+  var quick = (WATER_QUICK[unit] || WATER_QUICK.oz).map(function(q){
+    return '<button onclick="addWater(' + q[0] + ",'" + unit + '\',this)">+' + q[0] +
+      '<span class="wqs">' + esc(q[1]) + "</span></button>";
+  }).join("");
+  var foot = (w.target_amount == null) ? "Set a daily target in Setup"
+    : (w.remaining_amount > 0 ? g1(w.remaining_amount) + " " + ul + " to go" : "Target reached ✓");
+  return '<div class="frame"><h2 class="ic">' + hicon("drop") + "Water</h2>" +
+    '<div class="water-row"><div class="gauge">' + gaugeSVG(frac, "#4aa8ff", 96, 10) +
+    '<div class="gauge-c"><div class="gv" style="font-size:19px">' + g1(w.amount || 0) +
+    '<small>' + esc(ul) + '</small></div><div class="gl">' + esc(pct) + "</div></div></div>" +
+    '<div class="wq">' + quick + "</div></div>" +
+    '<div class="wfoot"><span>' + esc(foot) + "</span>" +
+    (rows.length ? '<button class="linkbtn" onclick="undoWater(' + rows[0].id + ',this)">Undo last</button>' : "<span></span>") +
+    "</div></div>";
+}
+async function addWater(amount, unit, btn){
+  if (btn) btn.disabled = true;
+  try {
+    await api("/health/water", { method: "POST", body: { amount: amount, unit: unit, date: today() } });
+    await reloadToday();
+    if (!$("logView").hidden) loadWater();
+  } catch (e){ if (btn) btn.disabled = false; alert(e.message); }
+}
+async function undoWater(id, btn){
+  if (btn) btn.disabled = true;
+  try {
+    await api("/health/water?id=" + id, { method: "DELETE" });
+    await reloadToday();
+    if (!$("logView").hidden) loadWater();
+  } catch (e){ if (btn) btn.disabled = false; alert(e.message); }
+}
+
+// compact area sparkline that fills its container height (for the Today weight card)
+function mspark(vals){
+  var W = 600, H = 140, pad = 10, mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals), span = (mx - mn) || 1, n = vals.length;
+  var xs = function(i){ return pad + (n === 1 ? (W - 2 * pad) / 2 : i * (W - 2 * pad) / (n - 1)); };
+  var ys = function(v){ return pad + (1 - (v - mn) / span) * (H - 2 * pad); };
+  var pts = vals.map(function(v, i){ return xs(i).toFixed(1) + "," + ys(v).toFixed(1); });
+  return '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" height="100%" preserveAspectRatio="none" style="display:block">' +
+    '<defs><linearGradient id="mwg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(33,230,255,.30)"/><stop offset="1" stop-color="rgba(33,230,255,0)"/></linearGradient></defs>' +
+    '<path d="M' + xs(0).toFixed(1) + "," + (H - pad) + " L" + pts.join(" L") + " L" + xs(n - 1).toFixed(1) + "," + (H - pad) + ' Z" fill="url(#mwg)"/>' +
+    '<path d="M' + pts.join(" L") + '" fill="none" stroke="#21e6ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+}
+
+function renderToday(s){
+  var r = s.rings || {}, t = s.totals || {};
+  // HERO — big calorie + protein rings
+  var html = '<div class="rings2">' +
+    ringCard("Calories", "flame", t.kcal, r.kcal, "#21e6ff", "") +
+    ringCard("Protein", "protein", t.protein_g, r.protein_g, "#3ee6b0", "g") + "</div>";
+
+  // Carbs · Fat · Meals
+  html += '<div class="frame"><h2 class="ic">' + hicon("carbs") + 'Carbs · Fat · Meals</h2><div class="dual">' +
+    smallGauge("Carbs", t.carbs_g, r.carbs_g, "#a78bfa", "g") +
+    smallGauge("Fat", t.fat_g, r.fat_g, "#f7b955", "g") +
+    '<div class="sg"><div class="dm-v">' + (t.meals || 0) + '</div><div class="dm-l">meals</div></div></div></div>';
+
+  // Water — the one-tap counter
+  html += waterCard(s.water || {}, s.water_today || []);
+
+  // Weight + mini trend
+  html += '<div class="frame"><h2 class="ic">' + hicon("scale") + "Weight</h2>";
+  if (s.weight){
+    var toGo = s.weight_goal ? (s.weight.weight - s.weight_goal) : null;
+    html += '<div class="wt-row"><div class="wt-now">' + g1(s.weight.weight) + "<small> " + esc(s.weight.unit) + "</small></div>";
+    if (s.weight_goal) html += '<div class="wt-goal">Goal ' + g1(s.weight_goal) + " " + esc(s.weight_unit || "lb") +
+      (toGo != null && Math.abs(toGo) >= 0.1 ? "<br>" + (toGo > 0 ? g1(Math.abs(toGo)) + " to go" : "at goal") : "") + "</div>";
+    html += "</div>";
+    var wt = s.weight_trend || [];
+    if (wt.length >= 2) html += '<div class="mini-spark">' + mspark(wt.map(function(x){ return x.weight; })) + "</div>";
+  } else html += '<div class="muted" style="font-size:12.5px">No weigh-in yet — add one in the Log tab.</div>';
+  html += "</div>";
+
+  // From your watch — icon chips
+  var dm = s.daily_metric || {};
+  function chip(label, value, cls, ic){ return '<div class="chip ' + cls + '"><div class="cl">' + (ic ? icon(ic) : "") + esc(label) + '</div><div class="cv">' + value + "</div></div>"; }
+  var chips = [];
+  if (dm.steps != null) chips.push(chip("Steps", dm.steps.toLocaleString(), "c-cyan", "steps"));
+  if (dm.sleep_min != null) chips.push(chip("Sleep", Math.floor(dm.sleep_min / 60) + "h " + (dm.sleep_min % 60) + "<small>m</small>", "c-violet", "moon"));
+  if (dm.resting_hr != null) chips.push(chip("Resting HR", dm.resting_hr + " <small>bpm</small>", "c-rose", "heart"));
+  if (dm.stress != null) chips.push(chip("Stress", dm.stress, "c-amber", "gauge"));
+  if (dm.body_battery != null) chips.push(chip("Body Batt", dm.body_battery, "c-green", "gauge"));
+  if (dm.active_kcal != null) chips.push(chip("Active", dm.active_kcal + " <small>kcal</small>", "c-cyan", "flame"));
+  html += '<div class="frame"><h2 class="ic">' + hicon("heart") + 'From your watch</h2>';
+  if (chips.length) html += '<div class="chips">' + chips.join("") + "</div>";
+  else html += '<div class="muted" style="font-size:12.5px;line-height:1.6">No watch data today. Connect Garmin in <b style="color:var(--cyan-soft)">Settings → Add-ons</b> to see steps, sleep, resting heart rate, stress, Body Battery, and active calories here.</div>';
+  html += "</div>";
+
+  if (!t.meals && !s.weight && !chips.length && !(s.water && s.water.ml))
+    html += '<div class="state-msg"><b>Nothing logged today.</b><br>Tap a glass of water above, or use the Log tab to add a meal or your weight.</div>';
+  $("todayBody").innerHTML = html;
+}
+
+// --- log ---------------------------------------------------------------------
+async function loadMeals(){
+  try {
+    var d = await api("/health/meals?date=" + today());
+    var meals = d.meals || [];
+    $("mealList").innerHTML = meals.length ? meals.map(function(m){
+      var av = esc(m.name), aq = esc(m.qty || "");
+      return '<div class="meal" data-id="' + m.id + '">' +
+        '<div class="lcard meal-head" onclick="toggleMeal(this)"><div class="lav">' + icon("flame") + '</div>' +
+        '<div class="lmain"><div class="ltitle">' + esc(m.name) + '</div><div class="lmeta">' +
+        '<span class="mtag">' + g(m.kcal) + ' kcal</span><span class="mtag p">' + g1(m.protein_g) + 'P</span>' +
+        '<span class="mtag c">' + g1(m.carbs_g) + 'C</span><span class="mtag f">' + g1(m.fat_g) + 'F</span></div></div>' +
+        '<span class="chev">' + icon("chev") + '</span></div>' +
+        '<div class="meal-edit" hidden>' +
+          '<label class="fld">Food</label><input class="e-name" value="' + av + '">' +
+          '<div class="fldrow"><div><label class="fld">Portion</label><input class="e-qty" value="' + aq + '" placeholder="1 bowl"></div>' +
+          '<div><label class="fld cal">Calories</label><input class="e-kcal" type="number" inputmode="decimal" value="' + g(m.kcal) + '"></div></div>' +
+          '<div class="grid4"><div><label class="fld prot">Protein g</label><input class="e-prot" type="number" inputmode="decimal" value="' + g1(m.protein_g) + '"></div>' +
+          '<div><label class="fld carb">Carbs g</label><input class="e-carb" type="number" inputmode="decimal" value="' + g1(m.carbs_g) + '"></div>' +
+          '<div><label class="fld fat">Fat g</label><input class="e-fat" type="number" inputmode="decimal" value="' + g1(m.fat_g) + '"></div></div>' +
+          '<div class="btnrow"><button class="btn" onclick="saveMeal(' + m.id + ',this)">SAVE CHANGES</button>' +
+          '<button class="xbtn" onclick="delMeal(' + m.id + ',this)">Delete</button></div>' +
+        '</div></div>';
+    }).join("") : '<div class="muted" style="font-size:12.5px">None yet — add a meal above.</div>';
+  } catch (e){}
+}
+function showQtyNote(qty){
+  var el = $("mQtyNote");
+  if (!el) return;
+  if (!qty){ el.hidden = true; el.textContent = ""; return; }
+  el.textContent = "You didn't say how much, so Adam priced one serving: " + qty +
+    ". If that's not what you ate, fix the Portion and estimate again.";
+  el.hidden = false;
+}
+async function estimateText(){
+  var name = $("mName").value.trim(), qty = $("mQty").value.trim();
+  $("mealErr").hidden = true;
+  if (!name){ $("mealErr").textContent = "Type a food first — e.g. 1 banana."; $("mealErr").hidden = false; return; }
+  var q = qty ? (name + " (" + qty + ")") : name;
+  var btn = $("mEstBtn"); btn.disabled = true; var label = btn.textContent; btn.textContent = "ESTIMATING…";
+  try {
+    var c = await api("/health/meal-estimate", { method: "POST", body: { text: q } });
+    if (c.name) $("mName").value = c.name;
+    if (c.qty) $("mQty").value = c.qty;
+    $("mKcal").value = g(c.kcal); $("mProt").value = g1(c.protein_g); $("mCarb").value = g1(c.carbs_g); $("mFat").value = g1(c.fat_g);
+    // You didn't say how much, so Adam picked a portion. Say that out loud — the
+    // Portion box is narrow and truncates, so a wrong assumption ("10 eggs") is
+    // easy to miss and silently swings the calories several-fold.
+    showQtyNote(c.qty_assumed ? c.qty : "");
+  } catch (e){ $("mealErr").textContent = e.message; $("mealErr").hidden = false; }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+async function addMeal(){
+  var name = $("mName").value.trim();
+  $("mealErr").hidden = true;
+  if (!name){ $("mealErr").textContent = "Name the meal first."; $("mealErr").hidden = false; return; }
+  var btn = $("mealAddBtn"); btn.disabled = true;
+  try {
+    await api("/health/meal", { method: "POST", body: { name: name, date: today(), qty: $("mQty").value.trim(),
+      kcal: num("mKcal") || 0, protein_g: num("mProt") || 0, carbs_g: num("mCarb") || 0, fat_g: num("mFat") || 0 } });
+    ["mName", "mQty", "mKcal", "mProt", "mCarb", "mFat"].forEach(function(i){ $(i).value = ""; });
+    showQtyNote("");   // the assumption belonged to the meal just logged
+    await loadMeals(); await loadToday();
+  } catch (e){ $("mealErr").textContent = e.message; $("mealErr").hidden = false; }
+  finally { btn.disabled = false; }
+}
+function toggleMeal(head){
+  var meal = head.closest(".meal"); if (!meal) return;
+  var ed = meal.querySelector(".meal-edit");
+  var opening = ed.hidden;
+  meal.classList.toggle("open", opening);
+  ed.hidden = !opening;
+}
+async function saveMeal(id, btn){
+  var meal = btn.closest(".meal"); if (!meal) return;
+  var v = function(cls){ var el = meal.querySelector(cls); return el ? el.value : ""; };
+  btn.disabled = true; var label = btn.textContent; btn.textContent = "SAVING…";
+  try {
+    await api("/health/meal/" + id, { method: "POST", body: {
+      name: v(".e-name").trim() || "Meal", qty: v(".e-qty").trim(),
+      kcal: parseFloat(v(".e-kcal")) || 0, protein_g: parseFloat(v(".e-prot")) || 0,
+      carbs_g: parseFloat(v(".e-carb")) || 0, fat_g: parseFloat(v(".e-fat")) || 0
+    }});
+    await loadMeals(); await loadToday();
+  } catch (e){ btn.disabled = false; btn.textContent = label; alert(e.message); }
+}
+async function delMeal(id, btn){
+  btn.disabled = true;
+  try { await api("/health/meal?id=" + id, { method: "DELETE" }); await loadMeals(); await loadToday(); }
+  catch (e){ btn.disabled = false; alert(e.message); }
+}
+// --- water (Log tab) ---------------------------------------------------------
+var _waUnitSynced = false;
+async function loadWater(){
+  try {
+    var d = await api("/health/waters?date=" + today());
+    var rows = d.water || [];
+    // Preselect the unit the user set in Setup — once, so a mid-entry change sticks.
+    if (!_waUnitSynced && d.summary && d.summary.unit){ $("waUnit").value = d.summary.unit; _waUnitSynced = true; }
+    $("waList").innerHTML = rows.length ? rows.map(function(r){
+      return '<div class="lcard"><div class="lav">' + icon("drop") + "</div>" +
+        '<div class="lmain"><div class="ltitle">' + g1(r.amount) + " " + esc(unitLabel(r.unit)) + "</div>" +
+        '<div class="lmeta">' + esc(r.note || "logged today") + "</div></div>" +
+        '<button class="xbtn" onclick="undoWater(' + r.id + ',this)">Remove</button></div>';
+    }).join("") : '<div class="muted" style="font-size:12.5px">Nothing yet today.</div>';
+  } catch (e){}
+}
+async function addWaterCustom(){
+  var amt = num("waAmt");
+  $("waErr").hidden = true;
+  if (amt == null || amt <= 0){ $("waErr").textContent = "Enter how much you drank."; $("waErr").hidden = false; return; }
+  var btn = $("waAddBtn"); btn.disabled = true;
+  try {
+    await api("/health/water", { method: "POST", body: { amount: amt, unit: $("waUnit").value, date: today() } });
+    $("waAmt").value = "";
+    await loadWater(); await reloadToday();
+  } catch (e){ $("waErr").textContent = e.message; $("waErr").hidden = false; }
+  finally { btn.disabled = false; }
+}
+
+async function addWeight(){
+  var w = num("wVal"); $("wErr").hidden = true;
+  if (w == null){ $("wErr").textContent = "Enter a weight."; $("wErr").hidden = false; return; }
+  try { await api("/health/weight", { method: "POST", body: { weight: w, unit: $("wUnit").value, date: today() } });
+    $("wVal").value = ""; await loadToday(); }
+  catch (e){ $("wErr").textContent = e.message; $("wErr").hidden = false; }
+}
+async function saveMetric(){
+  var body = { date: today() };
+  if (num("dSteps") != null) body.steps = num("dSteps");
+  if (num("dSleep") != null) body.sleep_min = num("dSleep");
+  try { await api("/health/metric", { method: "POST", body: body }); await loadToday(); }
+  catch (e){ $("wErr").textContent = e.message; $("wErr").hidden = false; }
+}
+
+// --- photo meal estimate (H2) ------------------------------------------------
+async function estimatePhoto(){
+  var f = $("mealPhoto").files[0];
+  $("photoErr").hidden = true; $("photoResult").hidden = true; $("photoResult").innerHTML = "";
+  if (!f){ $("photoErr").textContent = "Choose a photo first."; $("photoErr").hidden = false; return; }
+  var btn = $("mealPhotoBtn"); btn.disabled = true; btn.textContent = "UPLOADING…";
+  try {
+    var fd = new FormData(); fd.append("file", f);
+    var up = await fetch(LS.url + "/upload", { method: "POST", headers: { "Authorization": "Bearer " + LS.token }, body: fd });
+    var upd = null; try { upd = await up.json(); } catch(e){}
+    if (!up.ok) throw new Error((upd && upd.detail) || ("Upload failed (" + up.status + ")"));
+    btn.textContent = "ESTIMATING…";
+    var d = await api("/health/meal-photo", { method: "POST", body: { file_path: upd.path } });
+    renderCandidates(d.candidates || []);
+  } catch (e){ $("photoErr").textContent = e.message; $("photoErr").hidden = false; }
+  finally { btn.disabled = false; btn.textContent = "ESTIMATE FROM PHOTO"; }
+}
+function renderCandidates(cands){
+  if (!cands.length){ $("photoErr").textContent = "No foods recognized."; $("photoErr").hidden = false; return; }
+  var html = '<div class="muted" style="font-size:11px;margin:8px 0 2px">Adam\'s estimate — edit anything, then Add each item:</div>';
+  cands.forEach(function(c, i){
+    html += '<div class="frame" style="margin:8px 0;padding:13px" data-ci="' + i + '">';
+    html += '<label class="fld" style="margin-top:0">Food</label><input class="c-name" value="' + esc(c.name) + '">';
+    html += (c.qty ? '<div class="muted" style="font-size:11px;margin-top:5px">Est. portion: ' + esc(c.qty) + (c.corrected ? ' · using your saved numbers' : '') + "</div>" : "");
+    html += '<div class="fldrow" style="margin-top:8px">' +
+      '<div><label class="fld cal">Calories</label><input class="c-kcal" type="number" inputmode="decimal" value="' + g(c.kcal) + '"></div>' +
+      '<div><label class="fld prot">Protein g</label><input class="c-prot" type="number" inputmode="decimal" value="' + g1(c.protein_g) + '"></div></div>';
+    html += '<div class="fldrow">' +
+      '<div><label class="fld carb">Carbs g</label><input class="c-carb" type="number" inputmode="decimal" value="' + g1(c.carbs_g) + '"></div>' +
+      '<div><label class="fld fat">Fat g</label><input class="c-fat" type="number" inputmode="decimal" value="' + g1(c.fat_g) + '"></div></div>';
+    html += '<button class="btn wide" onclick="addCandidate(this)">ADD MEAL</button></div>';
+  });
+  $("photoResult").innerHTML = html; $("photoResult").hidden = false;
+}
+async function addCandidate(btn){
+  var box = btn.closest("[data-ci]"); if (!box) return;
+  var name = box.querySelector(".c-name").value.trim() || "Food";
+  var kcal = parseFloat(box.querySelector(".c-kcal").value) || 0;
+  var prot = parseFloat(box.querySelector(".c-prot").value) || 0;
+  var carb = parseFloat(box.querySelector(".c-carb").value) || 0;
+  var fat = parseFloat(box.querySelector(".c-fat").value) || 0;
+  btn.disabled = true;
+  try {
+    await api("/health/meal", { method: "POST", body: { name: name, date: today(), kcal: kcal, protein_g: prot, carbs_g: carb, fat_g: fat, source: "photo" } });
+    // Remember the (possibly edited) macros so this food comes back right next time.
+    try { await api("/health/correction", { method: "POST", body: { name: name, kcal: kcal, protein_g: prot, carbs_g: carb, fat_g: fat } }); } catch (e){}
+    box.remove(); await loadMeals(); await loadToday();
+  } catch (e){ btn.disabled = false; alert(e.message); }
+}
+
+// --- trends ------------------------------------------------------------------
+// A smooth area+line sparkline (SVG) — the right shape for weight, where the
+// range is small and fat bars would exaggerate tiny changes. Uniform scaling
+// (default preserveAspectRatio) keeps the endpoint dot round.
+// `dates` (optional, parallel to vals) positions points by REAL elapsed time.
+// Index spacing drew a next-day weigh-in and one after a five-day gap the same
+// distance apart, which invents or flattens the slope between them. Each point
+// also gets an invisible tap target so a mistyped weight can be corrected.
+function spark(vals, labels, dates){
+  var W = 600, H = 150, pad = 18;
+  var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+  var span = (mx - mn) || 1, n = vals.length;
+  var byTime = !!(dates && dates.length === n && n > 1);
+  var frac;
+  if (byTime){
+    var t0 = parseLocalDate(dates[0]).getTime(), tN = parseLocalDate(dates[n - 1]).getTime();
+    var tspan = (tN - t0) || 1;
+    frac = function(i){ return (parseLocalDate(dates[i]).getTime() - t0) / tspan; };
+  } else {
+    frac = function(i){ return n === 1 ? 0.5 : i / (n - 1); };
+  }
+  var xs = function(i){ return pad + frac(i) * (W - 2 * pad); };
+  var ys = function(v){ return pad + (1 - (v - mn) / span) * (H - 2 * pad); };
+  var pts = vals.map(function(v, i){ return xs(i).toFixed(1) + "," + ys(v).toFixed(1); });
+  var line = "M" + pts.join(" L");
+  var area = "M" + xs(0).toFixed(1) + "," + (H - pad) + " L" + pts.join(" L") + " L" + xs(n - 1).toFixed(1) + "," + (H - pad) + " Z";
+  var lx = xs(n - 1).toFixed(1), ly = ys(vals[n - 1]).toFixed(1);
+  // Crowded date-positioned labels overlap; keep the ends and thin the middle.
+  var ticks = labels.map(function(lb, i){
+    if (!(i === 0 || i === n - 1 || n <= 6)) return "";
+    return '<text x="' + xs(i).toFixed(1) + '" y="' + (H - 3) + '" fill="#5d8894" font-size="11" text-anchor="middle" font-family="' + "var(--font)" + '">' + esc(lb) + "</text>";
+  }).join("");
+  var dots = vals.map(function(v, i){
+    var d = (dates && dates[i]) ? dates[i] : "";
+    var vis = (i === n - 1) ? "" : '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(v).toFixed(1) + '" r="3" fill="#8df2ff" opacity=".5"/>';
+    return vis + '<circle class="wpt" data-day="' + esc(d) + '" cx="' + xs(i).toFixed(1) + '" cy="' + ys(v).toFixed(1) +
+      '" r="11" fill="transparent" style="cursor:pointer"><title>' + esc(g1(v) + (d ? " on " + d : "")) + '</title></circle>';
+  }).join("");
+  return '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" style="display:block;margin-top:4px" preserveAspectRatio="xMidYMid meet">' +
+    '<defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(33,230,255,.34)"/><stop offset="1" stop-color="rgba(33,230,255,0)"/></linearGradient>' +
+    '<linearGradient id="wl" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8df2ff"/><stop offset="1" stop-color="#21e6ff"/></linearGradient></defs>' +
+    '<path d="' + area + '" fill="url(#wg)"/>' +
+    '<path d="' + line + '" fill="none" stroke="url(#wl)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<circle cx="' + lx + '" cy="' + ly + '" r="5.5" fill="#8df2ff"/><circle cx="' + lx + '" cy="' + ly + '" r="10" fill="#21e6ff" opacity=".25"/>' +
+    dots + ticks + "</svg>";
+}
+
+// The charts run on a CONTINUOUS calendar axis. health_metrics only returns days
+// that actually have entries ("Only days with a logged drink appear"), so drawing
+// the rows straight through made a four-day gap invisible and stood 07-29 next to
+// 08-03 as though they were consecutive. Now every day in the window holds a slot,
+// BOTH bar charts share one axis (column N is the same date in each — they used to
+// disagree, since each series compacted independently), and an empty slot is the
+// tap target that backfills it.
+var TREND_DAYS = 14;
+
+function parseLocalDate(s){ return new Date(s + "T00:00:00"); }
+function fmtLocalDate(d){ var m = d.getMonth() + 1, day = d.getDate();
+  return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day; }
+
+function dateAxis(seriesList, maxDays){
+  var all = [];
+  (seriesList || []).forEach(function(s){
+    (s || []).forEach(function(r){ if (r && r.date) all.push(r.date); });
+  });
+  if (!all.length) return [];
+  var min = all[0], max = all[0];
+  all.forEach(function(d){ if (d < min) min = d; if (d > max) max = d; });
+  var end = today();
+  if (max > end) end = max;              // a future-dated row still gets a slot
+  if (!end || min > end) end = max;
+  var out = [], d = parseLocalDate(min), endD = parseLocalDate(end), guard = 0;
+  while (d <= endD && guard++ < 800){ out.push(fmtLocalDate(d)); d.setDate(d.getDate() + 1); }
+  return out.slice(-(maxDays || TREND_DAYS));
+}
+
+// "8/3" on the first column and at each month rollover, bare day number elsewhere —
+// a full YYYY-MM-DD per column is unreadable once every day has a slot.
+function axisLabel(ds, i){
+  var p = ds.split("-"), mo = +p[1], da = +p[2];
+  return (i === 0 || da === 1) ? (mo + "/" + da) : String(da);
+}
+
+function byDate(rows){ var m = {}; (rows || []).forEach(function(r){ m[r.date] = r; }); return m; }
+
+// One renderer for both bar charts. opts: {name, value, text, barStyle}
+function barChart(axis, map, opts){
+  var td = today(), vals = [];
+  axis.forEach(function(ds){ if (map[ds]) vals.push(opts.value(map[ds])); });
+  var mx = vals.length ? Math.max.apply(null, vals) : 0;
+  if (!mx) mx = 1;
+  var cols = axis.map(function(ds, i){
+    var row = map[ds], isToday = (ds === td), lab = esc(axisLabel(ds, i));
+    var cls = "col" + (row ? "" : " empty") + (isToday ? " today" : "");
+    if (!row){
+      return '<button type="button" class="' + cls + '" data-day="' + ds + '" aria-label="' +
+        esc("No " + opts.name + " logged " + ds + ". Tap to add.") + '">' +
+        '<span class="v2"></span><span class="bar2"></span><span class="lab">' + lab + '</span></button>';
+    }
+    var h = Math.max(6, (opts.value(row) / mx) * 74);
+    return '<button type="button" class="' + cls + '" data-day="' + ds + '" aria-label="' +
+      esc(opts.name + " " + opts.text(row) + " on " + ds + (isToday ? ", still being logged" : "") + ". Tap to edit.") + '">' +
+      '<span class="v2">' + esc(String(opts.text(row))) + '</span>' +
+      '<span class="bar2" style="height:' + h.toFixed(0) + 'px' + (opts.barStyle || "") + '"></span>' +
+      '<span class="lab">' + lab + '</span></button>';
+  }).join("");
+  return '<div class="tbar">' + cols + '</div>';
+}
+
+// Today is excluded — it isn't "missed", it's in progress.
+function gapNote(axis, map){
+  var missing = 0, td = today();
+  axis.forEach(function(ds){ if (!map[ds] && ds !== td) missing++; });
+  if (!missing) return "";
+  return missing + (missing === 1 ? " day not logged" : " days not logged");
+}
+
+async function loadTrends(){
+  try {
+    var t = await api("/health/trends");
+    var w = t.weight || [], it = t.intake || [], wa = t.water || [], wu = t.water_unit || "oz";
+    var axis = dateAxis([w, it, wa], TREND_DAYS);
+    var html = "";
+
+    // Weight — a weigh-in isn't a daily obligation, so it stays a point series
+    // rather than getting empty slots; it's positioned by date instead.
+    html += '<div class="frame"><h2 class="ic">' + hicon("scale") + "Weight</h2>";
+    if (w.length >= 2){
+      html += spark(w.map(function(x){ return x.weight; }),
+                    w.map(function(x){ return x.date.slice(5); }),
+                    w.map(function(x){ return x.date; }));
+      var chg = w[w.length - 1].weight - w[0].weight;
+      var chgTxt = (chg <= 0 ? "▼ " + g1(Math.abs(chg)) : "▲ " + g1(chg)) + " " + esc(w[w.length - 1].unit) + " overall";
+      html += '<div class="kv" style="border:0;padding:8px 0 0"><span class="label">' + g1(w[w.length - 1].weight) + " " + esc(w[w.length - 1].unit) + ' latest</span><span class="val" style="color:' + (chg <= 0 ? "var(--green)" : "var(--amber)") + '">' + chgTxt + "</span></div>";
+      html += '<div class="chart-foot"><span class="muted">' + w.length + ' weigh-ins · ' + esc(w[0].date.slice(5)) + '–' + esc(w[w.length - 1].date.slice(5)) + '</span><span class="chart-hint">tap a point to edit</span></div>';
+    } else if (w.length === 1){
+      html += '<div class="muted" style="font-size:12.5px">' + g1(w[0].weight) + " " + esc(w[0].unit) + " — log another weigh-in to see the trend.</div>";
+    } else html += '<div class="muted" style="font-size:12.5px">No weigh-ins yet.</div>';
+    html += "</div>";
+
+    // Calories per day
+    var im = byDate(it);
+    html += '<div class="frame"><h2 class="ic">' + hicon("flame") + "Calories per day</h2>";
+    if (axis.length){
+      html += barChart(axis, im, { name: "calories",
+        value: function(x){ return x.kcal; }, text: function(x){ return g(x.kcal); } });
+      // The old label said "last 7 days" but took slice(-7) of the ROWS, which
+      // spanned eight calendar days once a gap existed. Walk the real axis and
+      // print — for a day with nothing logged.
+      var last7 = axis.slice(-7);
+      var pro = last7.map(function(ds){ return im[ds] ? g(im[ds].protein_g) : "—"; }).join(" · ");
+      var gn = gapNote(axis, im);
+      html += '<div class="chart-foot"><span class="muted">Protein, ' + last7.length + ' days to ' +
+        esc(last7[last7.length - 1].slice(5)) + ': ' + pro + ' g</span>' +
+        (gn ? '<span class="chart-hint">' + esc(gn) + '</span>' : "") + '</div>';
+    } else html += '<div class="muted" style="font-size:12.5px">No meals logged yet.</div>';
+    html += "</div>";
+
+    // Water per day
+    var wm = byDate(wa);
+    html += '<div class="frame"><h2 class="ic">' + hicon("drop") + "Water per day</h2>";
+    if (axis.length){
+      html += barChart(axis, wm, { name: "water",
+        value: function(x){ return x.ml; }, text: function(x){ return g1(x.amount); },
+        barStyle: ";background:linear-gradient(180deg,#7cc4ff,#4aa8ff);box-shadow:0 0 10px rgba(74,168,255,.35)" });
+      var gw = gapNote(axis, wm);
+      html += '<div class="chart-foot"><span class="muted">Amounts in ' + esc(unitLabel(wu)) +
+        (t.target_water_amount ? " · daily target " + g1(t.target_water_amount) + " " + esc(unitLabel(wu)) : "") + '</span>' +
+        (gw ? '<span class="chart-hint">' + esc(gw) + '</span>' : "") + '</div>';
+    } else html += '<div class="muted" style="font-size:12.5px">No water logged yet — tap a glass on the Today tab.</div>';
+    html += "</div>";
+
+    if (axis.length){
+      html += '<div class="ds-note" style="padding:0 2px">Tap any bar — or a dashed slot for a day you missed — to see and fix what was logged. Striped bars are today, still in progress.</div>';
+    }
+
+    var body = $("trendsBody");
+    body.innerHTML = html;
+    // A dense axis scrolls; open it on the most recent days.
+    Array.prototype.forEach.call(body.querySelectorAll(".tbar"), function(el){ el.scrollLeft = el.scrollWidth; });
+    Array.prototype.forEach.call(body.querySelectorAll("[data-day]"), function(b){
+      b.addEventListener("click", function(){
+        var d = b.getAttribute("data-day");
+        if (d) openDay(d);
+      });
+    });
+  } catch (e){ $("trendsBody").innerHTML = '<div class="err">' + esc(e.message) + "</div>"; }
+}
+
+// --- setup -------------------------------------------------------------------
+async function loadSetup(){
+  try {
+    var s = await api("/health/targets");
+    $("tKcal").value = s.target_kcal == null ? "" : s.target_kcal;
+    $("tProt").value = s.target_protein_g == null ? "" : s.target_protein_g;
+    $("tCarb").value = s.target_carbs_g == null ? "" : s.target_carbs_g;
+    $("tFat").value = s.target_fat_g == null ? "" : s.target_fat_g;
+    $("tGoal").value = s.weight_goal == null ? "" : s.weight_goal;
+    if (s.weight_unit) $("tUnit").value = s.weight_unit;
+    if (s.water_unit) $("tWaterUnit").value = s.water_unit;
+    // The stored target is ml; show it in the unit the user picked.
+    var wu = s.water_unit || "oz";
+    $("tWater").value = s.target_water_ml == null ? ""
+      : (wu === "ml" ? Math.round(s.target_water_ml) : Math.round(s.target_water_ml / ML_PER[wu] * 10) / 10);
+  } catch (e){}
+}
+async function saveTargets(){
+  $("tErr").hidden = true;
+  var btn = $("tSaveBtn"); btn.disabled = true;
+  try {
+    var wTarget = num("tWater"), wUnit = $("tWaterUnit").value;
+    await api("/health/targets", { method: "POST", body: {
+      target_kcal: num("tKcal"), target_protein_g: num("tProt"), target_carbs_g: num("tCarb"),
+      target_fat_g: num("tFat"), weight_goal: num("tGoal"), weight_unit: $("tUnit").value,
+      target_water_ml: (wTarget == null ? null : Math.round(toMl(wTarget, wUnit))), water_unit: wUnit } });
+    _waUnitSynced = false;   // pick the new unit up next time the Log tab opens
+    await loadToday();
+    btn.textContent = "SAVED ✓"; setTimeout(function(){ btn.textContent = "SAVE TARGETS"; }, 1500);
+  } catch (e){ $("tErr").textContent = e.message; $("tErr").hidden = false; btn.textContent = "SAVE TARGETS"; }
+  finally { btn.disabled = false; }
+}
+
+// --- tabs --------------------------------------------------------------------
+function setTab(which){
+  var map = { Today: "todayView", Log: "logView", Trends: "trendsView", Setup: "setupView" };
+  ["Today", "Log", "Trends", "Setup"].forEach(function(t){
+    $("tab" + t).classList.toggle("on", t === which);
+    $(map[t]).hidden = (t !== which);
+  });
+}
+$("tabToday").addEventListener("click", function(){ setTab("Today"); loadToday(); });
+$("tabLog").addEventListener("click", function(){ setTab("Log"); loadMeals(); loadWater(); });
+$("tabTrends").addEventListener("click", function(){ setTab("Trends"); loadTrends(); });
+$("tabSetup").addEventListener("click", function(){ setTab("Setup"); loadSetup(); });
+$("mealAddBtn").addEventListener("click", addMeal);
+$("mEstBtn").addEventListener("click", estimateText);
+$("waAddBtn").addEventListener("click", addWaterCustom);
+$("wAddBtn").addEventListener("click", addWeight);
+$("metricBtn").addEventListener("click", saveMetric);
+$("tSaveBtn").addEventListener("click", saveTargets);
+$("mealPhotoBtn").addEventListener("click", estimatePhoto);
+$("mealPhoto").addEventListener("change", function(){ $("mealPhotoName").textContent = (this.files && this.files[0]) ? this.files[0].name : ""; });
+
+loadToday();
+
+// --- day sheet (tap a bar → see and fix that day) ----------------------------
+// Every write endpoint already accepted an explicit `date` and only fell back to
+// today; the UI just never sent one — all six log paths hardcoded today(). This
+// sheet is the missing half: it carries the tapped date through every add, edit,
+// and delete, so a day you skipped or half-logged can be repaired after the fact.
+var DAY = { date: "", data: null, editing: null, adding: "" };
+
+function dayHuman(ds){
+  try {
+    var d = parseLocalDate(ds), td = today();
+    var names = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    var mons = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    var base = names[d.getDay()] + ", " + mons[d.getMonth()] + " " + d.getDate();
+    if (ds === td) return base + " (today)";
+    var y = parseLocalDate(td); y.setDate(y.getDate() - 1);
+    if (ds === fmtLocalDate(y)) return base + " (yesterday)";
+    return base;
+  } catch (e){ return ds; }
+}
+
+async function openDay(ds){
+  if (!ds) return;
+  DAY.date = ds; DAY.editing = null; DAY.adding = "";
+  var panel = $("dayPanel"), scrim = $("dayScrim");
+  $("dayTitle").textContent = dayHuman(ds);
+  $("dayEyebrow").textContent = ds;
+  $("dayBody").innerHTML = '<div class="state-msg">Loading…</div>';
+  scrim.classList.add("show"); panel.classList.add("show");
+  panel.setAttribute("aria-hidden", "false");
+  try { document.body.style.overflow = "hidden"; } catch (_){}
+  setTimeout(function(){ try { $("dayClose").focus(); } catch (_){} }, 30);
+  await refreshDay();
+}
+
+function closeDay(){
+  var panel = $("dayPanel");
+  panel.classList.remove("show"); $("dayScrim").classList.remove("show");
+  panel.setAttribute("aria-hidden", "true");
+  try { document.body.style.overflow = ""; } catch (_){}
+}
+
+async function refreshDay(){
+  try {
+    DAY.data = await api("/health/day?date=" + encodeURIComponent(DAY.date));
+    renderDay();
+  } catch (e){ $("dayBody").innerHTML = '<div class="err">' + esc(e.message) + "</div>"; }
+}
+
+function macroLine(m){
+  var bits = [];
+  if (m.kcal) bits.push(g(m.kcal) + " kcal");
+  if (m.protein_g) bits.push("P " + g(m.protein_g));
+  if (m.carbs_g) bits.push("C " + g(m.carbs_g));
+  if (m.fat_g) bits.push("F " + g(m.fat_g));
+  return bits.length ? bits.join(" · ") : "no macros";
+}
+
+function delBtn(kind, id){
+  return '<button type="button" class="ds-ico danger" data-del="' + kind + ':' + id + '" aria-label="Delete">×</button>';
+}
+function editBtn(kind, id){
+  return '<button type="button" class="ds-ico" data-edit="' + kind + ':' + id + '" aria-label="Edit">✎</button>';
+}
+function fld(label, id, val, extra){
+  return '<div' + (extra || "") + '><label for="' + id + '">' + esc(label) + '</label>' +
+    '<input id="' + id + '" value="' + esc(val == null ? "" : String(val)) + '"></div>';
+}
+
+function renderDay(){
+  var d = DAY.data, u = "";
+  if (!d) return;
+  var isEd = function(kind, id){ return DAY.editing === kind + ":" + id; };
+
+  // --- summary strip
+  var wsum = d.water_summary || {};
+  var wunit = wsum.unit || (d.water[0] && d.water[0].unit) || "oz";
+  var wtot = (wsum.amount != null) ? wsum.amount : null;
+  u += '<div class="ds-row" style="background:rgba(33,230,255,.06)">' +
+    '<div class="rmain"><div class="rname">' + g(d.totals.kcal) + ' kcal · ' + g(d.totals.protein_g) + ' g protein</div>' +
+    '<div class="rsub">' + (wtot != null ? g1(wtot) + " " + esc(unitLabel(wunit)) + " water" : "no water") +
+    (d.weights.length ? " · " + g1(d.weights[0].weight) + " " + esc(d.weights[0].unit) : "") + '</div></div></div>';
+  if (!d.logged.meals && !d.logged.water && !d.logged.weight){
+    u += '<div class="ds-note" style="margin-top:2px">Nothing was logged on this day. Add what you remember — it counts toward your trends exactly like a same-day entry.</div>';
+  }
+
+  // --- meals
+  u += '<div class="ds-sec"><h3>Food</h3>';
+  if (!d.meals.length) u += '<div class="ds-empty">Nothing logged.</div>';
+  d.meals.forEach(function(m){
+    if (isEd("meal", m.id)){
+      u += '<div class="ds-row" style="display:block">' +
+        '<div class="ds-edit">' +
+          fld("Name", "e_name", m.name, ' class="wide"') +
+          fld("Qty", "e_qty", m.qty) + fld("Calories", "e_kcal", m.kcal) + fld("Protein g", "e_prot", m.protein_g) +
+          fld("Carbs g", "e_carb", m.carbs_g) + fld("Fat g", "e_fat", m.fat_g) + fld("Date", "e_date", m.date) +
+        '</div>' +
+        '<div class="ds-acts"><button type="button" class="ds-btn" data-save="meal:' + m.id + '">Save</button>' +
+        '<button type="button" class="ds-btn ghost" data-cancel="1">Cancel</button></div></div>';
+    } else {
+      u += '<div class="ds-row"><div class="rmain"><div class="rname">' + esc(m.name) + (m.qty ? ' <span class="muted">· ' + esc(m.qty) + '</span>' : "") + '</div>' +
+        '<div class="rsub">' + esc(macroLine(m)) + '</div></div>' + editBtn("meal", m.id) + delBtn("meal", m.id) + '</div>';
+    }
+  });
+  if (DAY.adding === "meal"){
+    u += '<div class="ds-row" style="display:block"><div class="ds-edit">' +
+      fld("Name", "a_name", "", ' class="wide"') +
+      fld("Qty", "a_qty", "") + fld("Calories", "a_kcal", "") + fld("Protein g", "a_prot", "") +
+      fld("Carbs g", "a_carb", "") + fld("Fat g", "a_fat", "") +
+      '</div><div class="ds-acts"><button type="button" class="ds-btn" data-add="meal">Add</button>' +
+      '<button type="button" class="ds-btn ghost" data-cancel="1">Cancel</button></div></div>';
+  } else {
+    u += '<div class="ds-acts"><button type="button" class="ds-btn ghost" data-open="meal">+ Add food</button></div>';
+  }
+  u += '</div>';
+
+  // --- water
+  u += '<div class="ds-sec"><h3>Water</h3>';
+  if (!d.water.length) u += '<div class="ds-empty">Nothing logged.</div>';
+  d.water.forEach(function(x){
+    if (isEd("water", x.id)){
+      u += '<div class="ds-row" style="display:block"><div class="ds-edit">' +
+        fld("Amount", "e_amt", g1(x.amount)) +
+        '<div><label for="e_unit">Unit</label><select id="e_unit" style="width:100%;box-sizing:border-box;background:rgba(2,6,12,.6);color:var(--ink);border:1px solid var(--edge);border-radius:9px;padding:7px 8px;font:inherit;font-size:12.5px">' +
+        ["oz","ml","cup"].map(function(o){ return '<option value="' + o + '"' + (x.unit === o ? " selected" : "") + '>' + o + '</option>'; }).join("") +
+        '</select></div>' + fld("Date", "e_wdate", x.date) +
+        '</div><div class="ds-acts"><button type="button" class="ds-btn" data-save="water:' + x.id + '">Save</button>' +
+        '<button type="button" class="ds-btn ghost" data-cancel="1">Cancel</button></div></div>';
+    } else {
+      u += '<div class="ds-row"><div class="rmain"><div class="rname">' + g1(x.amount) + " " + esc(unitLabel(x.unit)) + '</div>' +
+        (x.note ? '<div class="rsub">' + esc(x.note) + '</div>' : "") + '</div>' +
+        editBtn("water", x.id) + delBtn("water", x.id) + '</div>';
+    }
+  });
+  if (DAY.adding === "water"){
+    u += '<div class="ds-row" style="display:block"><div class="ds-edit">' +
+      fld("Amount", "a_amt", "") +
+      '<div><label for="a_unit">Unit</label><select id="a_unit" style="width:100%;box-sizing:border-box;background:rgba(2,6,12,.6);color:var(--ink);border:1px solid var(--edge);border-radius:9px;padding:7px 8px;font:inherit;font-size:12.5px">' +
+      ["oz","ml","cup"].map(function(o){ return '<option value="' + o + '"' + (wunit === o ? " selected" : "") + '>' + o + '</option>'; }).join("") +
+      '</select></div></div><div class="ds-acts"><button type="button" class="ds-btn" data-add="water">Add</button>' +
+      '<button type="button" class="ds-btn ghost" data-cancel="1">Cancel</button></div></div>';
+  } else {
+    u += '<div class="ds-acts"><button type="button" class="ds-btn ghost" data-open="water">+ Add water</button></div>';
+  }
+  u += '</div>';
+
+  // --- weight
+  u += '<div class="ds-sec"><h3>Weight</h3>';
+  if (!d.weights.length) u += '<div class="ds-empty">No weigh-in.</div>';
+  d.weights.forEach(function(x){
+    if (isEd("weight", x.id)){
+      u += '<div class="ds-row" style="display:block"><div class="ds-edit">' +
+        fld("Weight", "e_wt", x.weight) +
+        '<div><label for="e_wunit">Unit</label><select id="e_wunit" style="width:100%;box-sizing:border-box;background:rgba(2,6,12,.6);color:var(--ink);border:1px solid var(--edge);border-radius:9px;padding:7px 8px;font:inherit;font-size:12.5px">' +
+        ["lb","kg"].map(function(o){ return '<option value="' + o + '"' + (x.unit === o ? " selected" : "") + '>' + o + '</option>'; }).join("") +
+        '</select></div>' + fld("Date", "e_wtdate", x.date) +
+        '</div><div class="ds-acts"><button type="button" class="ds-btn" data-save="weight:' + x.id + '">Save</button>' +
+        '<button type="button" class="ds-btn ghost" data-cancel="1">Cancel</button></div></div>';
+    } else {
+      u += '<div class="ds-row"><div class="rmain"><div class="rname">' + g1(x.weight) + " " + esc(x.unit) + '</div>' +
+        (x.note ? '<div class="rsub">' + esc(x.note) + '</div>' : "") + '</div>' +
+        editBtn("weight", x.id) + delBtn("weight", x.id) + '</div>';
+    }
+  });
+  if (DAY.adding === "weight"){
+    u += '<div class="ds-row" style="display:block"><div class="ds-edit">' +
+      fld("Weight", "a_wt", "") +
+      '<div><label for="a_wunit">Unit</label><select id="a_wunit" style="width:100%;box-sizing:border-box;background:rgba(2,6,12,.6);color:var(--ink);border:1px solid var(--edge);border-radius:9px;padding:7px 8px;font:inherit;font-size:12.5px">' +
+      ["lb","kg"].map(function(o){ return '<option value="' + o + '">' + o + '</option>'; }).join("") +
+      '</select></div></div><div class="ds-acts"><button type="button" class="ds-btn" data-add="weight">Add</button>' +
+      '<button type="button" class="ds-btn ghost" data-cancel="1">Cancel</button></div></div>';
+  } else {
+    u += '<div class="ds-acts"><button type="button" class="ds-btn ghost" data-open="weight">+ Add weigh-in</button></div>';
+  }
+  u += '</div>';
+
+  u += '<div id="dayErr" class="err" hidden></div>';
+  $("dayBody").innerHTML = u;
+}
+
+function dayErr(msg){
+  var e = $("dayErr");
+  if (!e) return;
+  e.textContent = msg; e.hidden = false;
+}
+
+function fnum(id){ var el = $(id); if (!el) return null; var v = el.value.trim(); return v === "" ? null : parseFloat(v); }
+function fstr(id){ var el = $(id); return el ? el.value.trim() : ""; }
+
+// After any write the day sheet, the charts behind it, and (if the edited date is
+// today) the Today tab must all reflect it — a stale chart behind an edited sheet
+// is exactly the kind of thing that reads as "the edit didn't save".
+async function afterDayWrite(){
+  DAY.editing = null; DAY.adding = "";
+  await refreshDay();
+  try { await loadTrends(); } catch (_){}
+  if (DAY.date === today()){ try { await loadToday(); } catch (_){} }
+}
+
+document.addEventListener("click", async function(ev){
+  var t = ev.target;
+  if (!t || !t.getAttribute) return;
+  var body = $("dayBody");
+  if (!body || !body.contains(t)) return;
+
+  var open = t.getAttribute("data-open");
+  if (open){ DAY.adding = open; DAY.editing = null; renderDay(); return; }
+  if (t.getAttribute("data-cancel")){ DAY.adding = ""; DAY.editing = null; renderDay(); return; }
+
+  var ed = t.getAttribute("data-edit");
+  if (ed){ DAY.editing = ed; DAY.adding = ""; renderDay(); return; }
+
+  var del = t.getAttribute("data-del");
+  if (del){
+    // Two-tap confirm instead of confirm() — a modal dialog here would block the
+    // page (and the PWA) rather than just asking.
+    if (t.getAttribute("data-armed") !== "1"){
+      t.setAttribute("data-armed", "1"); t.textContent = "?";
+      setTimeout(function(){ try { if (t.getAttribute("data-armed") === "1"){ t.removeAttribute("data-armed"); t.textContent = "×"; } } catch (_){} }, 3000);
+      return;
+    }
+    var pd = del.split(":"), kind = pd[0], id = pd[1];
+    try {
+      await api("/health/" + kind + "?id=" + encodeURIComponent(id), { method: "DELETE" });
+      await afterDayWrite();
+    } catch (e){ dayErr(e.message); }
+    return;
+  }
+
+  var save = t.getAttribute("data-save");
+  if (save){
+    var ps = save.split(":"), k = ps[0], sid = ps[1];
+    try {
+      if (k === "meal"){
+        await api("/health/meal/" + encodeURIComponent(sid), { method: "POST", body: {
+          name: fstr("e_name"), qty: fstr("e_qty"), kcal: fnum("e_kcal"), protein_g: fnum("e_prot"),
+          carbs_g: fnum("e_carb"), fat_g: fnum("e_fat"), date: fstr("e_date") } });
+      } else if (k === "water"){
+        await api("/health/water/" + encodeURIComponent(sid), { method: "POST", body: {
+          amount: fnum("e_amt"), unit: fstr("e_unit"), date: fstr("e_wdate") } });
+      } else if (k === "weight"){
+        await api("/health/weight/" + encodeURIComponent(sid), { method: "POST", body: {
+          weight: fnum("e_wt"), unit: fstr("e_wunit"), date: fstr("e_wtdate") } });
+      }
+      await afterDayWrite();
+    } catch (e){ dayErr(e.message); }
+    return;
+  }
+
+  var add = t.getAttribute("data-add");
+  if (add){
+    try {
+      if (add === "meal"){
+        var nm = fstr("a_name");
+        if (!nm){ dayErr("Give the food a name."); return; }
+        await api("/health/meal", { method: "POST", body: { name: nm, date: DAY.date, qty: fstr("a_qty"),
+          kcal: fnum("a_kcal") || 0, protein_g: fnum("a_prot") || 0, carbs_g: fnum("a_carb") || 0,
+          fat_g: fnum("a_fat") || 0, source: "manual" } });
+      } else if (add === "water"){
+        var amt = fnum("a_amt");
+        if (!amt || amt <= 0){ dayErr("Enter an amount."); return; }
+        await api("/health/water", { method: "POST", body: { amount: amt, unit: fstr("a_unit"), date: DAY.date } });
+      } else if (add === "weight"){
+        var wt = fnum("a_wt");
+        if (!wt || wt <= 0){ dayErr("Enter a weight."); return; }
+        await api("/health/weight", { method: "POST", body: { weight: wt, unit: fstr("a_wunit"), date: DAY.date } });
+      }
+      await afterDayWrite();
+    } catch (e){ dayErr(e.message); }
+    return;
+  }
+});
+
+(function(){
+  try {
+    $("dayClose").addEventListener("click", closeDay);
+    $("dayScrim").addEventListener("click", closeDay);
+    document.addEventListener("keydown", function(e){
+      if (e.key === "Escape" && $("dayPanel").classList.contains("show")) closeDay();
+    });
+  } catch (_){}
+})();
+
+// --- page guide ("?" help) — self-contained + fail-safe so a typo can't break the tracker ---
+(function () {
+  try {
+    var fab = $("helpFab"), scrim = $("helpScrim"), panel = $("helpPanel"),
+        closeBtn = $("helpClose"), body = $("helpBody");
+    if (!fab || !panel || !body) return;
+
+    // One editable place; each card = a tab (or a cross-cutting note) explained plainly.
+    var GUIDE = [
+      { tab: "Today", t: "Your day at a glance",
+        d: "Calories and protein sit front and center with rings filling toward your targets, plus carbs, fat, weight, steps, and sleep. The water counter lives here too — tap a glass, bottle, or jug to fill toward your daily goal, and undo a mistap right on the card." },
+      { tab: "Log", t: "Log a meal, water, or your weight",
+        d: "Photograph a meal and Adam estimates the macros, or just describe it (e.g. “1 banana”) and Adam fills in the calories and macros — tweak anything, then add. Log an exact amount of water in oz, ml, or cups, and record your weight, steps, and sleep. Everything rolls up into Today's totals." },
+      { tab: "Trends", t: "Watch your progress over time",
+        d: "Weight, calories, and water charted across recent days — so you can see the direction you're heading, not just today's number." },
+      { tab: "Setup", t: "Set the goals your rings fill toward",
+        d: "Set daily calorie, protein, carb, and fat targets, a water target, and a goal weight. Leave any target blank to hide that ring." },
+      { tab: "Watch", t: "Connect a watch (optional)",
+        d: "Connect Garmin in Settings → Add-ons and your steps, sleep, resting heart rate, stress, Body Battery, and active calories appear under “From your watch” on Today — kept current through the day." },
+      { note: true, t: "Private and on-device, always",
+        d: "None of your health data ever leaves this machine — there's no account and no health company in the loop. It's yours." }
+    ];
+
+    function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+    function render() {
+      body.innerHTML = "";
+      GUIDE.forEach(function (c) {
+        var card = el("div", "hp-card" + (c.note ? " note" : ""));
+        card.appendChild(el("span", "tag", c.note ? "Note" : c.tab));
+        card.appendChild(el("h3", null, c.t));
+        card.appendChild(el("p", null, c.d));
+        body.appendChild(card);
+      });
+    }
+    render();
+
+    var lastFocus = null;
+    function open() {
+      lastFocus = document.activeElement;
+      scrim.classList.add("show"); panel.classList.add("show");
+      panel.setAttribute("aria-hidden", "false");
+      try { document.body.style.overflow = "hidden"; } catch (_) {}
+      setTimeout(function () { try { closeBtn.focus(); } catch (_) {} }, 30);
+    }
+    function hide() {
+      scrim.classList.remove("show"); panel.classList.remove("show");
+      panel.setAttribute("aria-hidden", "true");
+      try { document.body.style.overflow = ""; } catch (_) {}
+      try { (lastFocus && lastFocus.focus ? lastFocus : fab).focus(); } catch (_) {}
+    }
+    fab.addEventListener("click", function () { panel.classList.contains("show") ? hide() : open(); });
+    closeBtn.addEventListener("click", hide);
+    scrim.addEventListener("click", hide);
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && panel.classList.contains("show")) hide(); });
+    // Light focus trap while the guide is open.
+    panel.addEventListener("keydown", function (e) {
+      if (e.key !== "Tab") return;
+      var f = panel.querySelectorAll("button, [href], input, [tabindex]:not([tabindex='-1'])");
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+  } catch (_) {}
+})();
+</script>
+</html>

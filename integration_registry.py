@@ -129,6 +129,19 @@ def _hunter_status() -> str:
     return STATUS_AVAILABLE
 
 
+def _garmin_status() -> str:
+    """Garmin is ENABLED only when turned on AND both credentials are present.
+    Flag-on-but-missing-creds is NEEDS_SETUP. Presence only — never reads a
+    secret value. (Whether the optional library is installed is surfaced by the
+    sync endpoint, not here, so this stays import-free.)"""
+    has_creds = bool(config.GARMIN_EMAIL) and bool(config.GARMIN_PASSWORD)
+    if config.GARMIN_ENABLED and has_creds:
+        return STATUS_ENABLED
+    if config.GARMIN_ENABLED or config.GARMIN_EMAIL or config.GARMIN_PASSWORD:
+        return STATUS_NEEDS_SETUP
+    return STATUS_AVAILABLE
+
+
 # --- The registry ----------------------------------------------------------
 # id            stable key (matches the config `integrations.<id>` block).
 # name          human label for the card.
@@ -208,6 +221,17 @@ _ADDONS: list[dict] = [
         "write_capable": True,
         "delete_capable": False,
         "status_fn": _hunter_status,
+    },
+    {
+        "id": "garmin",
+        "name": "Garmin",
+        "short_description": "Sync your Garmin watch — steps, sleep, resting heart rate, and weight — into your Health Tracker. Unofficial: it signs in with your own Garmin login and can break if Garmin changes their app.",
+        "category": "health",
+        "setup_path": "/setup-garmin",
+        "requires": ["GARMIN_EMAIL", "GARMIN_PASSWORD"],
+        "write_capable": False,   # reads from Garmin, writes only to the LOCAL health store
+        "delete_capable": False,
+        "status_fn": _garmin_status,
     },
 ]
 

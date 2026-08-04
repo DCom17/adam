@@ -65,10 +65,11 @@ following a setup guide.
 
 ## "Windows protected your PC" (SmartScreen)
 
-The beta is not code-signed yet, so the first time you run `SETUP.cmd` (or `START.cmd`
-/ `UPDATE.cmd`) Windows may show a blue **"Windows protected your PC"** box. That is
-SmartScreen being cautious about an unsigned app from the internet — not a detection of
-anything wrong. Two ways past it:
+The installer (`adam-setup-….exe`) now carries a valid code signature, but the first time
+you run `SETUP.cmd` (or `START.cmd` / `UPDATE.cmd`) — or a freshly-signed installer whose
+certificate is still building reputation — Windows may still show a blue **"Windows
+protected your PC"** box. That is SmartScreen being cautious about a new app from the
+internet — not a detection of anything wrong. Two ways past it:
 
 - **Best:** before extracting, right-click the downloaded ZIP → **Properties** → tick
   **Unblock** → OK. Files extracted after that run without the warning.
@@ -76,7 +77,8 @@ anything wrong. Two ways past it:
   script).
 
 Never turn SmartScreen off system-wide for this — the per-file Unblock is all it takes.
-A code-signing certificate (which removes the warning entirely) is on the v1.0 roadmap.
+The installer is code-signed as of v0.9.45; SmartScreen warnings ease as the certificate
+builds reputation across downloads.
 
 ## Your data — where everything lives
 
@@ -136,3 +138,8 @@ phone-specific issues, the troubleshooting section of
 (insecure-context banner, 403, can't-reach, mic). For "the app says it can't reach
 Adam": the black Adam window on the PC is probably closed — reopen it from the
 desktop icon.
+
+Still stuck? [Open an issue](https://github.com/DCom17/adam-releases/issues/new/choose)
+— there are templates for setup trouble, bugs, and phone-connection questions. Run
+`python scripts/doctor.py` and the console's **Copy diagnostics** button first, then paste
+that (secret-free) output into your report. A human reads every issue.

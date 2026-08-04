@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.6.0.schema.json
 PackageIdentifier: ZonteCampos.AdamLocal
-PackageVersion: "1.0.0"   # TODO: match the signed release
+PackageVersion: "0.9.47"
 DefaultLocale: en-US
 ManifestType: version
 ManifestVersion: 1.6.0

@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Adam — the AI assistant that lives on your PC</title>
-<meta name="description" content="Adam is a personal, local-first voice assistant for your own files. Powered by your own Claude. No accounts, no telemetry, no middleman servers — everything runs on your PC.">
+<title>Adam: the private AI that runs your day</title>
+<meta name="description" content="Adam is a personal AI assistant that lives on your PC. It remembers everything you're juggling, plans your days onto your calendar, tracks your life on a personal dashboard, and checks in morning and night. Powered by your own Claude, private by design.">
 <link rel="icon" href="logo.png" type="image/png">
-<meta property="og:title" content="Adam — the AI assistant that lives on your PC">
-<meta property="og:description" content="A voice assistant for your own files, powered by your own Claude. No accounts, no telemetry, no middleman servers.">
+<meta property="og:title" content="Adam: the private AI that runs your day">
+<meta property="og:description" content="A personal assistant that remembers everything you're juggling, plans your days onto your calendar, tracks your life on a personal dashboard, and checks in morning and night. Runs on your PC, powered by your own Claude.">
 <meta property="og:image" content="https://adam.camposenterprises.org/og.png">
 <meta property="og:url" content="https://adam.camposenterprises.org/">
 <meta name="twitter:card" content="summary">
@@ -272,6 +272,63 @@
   .req { margin-top: 44px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
   .req .card p b { color: var(--text); }
 
+  /* pricing */
+  .plans { margin-top: 44px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; align-items: stretch; }
+  .plan {
+    display: flex; flex-direction: column;
+    background: var(--panel); border: 1px solid var(--edge); border-radius: 20px;
+    padding: 32px 30px 34px; position: relative; overflow: hidden;
+    transition: transform .35s, border-color .35s;
+  }
+  .plan.featured { border-color: var(--edge-hi); background: rgba(12, 26, 36, .6); }
+  .plan.featured::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 90% 55% at 50% -10%, rgba(33,230,255,.10), transparent 70%);
+  }
+  .plan:hover { transform: translateY(-4px); border-color: var(--edge-hi); }
+  .plan .tag {
+    font-size: 11.5px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--faint); font-weight: 700;
+  }
+  .plan.featured .tag { color: var(--cyan); }
+  .plan .name {
+    margin-top: 8px; font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: 24px; font-weight: 700; color: var(--ink);
+  }
+  .plan .price {
+    margin-top: 18px; display: flex; align-items: baseline; gap: 8px;
+  }
+  .plan .price .amt {
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: clamp(40px, 5vw, 54px); font-weight: 750; line-height: 1; letter-spacing: -0.02em;
+    background: linear-gradient(115deg, #fff 20%, var(--cyan-soft) 65%, var(--cyan));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .plan .price .per { font-size: 14px; color: var(--faint); }
+  .plan .lede { margin-top: 16px; font-size: 14.5px; color: var(--dim); }
+  .plan ul { list-style: none; margin: 22px 0 26px; display: grid; gap: 11px; }
+  .plan li { position: relative; padding-left: 26px; font-size: 14.5px; color: var(--text); }
+  .plan li::before {
+    content: ""; position: absolute; left: 0; top: 6px; width: 15px; height: 8px;
+    border-left: 2px solid var(--cyan); border-bottom: 2px solid var(--cyan);
+    transform: rotate(-45deg); opacity: .85;
+  }
+  .plan .plan-cta { margin-top: auto; }
+  .plan .plan-cta a {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px; width: 100%;
+    padding: 14px 24px; border-radius: 11px; font-weight: 800; font-size: 13px;
+    letter-spacing: 2px; text-transform: uppercase; transition: transform .25s, filter .25s, box-shadow .25s;
+  }
+  .plan .plan-cta a.solid {
+    background: linear-gradient(105deg, #eafcff, #8df2ff 55%, #21e6ff); color: #03222a;
+    box-shadow: 0 0 30px rgba(33,230,255,.18);
+  }
+  .plan .plan-cta a.solid:hover { text-decoration: none; transform: translateY(-2px); filter: brightness(1.06); }
+  .plan .plan-cta a.ghost { border: 1px solid var(--edge-hi); color: var(--ink); }
+  .plan .plan-cta a.ghost:hover { text-decoration: none; background: rgba(33,230,255,.07); }
+  .plan .fineprint { margin-top: 14px; font-size: 12.5px; color: var(--faint); line-height: 1.6; }
+  .pricing-note { margin-top: 26px; font-size: 13px; color: var(--faint); text-align: center; }
+
   /* footer cta */
   .foot-cta {
     padding: clamp(80px, 14vh, 150px) 0 60px;
@@ -308,13 +365,15 @@
   <a class="brand" href="#top">
     <img src="logo.png" alt="Adam logo">
     <span class="wordmark">ADAM</span>
-    <span class="brand-tag">Local AI</span>
+    <span class="brand-tag">Personal AI</span>
   </a>
   <div class="nav-links">
-    <a href="#why">Why Adam</a>
+    <a href="#what">What it does</a>
+    <a href="#addons">Add-ons</a>
     <a href="#how">How it works</a>
+    <a href="#pricing">Pricing</a>
     <a href="#support">Support</a>
-    <a class="nav-cta" href="https://github.com/DCom17/adam-releases/releases/latest">Download</a>
+    <a class="nav-cta" href="https://github.com/DCom17/adam-releases/releases/latest/download/adam-setup.exe">Download</a>
   </div>
 </nav>
 
@@ -324,10 +383,11 @@
   <canvas id="motes"></canvas>
   <div class="hero-inner">
     <div class="eyebrow">A D A M</div>
-    <h1>The AI assistant that <em>lives on your PC.</em></h1>
-    <p class="sub">A voice assistant for your own files, powered by your own Claude.
-    No accounts, no telemetry, no middleman servers — there's nowhere to send your data.</p>
-    <a class="cta" href="https://github.com/DCom17/adam-releases/releases/latest">
+    <h1>Stop carrying your whole life <em>in your head.</em></h1>
+    <p class="sub">A personal assistant that lives on your PC. It holds everything you're juggling,
+    plans your days with you, and keeps you on top of all of it, from the morning brief to the
+    weekly review. Runs on your own Claude; nothing leaves your machine.</p>
+    <a class="cta" href="https://github.com/DCom17/adam-releases/releases/latest/download/adam-setup.exe">
       Download for Windows
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
     </a>
@@ -343,50 +403,100 @@
 <div class="wrap">
 
 <section class="statement">
-  <p class="rv">Most assistants run in someone else's cloud.<br>
-  Adam works for you — <em>not on you.</em></p>
+  <p class="rv">You've been the one who remembers everything:<br>
+  the plans, the follow-ups, the thousand small things. <em>That's the job Adam takes.</em></p>
 </section>
 
-<section id="why">
-  <div class="label rv">Why Adam</div>
-  <h2 class="rv">Private by architecture, not by promise.</h2>
-  <p class="section-sub rv">Privacy policies can change. Architecture can't be walked back —
-  Adam is built so there is simply no server of ours in the loop.</p>
+<section id="what">
+  <div class="label rv">What it does</div>
+  <h2 class="rv">Not a chatbot you ask. An assistant that runs your days.</h2>
+  <p class="section-sub rv">Most AI answers a question and forgets you the moment the chat ends.
+  Adam holds your whole context and works from it, remembering, planning, and keeping you moving.</p>
   <div class="cards">
     <div class="card rv">
-      <div class="glyph"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div>
-      <h3>Local first, actually</h3>
-      <p>Your notes, chat history, and settings never leave your PC. The one thing
-      that goes to the internet is your question to Claude — under your own account,
-      exactly as if you'd typed it there yourself.</p>
+      <div class="glyph"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/></svg></div>
+      <h3>A real second brain</h3>
+      <p>Adam keeps a private file system for your life: long-term memory for what's
+      durable, short-term context for what you're on right now. Every project, person,
+      decision, and preference lives in it, so you never re-explain yourself and it
+      never forgets you between chats the way a chatbot does.</p>
     </div>
     <div class="card rv">
-      <div class="glyph"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0M2 12h3m14 0h3"/><circle cx="12" cy="12" r="2.4"/><path d="M12 14.4V21"/></svg></div>
-      <h3>No middleman servers</h3>
-      <p>Phone access rides your own private Tailscale network: your phone talks
-      directly to your PC over an encrypted tunnel. Nothing transits anyone else's
-      infrastructure — no relay, no maintainer server to trust.</p>
+      <div class="glyph"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12.5h5"/></svg></div>
+      <h3>Plans your day in a two-minute talk</h3>
+      <p>Tell Adam how your day looks and it builds the plan with you, protecting what
+      matters, adding buffers, catching clashes. Connect your Google Calendar and it puts
+      the day straight onto it and keeps it managed as things move. Planning stops being
+      a chore and becomes a quick conversation.</p>
     </div>
     <div class="card rv">
-      <div class="glyph"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-2.8 8.1-7 10-4.2-1.9-7-5.6-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
-      <h3>Safe by design</h3>
-      <p>Adam proposes; you approve. File changes go through a review flow with
-      automatic backups and an audit log. Zero telemetry, zero crash reporting —
-      diagnostics only leave your machine if you copy them yourself.</p>
+      <div class="glyph"><svg viewBox="0 0 24 24"><path d="M3 18h18"/><path d="M6.5 18a5.5 5.5 0 0 1 11 0"/><path d="M12 4v2.5M4.5 8.5l1.6 1.6M19.5 8.5l-1.6 1.6M2 14h1.5M20.5 14H22"/></svg></div>
+      <h3>Checks in, morning and night</h3>
+      <p>Say "good morning" and Adam reads you the shape of your day, assembled overnight.
+      At night it reviews what got done and what slipped; each week it zooms out to the
+      patterns, the wins, and what's drifting. You always know exactly where you stand.</p>
+    </div>
+    <div class="card rv">
+      <div class="glyph"><svg viewBox="0 0 24 24"><path d="M4 13v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/><path d="M12 3v11M8.5 10.5 12 14l3.5-3.5"/></svg></div>
+      <h3>Keeps you organized without effort</h3>
+      <p>Fire a thought at Adam from your phone the moment it lands. It files each one
+      where it belongs (task, plan, memory, project), so nothing gets lost and staying
+      organized costs you nothing. Your head stays clear; the system stays tidy.</p>
     </div>
     <div class="card rv">
       <div class="glyph"><svg viewBox="0 0 24 24"><path d="M4 10v4m4-8v12m4-15v18m4-14v10m4-7v4"/></svg></div>
-      <h3>A real voice</h3>
-      <p>An optional one-time download adds a natural on-device voice — the
-      open-source Kokoro model. Speech is generated on your own hardware,
-      not in the cloud.</p>
+      <h3>Learns how you work best</h3>
+      <p>Adam runs small experiments (quests it sets for you) to find out how you
+      actually operate: when you focus, what drains you, which routines pay off. It A/B
+      tests your own life, keeps what works, and tunes your days around it. It proposes;
+      you approve.</p>
+    </div>
+    <div class="card rv">
+      <div class="glyph"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
+      <h3>A dashboard for your whole life</h3>
+      <p>Adam runs a personal operating system for you: a live dashboard tracking the
+      skills and attributes you're leveling up, your goals for each day, and how you're
+      really doing across work, health, money, and more. Progress that used to be
+      invisible becomes something you can watch climb, on your desk or your phone.</p>
+    </div>
+  </div>
+</section>
+
+<section id="addons">
+  <div class="label rv">Add-ons</div>
+  <h2 class="rv">Adam works on its own. Connect your accounts to give it reach.</h2>
+  <p class="section-sub rv">Nothing is on by default. When you want more, switch on an add-on in a
+  couple of taps. Each one runs through your own accounts and credentials, never ours.</p>
+  <div class="cards">
+    <div class="card rv">
+      <div class="glyph"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M8 14h3"/></svg></div>
+      <h3>Google Calendar</h3>
+      <p>The one that makes "plan my day" real: Adam turns the plan into actual events and
+      manages your day on your own calendar, creating, moving, and protecting blocks as
+      things change.</p>
+    </div>
+    <div class="card rv">
+      <div class="glyph"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
+      <h3>Your life dashboard</h3>
+      <p>The personal operating system, kept live on a Google Sheet you can pull up on your
+      desk or your phone: levels, skills, daily goals, and how you're tracking across
+      every area of your life.</p>
+    </div>
+    <div class="card rv">
+      <div class="glyph"><svg viewBox="0 0 24 24"><path d="M9 15l6-6"/><path d="M11 6l1-1a4 4 0 0 1 6 6l-1 1"/><path d="M13 18l-1 1a4 4 0 0 1-6-6l1-1"/></svg></div>
+      <h3>Email, SMS, voicemail, LinkedIn, and more</h3>
+      <p>Let Adam reach the channels you already use: triage and draft email, send a text,
+      handle voicemail, pull from LinkedIn. New connectors land regularly. Turn on only
+      the ones you want.</p>
     </div>
   </div>
 </section>
 
 <section>
-  <div class="label rv">By the numbers</div>
-  <h2 class="rv">Nothing to collect, nothing to leak.</h2>
+  <div class="label rv">Yours alone</div>
+  <h2 class="rv">The thing that knows this much about you should answer to no one else.</h2>
+  <p class="section-sub rv">Adam runs on your PC. No account, no server of ours, nothing phoning home,
+  so the assistant holding your whole life is accountable only to you.</p>
   <div class="stats">
     <div class="stat rv">
       <div class="k">Telemetry<br>events sent</div>
@@ -401,18 +511,48 @@
     <div class="stat rv">
       <div class="k">Your data<br>on your PC</div>
       <div class="v">100%</div>
-      <div class="d">Notes, history, and settings live in local files you can open.</div>
+      <div class="d">Notes, history, memory, and settings live in local files you can open.</div>
     </div>
     <div class="stat rv">
       <div class="k">Cloud<br>connections</div>
       <div class="v">1</div>
-      <div class="d">Your own Claude — your subscription or API key, your rules.</div>
+      <div class="d">The one connection Adam needs: your own Claude. Add-ons you switch on talk to your own accounts directly, never through us.</div>
     </div>
   </div>
 </section>
 
 <section class="statement">
-  <p class="rv">Talk to it from your desk<br>or your phone — <em>it's still your PC answering.</em></p>
+  <p class="rv">Add Adam to your phone like any other app:<br><em>the whole assistant, in your pocket, still your own PC answering.</em></p>
+</section>
+
+<section>
+  <div class="label rv">Built to be yours</div>
+  <h2 class="rv">Private by architecture, not by promise.</h2>
+  <p class="section-sub rv">Privacy policies can change. Architecture can't be walked back.
+  Adam is built so there's simply no server of ours in the loop.</p>
+  <div class="cards">
+    <div class="card rv">
+      <div class="glyph"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-2.8 8.1-7 10-4.2-1.9-7-5.6-7-10V6l7-3z"/></svg></div>
+      <h3>It all stays on your machine</h3>
+      <p>Your notes, history, and memory never leave your PC. The one thing that
+      reaches the internet is your question to Claude, under your own account,
+      exactly as if you'd typed it there yourself.</p>
+    </div>
+    <div class="card rv">
+      <div class="glyph"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.6 2.6L16 9"/></svg></div>
+      <h3>It proposes, you approve</h3>
+      <p>Adam never changes a file or your calendar on its own. Every action waits
+      for your yes, with automatic backups and a plain audit log. Zero telemetry,
+      zero crash reporting, ever.</p>
+    </div>
+    <div class="card rv">
+      <div class="glyph"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 14 0M2 12h3m14 0h3"/><circle cx="12" cy="12" r="2.4"/><path d="M12 14.4V21"/></svg></div>
+      <h3>Yours on every device</h3>
+      <p>Reach Adam from your phone over your own private Tailscale network. Your
+      phone talks straight to your PC, encrypted, with no relay and no middleman
+      server to trust.</p>
+    </div>
+  </div>
 </section>
 
 <section id="how">
@@ -422,18 +562,19 @@
     <div class="step rv">
       <div class="n">1</div>
       <div class="body"><b>Download the ZIP</b> and right-click → <b>Extract All</b>.
-        <div class="note">Grab the file named <code>adam-local-… .zip</code> under Assets — not "Source code".</div></div>
+        <div class="note">Grab the file named <code>adam-local-… .zip</code> under Assets, not "Source code".</div></div>
     </div>
     <div class="step rv">
       <div class="n">2</div>
-      <div class="body"><b>Double-click <code>SETUP</code></b> in the extracted folder — the wizard installs everything for you.
+      <div class="body"><b>Double-click <code>SETUP</code></b> in the extracted folder. The wizard installs everything for you.
         <div class="note">If Windows shows a blue "Windows protected your PC" box, click
-        <i>More info → Run anyway</i>. That's Windows being cautious about new apps;
-        a signed installer arrives with v1.0.</div></div>
+        <i>More info → Run anyway</i>. That's Windows being cautious about new apps; our
+        installer is now code-signed, though a new certificate can still show this until
+        it builds reputation.</div></div>
     </div>
     <div class="step rv">
       <div class="n">3</div>
-      <div class="body"><b>Sign in to Claude</b> when the wizard asks — or paste your own
+      <div class="body"><b>Sign in to Claude</b> when the wizard asks, or paste your own
         Anthropic API key. Both are first-class.</div>
     </div>
     <div class="step rv">
@@ -444,7 +585,8 @@
       <div class="n">5</div>
       <div class="body"><b>Optional: put it on your phone.</b> The in-app wizard walks you through
         connecting over your own Tailscale network, and the app installs to your
-        home screen like any other.</div>
+        home screen like any other.
+        <div class="note">Phone &amp; remote access is <a href="#pricing">Adam Plus</a> — free while Adam's in beta.</div></div>
     </div>
   </div>
 </section>
@@ -465,26 +607,91 @@
     </div>
     <div class="card rv">
       <h3>Optional: Tailscale</h3>
-      <p>Free for personal use — install it on your PC and phone for private
-      remote access from anywhere.</p>
+      <p>Free for personal use — it's the private network that carries Adam to your
+      phone. (Phone &amp; remote access is the <a href="#pricing">Adam Plus</a> upgrade,
+      free while Adam's in beta.)</p>
     </div>
   </div>
+</section>
+
+<!-- ============================================================================
+     PRICING — TEASER (free beta -> paid at launch). Publishable as-is: it primes
+     the future paid phone tier but sells NOTHING yet (no live checkout).
+     Guardrails still in force until selling is real:
+       * NO buy button until (1) the Merchant-of-Record checkout exists and a real
+         CHECKOUT_URL is wired, AND (2) the signing keypair is generated + the public
+         key is pasted into licensing.py (and licensing.py is in the make_release
+         allow-list). Until then the Plus card's CTA is the free beta download, not
+         a purchase — do NOT re-add a CHECKOUT_URL buy link before both are done.
+     Price + model per SELLING_ADAM.md (2026-07-16): desktop free forever; phone/
+     remote is a ONE-TIME $24.99 (perpetual) upgrade AFTER the free beta; 30-day
+     local trial once selling is live. Switch .per / copy if it ever goes recurring.
+     Phone-access copy elsewhere (Tailscale "what you need" card, step 5) is
+     reconciled to frame phone/remote as the Adam Plus upgrade, free while in beta.
+============================================================================ -->
+<section id="pricing">
+  <div class="label rv">Pricing</div>
+  <h2 class="rv">Free on your desk. A little more to carry it everywhere.</h2>
+  <p class="section-sub rv">Adam runs free on your PC, in full — forever. Putting it on your phone
+  and reaching it from anywhere will be the one paid upgrade: a single price, yours to keep.
+  It's <b>free for everyone while Adam's in beta</b> — the price below is what it becomes at launch.</p>
+  <div class="plans">
+    <div class="plan rv">
+      <div class="tag">Desktop</div>
+      <div class="name">Adam</div>
+      <div class="price"><span class="amt">Free</span></div>
+      <div class="lede">Everything Adam does, running on your Windows PC. No account, no card, no catch.</div>
+      <ul>
+        <li>Second brain, planning, and daily check-ins</li>
+        <li>Life dashboard and progress tracking</li>
+        <li>Every add-on: Calendar, email, SMS, and more</li>
+        <li>100% local; zero telemetry, forever</li>
+      </ul>
+      <div class="plan-cta">
+        <a class="ghost" href="https://github.com/DCom17/adam-releases/releases/latest/download/adam-setup.exe">Download free</a>
+      </div>
+      <div class="fineprint">Windows 10/11. Runs on your own Claude.</div>
+    </div>
+    <div class="plan featured rv">
+      <div class="tag">Desktop + Phone</div>
+      <div class="name">Adam Plus</div>
+      <div class="price"><span class="amt">$24.99</span><span class="per">one-time · at launch</span></div>
+      <div class="lede">Everything in Adam, plus the whole assistant in your pocket, reachable from anywhere.
+      <b>Free for every beta tester right now.</b></div>
+      <ul>
+        <li>Everything in the free desktop app</li>
+        <li>Adam on your phone's home screen</li>
+        <li>Private remote access over your own Tailscale network</li>
+        <li>Talk to Adam from anywhere, encrypted, no relay</li>
+      </ul>
+      <div class="plan-cta">
+        <a class="solid" href="https://github.com/DCom17/adam-releases/releases/latest/download/adam-setup.exe">Get it free in the beta</a>
+      </div>
+      <div class="fineprint">Free while Adam's in beta — the whole thing, phone included.
+      After launch it's a one-time $24.99 (no subscription), yours forever and offline, with a
+      30-day free trial. You always keep the free desktop app.</div>
+    </div>
+  </div>
+  <p class="pricing-note rv">You bring your own Claude (a Claude subscription or an Anthropic API key);
+  Adam never charges for usage or routes anything through our servers.
+  Questions? <a href="https://github.com/DCom17/adam-releases/issues/new/choose">Open an issue</a>.
+  Refunds are covered by our <a href="refund.html">14-day refund policy</a>.</p>
 </section>
 
 <section id="support">
   <div class="label rv">Support</div>
   <h2 class="rv">A human reads every issue.</h2>
   <p class="section-sub rv">Found a problem or need a hand?
-  <a href="https://github.com/DCom17/adam/issues">Open a GitHub issue</a> — there are
+  <a href="https://github.com/DCom17/adam-releases/issues/new/choose">Open a GitHub issue</a>. There are
   templates for setup trouble, bugs, and phone-connection questions. The
   <a href="https://github.com/DCom17/adam-releases/releases">changelog</a> lists
   what's new in every release.</p>
 </section>
 
 <div class="foot-cta">
-  <h2 class="rv">An assistant that's <em>actually yours.</em></h2>
+  <h2 class="rv">Hand it over. <em>Adam's got it from here.</em></h2>
   <div class="rv">
-    <a class="cta" href="https://github.com/DCom17/adam-releases/releases/latest">
+    <a class="cta" href="https://github.com/DCom17/adam-releases/releases/latest/download/adam-setup.exe">
       Download for Windows
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
     </a>
@@ -495,13 +702,16 @@
 <footer>
   <div class="foot-links">
     <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+    <a href="refund.html">Refunds</a>
+    <a href="eula.html">EULA</a>
     <a href="https://github.com/DCom17/adam">Source</a>
     <a href="https://github.com/DCom17/adam-releases/releases">Releases</a>
-    <a href="https://github.com/DCom17/adam/issues">Support</a>
+    <a href="https://github.com/DCom17/adam-releases/issues">Support</a>
   </div>
   <div class="colophon">
-    © 2026 Zonte Campos · A Campos Enterprises product ·
-    Powered by Claude — not affiliated with or endorsed by Anthropic.<br>
+    © 2026 Campos Systems LLC ·
+    Powered by Claude, not affiliated with or endorsed by Anthropic.<br>
     Adam is an AI assistant; it can make mistakes. File changes always wait for your approval.
   </div>
 </footer>
@@ -509,12 +719,14 @@
 </div>
 </main>
 
-<!-- Download deliberately links to the Releases page, not api.github.com:
-     the unauthenticated API is limited to 60 req/hr/IP (shared NATs can starve
-     it) while the releases page and its latest/download/ redirects are plain
-     web requests with no such cap. Swap the buttons to
-     releases/latest/download/adam-setup.exe once a stable-named signed
-     installer asset ships. -->
+<!-- Primary download buttons hit the permanent latest/download/ redirect for
+     the stable-named signed installer (adam-setup.exe), so non-technical users
+     get a one-click .exe instead of a Releases page listing a raw ZIP. This is
+     a plain web redirect with no API rate limit (unlike api.github.com, capped
+     at 60 req/hr/IP). publish-release.ps1 attaches adam-setup.exe (a copy of
+     the versioned adam-setup-<tag>.exe) on every release so this URL never
+     rots. The ZIP + full asset list stay one click away via the "all releases
+     & changelog" and footer "Releases" links, for advanced/non-installer use. -->
 
 <script>
 (function () {

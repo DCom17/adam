@@ -29,8 +29,11 @@ ROOT = Path(__file__).resolve().parent.parent
 _ROOT_FILES = [
     # product modules
     "server.py", "config.py", "permissions.py", "proposed_changes.py",
-    "self_edit_guard.py", "security.py", "models.py", "rate_limit.py",
+    "self_edit_guard.py", "security.py", "licensing.py", "models.py", "rate_limit.py",
     "usage_store.py", "tts_supervisor.py",
+    "finance_store.py", "finance_metrics.py", "finance_import.py",  # Finance Tracker (F1/F2)
+    "health_store.py", "health_metrics.py", "health_import.py",  # Health Tracker (H1/H2)
+    "garmin.py",  # Garmin health-sync add-on (Phase H3; garminconnect is optional/lazy)
     "approvals.py", "diffs.py", "job_store.py", "session_store.py", "onboarding.py", "agent_write_probe.py",
     "google_calendar.py", "integration_registry.py", "twilio_sms.py",
     "twilio_voicemail.py", "voicemail_provision.py", "voicemail_store.py",
@@ -39,7 +42,9 @@ _ROOT_FILES = [
     "external_actions.py", "update_engine.py", "merge.py", "updater.py", "phone_link.py",
     "integration_config.py",
     # meta / templates (NEVER the real .env or settings.json — those are deny-guarded)
-    "requirements.txt", "README.md", "CHANGELOG.md", "LICENSE",
+    # SECURITY.md ships so the disclosure address travels with the app: someone
+    # who finds a flaw in an installed copy shouldn't have to locate the repo.
+    "requirements.txt", "README.md", "CHANGELOG.md", "LICENSE", "SECURITY.md",
     ".env.example", "settings.example.json", ".gitignore",
     # consumer one-click entry points (double-clickable; the non-technical front door)
     "START_HERE.txt", "SETUP.cmd", "START.cmd", "UPDATE.cmd", "INSTALL-VOICE.cmd",
@@ -49,13 +54,24 @@ _ROOT_FILES = [
     "calendar_bridge.gs",
     "hunter_dashboard.gs", "hunter_verify.gs",
 ]
-_WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.html", "setup-email.html", "setup-linkedin.html", "setup-sms.html", "setup-voicemail.html", "setup-hunter.html", "hunter-dashboard.html", "sw.js", "manifest.json", "icon.png", "icon-maskable.png", "icon.ico", "logo.png"]
+_WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.html", "setup-email.html", "setup-linkedin.html", "setup-sms.html", "setup-voicemail.html", "setup-hunter.html", "setup-garmin.html", "hunter-dashboard.html", "finance.html", "health.html",
+    # First-run EULA clickwrap + bundled legal docs (served via /license-agreement, /legal,
+    # and /legal/<name>.md). The clickwrap records assent locally — see licensing.py.
+    "license-agreement.html", "legal.html",
+    "legal/eula.md", "legal/terms.md", "legal/privacy.md", "legal/refund.md",
+    "sw.js", "manifest.json", "icon.png", "icon-maskable.png", "icon.ico", "logo.png",
+    # Higgsfield level-up / rank-up / milestone celebration clips (web/celebrate/, served
+    # via /celebrate/<name>) — mp4 (H.264, universal) + webm (VP9, codec-stripped Chromium)
+    "celebrate/rank-d.mp4", "celebrate/rank-c.mp4", "celebrate/rank-b.mp4", "celebrate/rank-a.mp4",
+    "celebrate/rank-s.mp4", "celebrate/rank-master.mp4", "celebrate/milestone.mp4",
+    "celebrate/rank-d.webm", "celebrate/rank-c.webm", "celebrate/rank-b.webm", "celebrate/rank-a.webm",
+    "celebrate/rank-s.webm", "celebrate/rank-master.webm", "celebrate/milestone.webm"]
 _SCRIPT_FILES = [
     "setup.py", "doctor.py", "make_release.py", "make_release.ps1", "apply_update.py",
     "self_update.py", "publish-release.ps1",
     "wizard.ps1", "add-app-shortcut.ps1", "adam-app.vbs", "update.ps1", "install-voice.ps1",
     "tts_server/tts_server.py", "tts_server/requirements.txt",
-    "start-adam.ps1", "rotate-token.ps1", "connect-phone.py", "connect-phone.ps1",
+    "start-adam.ps1", "relaunch-adam.ps1", "rotate-token.ps1", "connect-phone.py", "connect-phone.ps1",
     # forwarding shims: pre-rename desktop/taskbar shortcuts point at the old
     # launcher names (start-jarvis.ps1 directly, jarvis-app.vbs via wscript)
     "start-jarvis.ps1", "jarvis-app.vbs",
@@ -69,8 +85,8 @@ _DOC_FILES = [
     "RELEASE.md", "CONSUMER_TEST_CHECKLIST.md", "PRIVACY.md",
 ]
 _ROUTERS_FILES = [  # the routers/ package server.py imports at boot
-    "__init__.py", "chat.py", "integrations.py", "reviews.py", "system.py",
-    "voice_push.py",
+    "__init__.py", "chat.py", "finance.py", "health.py", "integrations.py",
+    "reviews.py", "system.py", "voice_push.py",
 ]
 _TEST_GLOB = "test_*.py"   # F&F beta ships the test suites for self-verification
 _DATA_KEEP = "data/.gitkeep"
@@ -111,7 +127,11 @@ _DENY_GLOBS = [
     "docs/DECISION_LOG.md", "docs/ROADMAP.md", "docs/PHASE_HISTORY.md",
     "docs/NEXT_PHASE_PROMPT.md", "docs/PARKING_LOT.md",
     "docs/PERSONAL_FIX_PORTING_LOG.md", "docs/DEVICE_ACCEPTANCE_RUN_*.md",
-    "docs/NAME_DECISION_EVIDENCE.md",
+    "docs/NAME_DECISION_EVIDENCE.md", "docs/SELLING_ADAM.md",
+    # vendor license-signing tools + any signing key never ship
+    "scripts/vendor/*",
+    # maintainer-only local signing config (installer code-signing paths) never ships
+    "scripts/signing.local.ps1",
 ]
 _DENY_CONTAINS = ["__pycache__/", ".git/"]   # any path inside these dirs
 # Paths that match a deny glob but are deliberately shippable.
@@ -320,10 +340,16 @@ def check_tree_clean(rels: list[str]) -> None:
     for rel in rels:
         if rel.startswith(_BRAIN_DIR + "/"):
             continue  # brain/ is covered (base + local terms) by check_brain_clean
-        if rel == "LICENSE":
-            # The EULA must name its licensor — the owner's public legal name
-            # there (same as the site colophon) is deliberate, not a leak.
-            # Everything else stays guarded, including brain/LICENSE.
+        if rel in ("LICENSE", "licensing.py", "SECURITY.md") or rel.startswith("web/legal/"):
+            # These files deliberately carry the product's PUBLIC identifiers — the
+            # LICENSE/EULA and bundled policies (web/legal/*) name the licensor and a
+            # public contact address, licensing.py's BUY_URL is the public store
+            # link, and SECURITY.md exists precisely to publish the vulnerability
+            # disclosure address (a security policy with the contact stripped out is
+            # worse than none). That's the same public info as the site colophon and
+            # the customer-facing published docs — deliberate disclosure, not a leak,
+            # and none of these carry a personal name. Everything else stays guarded,
+            # including brain/LICENSE.
             continue
         if Path(rel).suffix.lower() in _BINARY_EXTS:
             continue

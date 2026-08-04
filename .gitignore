@@ -42,3 +42,20 @@ dist/
 *.onnx
 voices-*.bin
 cloudflared.exe
+
+# Internal process / strategy docs — kept LOCAL ONLY, never in the public repo.
+# They stay on disk for local use; the release builder already deny-lists them.
+/HANDOFF.md
+/KNOWN_ISSUES.md
+/docs/ROADMAP.md
+/docs/DECISION_LOG.md
+/docs/NAME_DECISION_EVIDENCE.md
+
+# Vendor license signing key + issuing tooling — NEVER commit or ship
+scripts/vendor/
+
+# Maintainer-only installer code-signing config (machine-specific ACS paths) — never ship
+scripts/signing.local.ps1
+
+# Internal go-to-market strategy — public repo, keep local-only
+docs/SELLING_ADAM.md

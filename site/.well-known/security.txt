@@ -1,0 +1,9 @@
+# Adam — Campos Systems LLC
+# https://adam.camposenterprises.org
+# Vulnerability disclosure policy: https://github.com/DCom17/adam/blob/main/SECURITY.md
+
+Contact: mailto:security@camposenterprises.org
+Expires: 2027-07-27T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://adam.camposenterprises.org/.well-known/security.txt
+Policy: https://github.com/DCom17/adam/blob/main/SECURITY.md

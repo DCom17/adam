@@ -20,6 +20,7 @@ Rules:
 - Never commit from messy planning — validate the packet first.
 - Read `06_calendar/calendar_lessons.md` and apply every standing lesson before building events.
 - A validated packet and commit preview must exist before committing.
+- **Freshness guard — the packet must be dated today.** If `latest_calendar_packet.md` is empty, missing, or its date isn't today, the plan is not in front of you. Do NOT rebuild the day from `active_tasks.md`, the phone inbox, or memory of an earlier conversation. Say plainly that the plan built earlier isn't loaded and ask the user to read it back or plan fresh. A returning "load those tasks" commits *today's* packet — it never authorizes reconstructing the day from the standing task backlog. If you ever pull events from any source other than the user's actual plan, **announce the substitution in the same breath** — never present a stand-in list as if it were their plan.
 - **Confirm the Calendar add-on is enabled** (the live ADD-ONS note). If it isn't, do not emit a block — keep the day staged in `latest_calendar_packet.md` and tell the user to connect Calendar in Settings → Add-ons.
 - Commit only events listed in the approved preview.
 - Create events only. Do not update existing events. Do not delete events. Do not invite guests. Do not create recurring events.

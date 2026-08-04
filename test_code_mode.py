@@ -227,6 +227,8 @@ def main() -> int:
     prompt = cmd[cmd.index("--append-system-prompt") + 1]
     check("CODE_SYSTEM_PROMPT used", "Claude Code mode" in prompt)
     check("no SAFETY MODE (draft) note", "SAFETY MODE" not in prompt)
+    check("no brain bootstrap note (code runs cwd=vault, loads CLAUDE.md natively)",
+          "YOUR BRAIN" not in prompt)
     check("wire mode is 'code'", out.get("mode") == "code")
     check("spoken summary extracted", out.get("spoken") == "Done, sir.")
     audits = [a for a in cap["audit"] if a.get("action_type") == "code_mode_turn"]
@@ -254,10 +256,32 @@ def main() -> int:
           cmd[cmd.index("--output-format") + 1] == "json" and "--verbose" not in cmd)
     check("wire mode is 'work'", out.get("mode") == "work")
 
+    print("\n[6b] brain bootstrap note reconnects the vault in voice/work (not code)")
+    # --add-dir grants READ access to the vault but Claude Code loads no CLAUDE.md memory
+    # from it, so without an injected directive Adam never learns the user's brain (family,
+    # identity, memory) exists. This is the regression fix for "Adam knows nothing about me".
+    if config.AGENT_RESTRICT_TOOLS:
+        capv, _ = _run("voice")
+        vprompt = capv["cmd"][capv["cmd"].index("--append-system-prompt") + 1]
+        check("voice prompt carries the brain bootstrap directive", "YOUR BRAIN" in vprompt)
+        check("voice prompt orders reading the identity + people files",
+              "user_profile.md" in vprompt and "people_and_relationships.md" in vprompt)
+        check("voice prompt asserts the brain overrides dev/global instructions",
+              "OVERRIDES" in vprompt)
+        capw, _ = _run("work")
+        wprompt = capw["cmd"][capw["cmd"].index("--append-system-prompt") + 1]
+        check("work prompt carries the brain bootstrap directive too", "YOUR BRAIN" in wprompt)
+    else:
+        check("legacy_direct install: no bootstrap note (cwd=vault loads it natively)", True)
+
     print("\n[7] the flag is settings-only — POST /ui-prefs cannot flip it")
     _flag(False)
     r = client.post("/ui-prefs", headers=AUTH, json={"code_mode_allowed": True})
-    check("POST accepted or ignored without error", r.status_code == 200)
+    # 200 = the field was ignored (pre-StrictModel behaviour); 422 = it was
+    # rejected outright, which is what models.StrictModel's extra="forbid" now
+    # does. Either satisfies this test — what matters is the assertion below,
+    # that the flag itself is untouched. A 5xx would mean the POST blew up.
+    check("POST rejected or ignored, never honoured", r.status_code in (200, 422))
     check("flag unchanged by POST", config.AGENT_ALLOW_CODE_MODE is False)
     _flag(True)
 
@@ -291,6 +315,53 @@ def main() -> int:
         check("user stop -> TurnStopped", True)
     finally:
         server.CANCELLED_JOBS.discard("j8s")
+
+    # A gone --resume session (CLI exits 1 with "No conversation found") must be
+    # signalled distinctly so run_claude can recover, not raised as a raw failure.
+    class _FakeStaleProc(_FakeStreamProc):
+        def __init__(self):
+            super().__init__([], returncode=1)
+
+        async def read(self):
+            return b"No conversation found with session ID: stale-xyz"
+
+    try:
+        asyncio.run(server._read_stream_result(_FakeStaleProc(), "j8g", timeout=30))
+        check("gone resume -> SessionNotFound", False)
+    except server.SessionNotFound:
+        check("gone resume -> SessionNotFound", True)
+    except Exception:
+        check("gone resume -> SessionNotFound", False)
+
+    print("\n[8b] code-mode stale resume recovers with one fresh re-run")
+    _flag(True)
+    spawns = {"n": 0, "resume_flags": []}
+
+    async def fake_exec_stale(*cmd, **kw):
+        spawns["n"] += 1
+        spawns["resume_flags"].append("--resume" in cmd)
+        if spawns["n"] == 1:
+            return _FakeStaleProc()   # first attempt: the resume target is gone
+        return _FakeStreamProc(_stream_lines(_DEFAULT_STREAM))   # retry: fresh success
+
+    real_exec = asyncio.create_subprocess_exec
+    real_audit = permissions.record_audit_event
+    real_note = server._proposal_outcome_note
+    asyncio.create_subprocess_exec = fake_exec_stale
+    permissions.record_audit_event = lambda ev: None
+    server._proposal_outcome_note = lambda: ""
+    try:
+        out = asyncio.run(server.run_claude("hello", "stale-xyz", mode="code", job_id="jstale"))
+    finally:
+        asyncio.create_subprocess_exec = real_exec
+        permissions.record_audit_event = real_audit
+        server._proposal_outcome_note = real_note
+    check("stale code resume recovered (result returned)", out.get("session_id") == "sid-test-1")
+    check("spawned twice: original + one fresh retry", spawns["n"] == 2)
+    check("first spawn resumed; retry dropped --resume",
+          spawns["resume_flags"] == [True, False])
+    check("live registries cleaned after recovery",
+          "jstale" not in server.RUNNING_PROCS and "jstale" not in server.JOB_PROGRESS)
 
     print("\n[9] POST /jobs/{id}/stop")
     check("no token -> 403", client.post("/jobs/x/stop").status_code == 403)

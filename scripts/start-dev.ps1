@@ -14,5 +14,7 @@ if (-not (Test-Path (Join-Path $root ".env"))) {
 }
 
 Write-Host "Starting Adam on http://$($c.host):$($c.port) ..." -ForegroundColor Cyan
-Write-Host "(Ctrl+C to stop, or run scripts\stop-dev.ps1 from another window)" -ForegroundColor DarkGray
-python -m uvicorn server:app --host $c.host --port $c.port
+Write-Host "(Ctrl+C drains an in-flight turn then stops; Ctrl+C again forces. Or run scripts\stop-dev.ps1)" -ForegroundColor DarkGray
+# --timeout-graceful-shutdown lets the on-shutdown drain finish a long code turn
+# on Ctrl+C (cap 300s + headroom) before uvicorn force-exits. See config.DRAIN_MAX_WAIT_SECONDS.
+python -m uvicorn server:app --host $c.host --port $c.port --timeout-graceful-shutdown 330

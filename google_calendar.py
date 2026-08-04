@@ -32,6 +32,21 @@ from typing import Any
 import config
 
 
+# Monotonic counter, bumped after every successful create/update. A caller that
+# CACHES a read (e.g. the server's "today's calendar" prompt note) keys its cache
+# on this value so a write it just made — or any other write this process ran —
+# invalidates the cache and forces a fresh read on the next turn. Reads never bump
+# it; deletes don't exist. Process-local, which is exactly the cache's scope.
+_WRITE_SEQ = 0
+
+
+def write_generation() -> int:
+    """Current calendar write generation (see _WRITE_SEQ). Increments on every
+    successful create_events()/update_event(); a cache keyed on it stays correct
+    across writes from any call site without cross-module invalidation wiring."""
+    return _WRITE_SEQ
+
+
 class CalendarError(RuntimeError):
     """A calendar bridge call failed. The message never contains the token."""
 
@@ -119,15 +134,17 @@ def _request(bridge_url: str, token: str, action: str,
     return parsed
 
 
-def _post(action: str, payload: dict[str, Any] | None = None) -> dict:
+def _post(action: str, payload: dict[str, Any] | None = None,
+          timeout: int | None = None) -> dict:
     """POST one action using the CONFIGURED bridge url + token. Requires the
-    connector to be enabled and configured."""
+    connector to be enabled and configured. `timeout` overrides the default so a
+    latency-sensitive read (a per-turn prompt note) can cap its worst case."""
     if not is_configured():
         raise CalendarNotConfigured(
             "Google Calendar connector is not configured "
             "(set integrations.google_calendar.enabled + bridge_url and GOOGLE_CALENDAR_TOKEN)."
         )
-    return _request(_bridge_url(), _token(), action, payload)
+    return _request(_bridge_url(), _token(), action, payload, timeout=timeout)
 
 
 def probe_bridge(bridge_url: str, token: str, calendar_id: str | None = None,
@@ -172,12 +189,14 @@ def test_connection() -> dict:
     return {"ok": True, "calendar_id": result.get("calendar_id", _default_calendar_id())}
 
 
-def list_events(time_min: str, time_max: str, calendar_id: str | None = None) -> list[dict]:
-    """Events between two ISO datetimes. Read-only."""
+def list_events(time_min: str, time_max: str, calendar_id: str | None = None,
+                timeout: int | None = None) -> list[dict]:
+    """Events between two ISO datetimes. Read-only. `timeout` caps the bridge call
+    for latency-sensitive callers (e.g. a per-turn prompt note)."""
     res = _post("list", {
         "time_min": time_min, "time_max": time_max,
         "calendar_id": (calendar_id or _default_calendar_id()),
-    })
+    }, timeout=timeout)
     return list((res.get("result", {}) or {}).get("events", []))
 
 
@@ -199,6 +218,8 @@ def create_events(events: list[dict]) -> dict:
     if not events:
         raise CalendarError("create_events requires a non-empty events list.")
     res = _post("create", {"events": events})
+    global _WRITE_SEQ
+    _WRITE_SEQ += 1
     return res.get("result", {}) or {}
 
 
@@ -213,6 +234,8 @@ def update_event(event_id: str, changes: dict, calendar_id: str | None = None) -
         "event_id": event_id, "changes": changes,
         "calendar_id": (calendar_id or _default_calendar_id()),
     })
+    global _WRITE_SEQ
+    _WRITE_SEQ += 1
     return res.get("result", {}) or {}
 
 # NOTE: there is intentionally no delete_event(). Deletion is unsupported by

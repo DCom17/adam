@@ -235,7 +235,7 @@ When the user says "Start my day" or "Run daily planning", run two phases. The p
 5. Apply the Quest Eligibility Filter to every item surfaced: stat gate or boss gate. Passing items become quests; everything else is a task only.
 6. **Run the Adaptive Gap-Fill engine.** After fixed commitments and confirmed tasks are placed, read `02_command_memory/operating_patterns.md` and detect open blocks. Propose beneficial `[FLEX]` fills tuned to today's state per `06_calendar/gap_fill_protocol.md`. Present each with the *why*; cap at ~2–3. Approved fills join the packet and ride the sign-off chain.
 
-Do not access Google Calendar during Phase 1. Do not stage prematurely — keep talking until the day is fully captured.
+**Capture every item the moment it's said — never leave the plan in conversation memory only.** As each task, appointment, commitment, or errand is named, append it to `06_calendar/latest_calendar_packet.md` that turn — a durable LOCAL write, not an external commit (Google Calendar stays untouched until sign-off). Capturing is never gated on the user confirming: write it to the packet and tell them it's held; confirmation gates the external commit only. This exists so an interrupted conversation (the user walks away, the app backgrounds, the session rolls over before sign-off) never loses the plan — any later turn re-reads the packet and continues from it instead of rebuilding the day. "Do not stage prematurely" means do not COMMIT to the external calendar early; it does not mean withhold the plan from the packet. Do not access Google Calendar during Phase 1.
 
 **Phase 2 — Sign-Off Execution (user leaves):**
 
@@ -445,6 +445,7 @@ blocks — see `INTEGRATION_EXECUTION.md`. You never run a script.
 
 **Step 1 — Commit Calendar (CREATES ONLY):**
 1. Read `06_calendar/latest_calendar_packet.md`, `06_calendar/commit_preview.md`, and `06_calendar/calendar_lessons.md`.
+   - **Freshness guard:** if the packet is empty, missing, or its date isn't today, the plan built earlier is not loaded. STOP — say so plainly and ask the user to read it back or plan fresh. Do NOT reconstruct the day from `active_tasks.md`, the phone inbox, or memory, and do NOT commit off a stale packet. A returning "load those tasks" commits *today's* packet; it never authorizes rebuilding the day from the standing task backlog. If you pull from any source other than the user's actual plan, announce the substitution — never present a stand-in as if it were their plan. (Mirrors the staleness guard the Good Morning briefing already applies.)
 2. Validate: correct date, timezone, no overlaps, realistic durations, buffers, clear titles, reminders, only real commitments.
 3. If the **Calendar add-on is enabled**, emit one `calendar.create` block with today's events. Creates only — no updates, no deletions, no recurring events, no guest invitations. Hold out anything genuinely unclear. (If Calendar isn't connected: skip the block, keep the day staged in the packet, and tell the user to add it in Settings → Add-ons.)
 4. Update `06_calendar/commit_log.md`, today's daily log, and archive the packet in `06_calendar/packet_archive/`. Report the create as **staged for approval** (default) or **done** (only if auto-run is on) — never claim it committed otherwise.

@@ -14,6 +14,7 @@ import approvals
 import config
 import external_actions
 import integration_config
+import licensing
 import merge
 import permissions
 import proposed_changes
@@ -21,7 +22,9 @@ from models import (
     ActionProposeRequest,
     AiPlanBody,
     ApprovalCreate,
+    AssentBody,
     CapabilityTierBody,
+    LicenseBody,
     ProposedChangeCreate,
     UiPrefs,
 )
@@ -247,8 +250,9 @@ async def set_capability_tier(body: CapabilityTierBody):
 
 
 # --- AI plan (the two-door choice: subscription vs pay-as-you-go) ------------
-# 'subscription' = the CLI's own Claude login covers usage at the plan's flat
-# rate. 'api_key' = the user's Anthropic API key, prepaid pay-as-you-go, with
+# 'subscription' = the CLI's own Claude login; note programmatic use like Adam
+# draws on the plan's separate Agent-SDK credit, not the flat interactive quota.
+# 'api_key' = the user's Anthropic API key, prepaid pay-as-you-go, with
 # the budget governor + cost meter keeping it bounded. The key itself lives in
 # .env and is injected only into the claude.exe subprocess env (run_claude).
 
@@ -319,7 +323,7 @@ async def set_ai_plan(body: AiPlanBody):
     if mode is not None and mode != prev_mode:
         integration_config.set_settings_top_level("auth_mode", mode)
         config.AUTH_MODE = mode
-        # Each door has a recommended model (Opus on flat-rate, Sonnet on
+        # Each door has a recommended model (Opus on subscription, Sonnet on
         # pay-as-you-go). Apply it on a door switch unless this same request
         # pins a model explicitly — the picker stays fully user-overridable.
         if model is None:
@@ -341,6 +345,84 @@ async def set_ai_plan(body: AiPlanBody):
         "key_updated": key is not None,   # never the key itself
     })
     return _ai_plan_state()
+
+
+# --- License (paid-product activation) --------------------------------------
+# Adam is sold on the bring-your-own-Anthropic-key model; THIS is a separate key
+# that proves purchase. It is verified entirely offline (licensing.py) against an
+# embedded public key — no license server, no phone-home. Until the product's
+# public key is configured, every key reports unlicensed (the scaffold is inert).
+
+def _license_public(info) -> dict:
+    """Status dict for the UI: the LicenseInfo fields, whether the product is actively selling
+    (the UI hides its license field until then — so a dormant beta shows nothing), plus trial +
+    entitlement so the UI can show a countdown and gate premium features."""
+    d = info.as_public_dict()
+    d["configured"] = licensing.is_selling()
+    d["entitled"] = licensing.is_entitled()
+    d["trial"] = licensing.trial_status()
+    d["buy_url"] = licensing.BUY_URL
+    return d
+
+
+@router.get("/license", dependencies=[Depends(require_token)])
+async def get_license():
+    """Current license status (validity, tier, buyer email, expiry) + configured flag.
+    Never returns the raw key."""
+    return _license_public(licensing.current_license())
+
+
+@router.post("/license", dependencies=[Depends(require_token)])
+async def set_license(body: LicenseBody):
+    """Activate a license key (verified offline, then stored so it applies immediately),
+    or deactivate with an empty key. 400 if the key is invalid, naming why."""
+    key = (body.key or "").strip()
+    if not key:
+        licensing.remove_license()
+        permissions.record_audit_event({"action_type": "license_removed"})
+        return _license_public(licensing.current_license())
+
+    info = licensing.install_license_key(key)
+    if not info.valid:
+        raise HTTPException(status_code=400, detail=info.reason or "invalid license key")
+    permissions.record_audit_event({
+        "action_type": "license_activated",
+        "tier": info.tier, "order": info.order_id,   # never the key itself
+    })
+    return _license_public(info)
+
+
+# --- EULA assent (clickwrap) ------------------------------------------------
+# The warranty disclaimer, liability cap, and arbitration clause bind only if the
+# user affirmatively accepted the EULA. The app shows the License Agreement screen
+# at first run (and after a EULA version bump) and posts the acceptance here; it is
+# recorded locally (licensing.py), append-only, no phone-home.
+
+@router.get("/assent", dependencies=[Depends(require_token)])
+async def get_assent():
+    """Has the user accepted the current EULA version? The first-run gate reads
+    `needs_assent` to decide whether to show the License Agreement screen."""
+    return licensing.assent_status()
+
+
+@router.post("/assent", dependencies=[Depends(require_token)])
+async def set_assent(body: AssentBody):
+    """Record the user's acceptance of the EULA (clickwrap). The posted version must match
+    the EULA the app currently ships, so a stale or forged version can't satisfy the gate.
+    Append-only; returns the fresh assent status."""
+    version = (body.version or "").strip()
+    if version != licensing.EULA_VERSION:
+        raise HTTPException(status_code=400, detail=(
+            f"assent version {version!r} does not match current EULA "
+            f"{licensing.EULA_VERSION!r}"))
+    method = (body.method or "install-clickwrap").strip() or "install-clickwrap"
+    rec = licensing.record_assent(version, method=method, order_id=(body.order_id or ""))
+    if not rec:
+        raise HTTPException(status_code=500, detail="could not save assent record")
+    permissions.record_audit_event({
+        "action_type": "eula_accepted", "version": version, "method": method,
+    })
+    return licensing.assent_status()
 
 
 @router.post("/undo-last", dependencies=[Depends(require_token)])

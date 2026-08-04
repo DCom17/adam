@@ -14,7 +14,9 @@
  * fall back to cache only when the network fails), so a redeploy is picked up on
  * the next online launch. Only the static icon/manifest are served cache-first.
  */
-const CACHE = "adam-shell-v7";   // v7: 0.9.41 voice-loop reliability fixes (index.html changed) — bump forces a clean SW re-activate + refreshes the offline shell copy
+const CACHE = "adam-shell-v14";   // v14: accessibility phase 1 — orb is a real keyboard-reachable <button>, state/error/transcript are live regions, composer is labelled, global :focus-visible ring (index.html). Bump forces a clean SW re-activate + refreshes the offline shell copy
+// (v13: code-mode long-turn fix — a mid-task server restart now shows "restarted mid-task — ask again" instead of "Connection error, sir." (index.html fail() handles the JVL_INTERRUPTED tag))
+// (v12: 30-day trial + feature-limit gate — license field shows trial countdown / buy link; phone-setup shows a licensed-feature prompt post-trial)
 const SHELL = ["/", "/manifest.json", "/icon.png", "/icon-maskable.png", "/logo.png"];
 
 self.addEventListener("install", (event) => {

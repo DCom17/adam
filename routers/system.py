@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse, JSONResponse
 import config
 import integration_registry
 import job_store
+import licensing
 import merge
 import permissions
 import updater
@@ -24,6 +25,20 @@ from security import require_token, token_matches
 import server
 
 router = APIRouter()
+
+
+def _require_entitlement() -> None:
+    """Gate premium (phone/remote) features. No-op on an unconfigured build or during the
+    free trial or with a valid license; otherwise 402 with a buy link so the client can
+    render a clean 'licensed feature' prompt. Enforcement policy: trial → feature-limit."""
+    if licensing.is_entitled():
+        return
+    raise HTTPException(status_code=402, detail={
+        "locked": True,
+        "feature": "phone",
+        "message": "Taking Adam to your phone is a licensed feature after your free trial.",
+        "buy_url": licensing.BUY_URL,
+    })
 
 
 @router.get("/ping")
@@ -50,6 +65,7 @@ async def phone_setup():
     HTTPS. Runs the READ-ONLY connect-phone helper (it never changes Tailscale or any
     config — it only inspects and prints commands), so the in-app wizard can guide the
     user step by step. No secrets in the output."""
+    _require_entitlement()
     script = str(config.ROOT / "scripts" / "connect-phone.py")
     try:
         p = await asyncio.to_thread(
@@ -67,6 +83,7 @@ async def connect_info():
     """Phone-reachable URLs for the Connect-phone QR. The browser is on localhost (no
     use to a phone), so the server reports the Tailscale HTTPS URL / LAN IP instead.
     `best` prefers a secure (HTTPS) URL — what an iPhone needs for voice."""
+    _require_entitlement()
     import phone_link
     cands = await asyncio.to_thread(phone_link.phone_urls, config.PORT, config.PUBLIC_BASE_URL)
     best = next((c for c in cands if c.get("secure")), cands[0] if cands else None)
@@ -176,7 +193,31 @@ async def update_apply():
         "action_type": "update_applied", "to_version": res.get("version"),
         "updated": res.get("updated"), "conflicts": len(res.get("conflicts") or []),
     })
-    return {"applied": True, "restart_required": True, **res}
+    # Finish the update the way it should finish: bring the new version up on its
+    # own. Spawn the detached relauncher, then drain + exit this (old-code) process.
+    # The launcher window closes on our clean exit; a fresh one opens running the
+    # just-installed files. Returns immediately; the drain+exit run in background.
+    server.begin_relaunch_and_exit()
+    return {"applied": True, "restart_required": True, "restarting": True, **res}
+
+
+@router.post("/drain", dependencies=[Depends(require_token)])
+async def drain(max_wait: int | None = None):
+    """Cooperative restart prep: stop taking new turns, wait for the in-flight
+    one(s) to finish (bounded by max_wait, default config.DRAIN_MAX_WAIT_SECONDS),
+    then exit — so restart-adam.ps1 (or the updater) can relaunch without killing a
+    long code turn mid-flight. Returns immediately; the wait + exit run in the
+    background. A hard window-close/reboot skips this entirely and is handled by
+    the recoverable 'restarted mid-task' message instead."""
+    running = server.begin_drain_and_exit(max_wait)
+    permissions.record_audit_event({
+        "action_type": "drain_requested", "target": None, "risk": "low",
+        "reason": "cooperative restart", "running_jobs": running,
+    })
+    server.log.info("drain requested: %d in-flight turn(s), cap %ss",
+                    running, max_wait if max_wait is not None else config.DRAIN_MAX_WAIT_SECONDS)
+    return {"draining": True, "running_jobs": running,
+            "max_wait_s": max_wait if max_wait is not None else config.DRAIN_MAX_WAIT_SECONDS}
 
 
 @router.get("/update-conflicts", dependencies=[Depends(require_token)])
@@ -254,6 +295,28 @@ async def favicon():
     raise HTTPException(status_code=404, detail="icon.ico not found")
 
 
+# Bundled level-up / rank-up celebration videos (web/celebrate/*.mp4). Static and
+# carry no secret, so they're served un-gated like the icons. Only allow-listed
+# filenames resolve — no user input ever reaches the filesystem path.
+_CELEBRATE_NAMES = ("rank-d", "rank-c", "rank-b", "rank-a", "rank-s", "rank-master", "milestone")
+# Both codecs ship: H.264 mp4 (universal — Safari/Edge/mobile) and VP9 webm
+# (Chromium builds without proprietary H.264). The page picks per canPlayType.
+_CELEBRATE_FILES = {n + ext for n in _CELEBRATE_NAMES for ext in (".mp4", ".webm")}
+
+
+@router.get("/celebrate/{filename}")
+async def celebrate_asset(filename: str):
+    """Serve a bundled celebration clip (mp4/webm) by its allow-listed name."""
+    if filename not in _CELEBRATE_FILES:
+        raise HTTPException(status_code=404, detail="not found")
+    path = server.FRONTEND.parent / "celebrate" / filename
+    if path.exists():
+        mt = "video/webm" if filename.endswith(".webm") else "video/mp4"
+        return FileResponse(path, media_type=mt,
+                            headers={"Cache-Control": "public, max-age=86400"})
+    raise HTTPException(status_code=404, detail="not found")
+
+
 def _static_page(name: str) -> FileResponse:
     """Serve one of the static web/ pages no-store (so an edit shows without a
     cache clear). Every one of these pages carries NO secret — the token is
@@ -313,12 +376,69 @@ async def setup_hunter_page():
     return _static_page("setup-hunter.html")
 
 
+@router.get("/setup-garmin")
+async def setup_garmin_page():
+    """Serve the standalone Garmin (unofficial health sync) setup wizard."""
+    return _static_page("setup-garmin.html")
+
+
 @router.get("/hunter-dashboard")
 async def hunter_dashboard_page():
     """Serve the in-app Hunter dashboard (web/hunter-dashboard.html) — the mobile
     view, rendered locally from GET /integrations/hunter/board instead of Google.
     Opened in an overlay iframe from the main app's view switcher."""
     return _static_page("hunter-dashboard.html")
+
+
+@router.get("/finance")
+async def finance_page():
+    """Serve the in-app Finance Tracker (web/finance.html) — the private, local
+    money dashboard + import/review view. Numbers are read from the token-gated
+    /finance/* API (finance_metrics computes them). Opened in an overlay iframe
+    from the main app's view switcher."""
+    return _static_page("finance.html")
+
+
+@router.get("/health-tracker")
+async def health_tracker_page():
+    """Serve the in-app Health Tracker (web/health.html) — the private, on-device
+    weight/meals/macros dashboard. Numbers are read from the token-gated
+    /health/* API (health_metrics computes them). Opened in an overlay iframe
+    from the main app's view switcher. (The bare /health path is the server's
+    liveness endpoint, so the page lives at /health-tracker.)"""
+    return _static_page("health.html")
+
+
+@router.get("/license-agreement")
+async def license_agreement_page():
+    """Serve the first-run EULA clickwrap screen (web/license-agreement.html). The
+    frontend gate sends new users here until they accept the current EULA version."""
+    return _static_page("license-agreement.html")
+
+
+@router.get("/legal")
+async def legal_page():
+    """Serve the legal-document viewer (web/legal.html); ?doc=eula|terms|privacy|refund."""
+    return _static_page("legal.html")
+
+
+# The bundled legal documents, served as Markdown for the in-app viewer and the
+# clickwrap screen. Public and un-gated — the same texts are published on the site,
+# and the clickwrap must be readable before the user is "in." Only these allow-listed
+# names resolve, so no user input ever reaches the filesystem path.
+_LEGAL_DOCS = ("eula", "terms", "privacy", "refund")
+
+
+@router.get("/legal/{name}.md")
+async def legal_markdown(name: str):
+    """Serve a bundled legal document (Markdown) by allow-listed name."""
+    if name not in _LEGAL_DOCS:
+        raise HTTPException(status_code=404, detail="not found")
+    path = server.FRONTEND.parent / "legal" / (name + ".md")
+    if path.exists():
+        return FileResponse(path, media_type="text/markdown; charset=utf-8",
+                            headers={"Cache-Control": "no-store"})
+    raise HTTPException(status_code=404, detail="not found")
 
 
 @router.get("/")

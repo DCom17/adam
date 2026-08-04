@@ -109,7 +109,7 @@ async def push_subscribe(body: PushSubscribe):
 
 @router.post("/clientlog", dependencies=[Depends(require_token)])
 @limiter.limit("60/minute")
-async def clientlog(request: Request, body: ClientLog):
+async def clientlog(request: Request, response: Response, body: ClientLog):
     """Beacon endpoint: the PWA reports a turn failure here so it lands in the
     server log. The phone has no dev console, so without this a 'Connection
     error' on-device is invisible — this records the specific cause."""

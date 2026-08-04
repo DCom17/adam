@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
 PackageIdentifier: ZonteCampos.AdamLocal
-PackageVersion: "1.0.0"   # TODO: match the signed release
+PackageVersion: "0.9.47"
 InstallerLocale: en-US
 Platform:
   - Windows.Desktop
@@ -11,9 +11,8 @@ UpgradeBehavior: install
 # The app has its own in-app updater; winget upgrade runs the installer, whose
 # upgrade path backs up program files and resets the updater baseline (safe).
 Installers:
-  # TODO: tagged asset URL (never /latest) + real SHA256 from Get-FileHash.
   - Architecture: x64
-    InstallerUrl: https://github.com/DCom17/adam-releases/releases/download/v1.0.0/adam-setup-v1.0.0.exe
-    InstallerSha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    InstallerUrl: https://github.com/DCom17/adam-releases/releases/download/v0.9.47/adam-setup-v0.9.47.exe
+    InstallerSha256: "60EE4A6E150FECAA44E118363AF2373312C304ECC48092DAB3709CB57C85FC4F"
 ManifestType: installer
 ManifestVersion: 1.6.0

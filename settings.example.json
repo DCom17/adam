@@ -3,7 +3,7 @@
 
   "claude_exe": "",
 
-  "_ai_plan_comment": "How Claude usage is paid for. auth_mode 'subscription' (default) = your Claude Pro/Max login covers usage at the plan's flat rate; recommended model: Opus. auth_mode 'api_key' = pay-as-you-go on your own Anthropic API key (stored in .env as ANTHROPIC_API_KEY, reaches only the spawned claude.exe); recommended model: Sonnet. api_budget_monthly_usd is the pay-as-you-go monthly ceiling — Adam pauses (never overspends) when the month's metered cost reaches it; 0 disables the ceiling. Change all of this from Settings -> AI plan in the app.",
+  "_ai_plan_comment": "How Claude usage is paid for. auth_mode 'api_key' (recommended, supported) = pay-as-you-go on your own Anthropic API key (stored in .env as ANTHROPIC_API_KEY, reaches only the spawned claude.exe); clear per-use cost, unaffected by Claude subscription-plan changes; recommended model: Sonnet. auth_mode 'subscription' = Adam runs through your own Claude Code sign-in; note that programmatic tools like Adam draw on your plan's SEPARATE monthly programmatic/Agent-SDK allowance (varies by plan), NOT the flat interactive quota, and pause when it is exhausted; recommended model: Opus. api_budget_monthly_usd is the pay-as-you-go monthly ceiling — Adam pauses (never overspends) when the month's metered cost reaches it; 0 disables the ceiling. Change all of this from Settings -> AI plan in the app.",
   "auth_mode": "subscription",
   "voice_model": "claude-opus-4-8",
   "api_budget_monthly_usd": 10,
@@ -15,7 +15,8 @@
   "vault_path": "brain",
   "work_extra_dirs": [],
 
-  "host": "0.0.0.0",
+  "_host_comment": "127.0.0.1 keeps Adam off every other interface. Phone access over Tailscale Serve still works — it proxies to loopback on this PC. Change to 0.0.0.0 only if you deliberately want other devices on your local network to reach Adam directly.",
+  "host": "127.0.0.1",
   "port": 8000,
   "public_base_url": "",
   "cors_allowed_origins": ["*"],

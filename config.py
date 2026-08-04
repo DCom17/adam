@@ -37,7 +37,7 @@ CONFIG_ROOT = Path(os.environ.get("ADAM_CONFIG_ROOT", "").strip()
 load_dotenv(CONFIG_ROOT / ".env")  # secrets + machine values
 
 APP_NAME = "adam-local"
-APP_VERSION = "0.9.41"
+APP_VERSION = "0.9.60"
 
 
 # --- Settings file ----------------------------------------------------------
@@ -141,7 +141,15 @@ WORK_EXTRA_DIRS = [
 ]
 
 # --- Server -----------------------------------------------------------------
-HOST = str(_get("host", "0.0.0.0"))
+# Bind loopback by default (OWASP: minimise exposed attack surface). The
+# supported remote path is Tailscale Serve, which proxies from the tailnet to
+# 127.0.0.1 on this machine, so phone access is unaffected by this default.
+# Binding 0.0.0.0 puts the port on every interface — on a hotel or cafe network
+# that means every peer can reach it, with only the bearer token in the way.
+# Set "host": "0.0.0.0" in settings.json to opt back in to raw LAN access.
+# NOTE: existing installs that already carry "host" in settings.json keep
+# whatever they have; this default only governs a config that omits it.
+HOST = str(_get("host", "127.0.0.1"))
 PORT = int(_get("port", 8000))
 # Where the PWA is reached from outside (used for Twilio signature checks, docs).
 PUBLIC_BASE_URL = str(_get("public_base_url", "")).strip()
@@ -166,6 +174,13 @@ ASYNC_CLAUDE_TIMEOUT_SECONDS = int(_get("async_claude_timeout_seconds", 600))
 # so the cap is a backstop against a wedged process, not a UX guarantee.
 CODE_CLAUDE_TIMEOUT_SECONDS = int(_get("code_claude_timeout_seconds", 3600))
 JOB_TTL_SECONDS = int(_get("job_ttl_seconds", 600))
+# On a COOPERATIVE restart (Ctrl+C on the server window, or POST /drain via
+# restart-adam / the updater), stop taking new turns and wait up to this long for
+# the in-flight one(s) to finish before exiting — so a long code turn survives a
+# deliberate restart instead of dying with "restarted mid-task". A hard
+# window-close / taskkill / reboot can't be caught (Windows kills the process);
+# those still fall back to the recoverable "ask again" message. -Force skips it.
+DRAIN_MAX_WAIT_SECONDS = int(_get("drain_max_wait_seconds", 300))
 
 # --- Data directories (off the synced vault by default) ---------------------
 DATA_DIR = _resolve_path(_get("data_dir", ""), "data")
@@ -498,6 +513,24 @@ JOB_HISTORY_TTL_SECONDS = int(_get("job_history_ttl_days", 7)) * 24 * 3600
 # full prompt is never persisted; only a short summary for history readability).
 JOB_INPUT_SUMMARY_MAX = int(_get("job_input_summary_max_chars", 200))
 
+# --- Finance Tracker (Phase F1) ---------------------------------------------
+# Local-first personal finance engine. Its own SQLite DB under the data tree,
+# so — like every data/ file — it is never synced to the vault, never shipped
+# in a release, and never committed. The Google Sheet the owner runs by hand is
+# the SPEC for the schema + formulas; Adam owns the engine and the storage. The
+# LLM only parses/categorizes imports; every displayed number is computed by
+# finance_metrics.py from this DB (see docs/PLAN-FINANCE-HEALTH.md).
+FINANCE_DIR = _resolve_path(_get("finance_dir", ""), "data/finance")
+FINANCE_DB = FINANCE_DIR / "finance.db"
+
+# --- Health Tracker (Phase H1) ----------------------------------------------
+# Local-first health engine (weight, meals/macros, daily wearable metrics). Same
+# posture as Finance: its own SQLite DB under the runtime data tree — never
+# synced, shipped, or committed. Health data is as private as finance data, and
+# keeping it on-device is the whole point (vs. sending it to a cloud tracker).
+HEALTH_DIR = _resolve_path(_get("health_dir", ""), "data/health")
+HEALTH_DB = HEALTH_DIR / "health.db"
+
 # --- Integrations: Google Calendar (opt-in, OFF by default) -----------------
 # A connector to the user's OWN Google Apps Script calendar bridge
 # (calendar_bridge.gs), which runs in the user's Google account. We never hold a
@@ -582,6 +615,18 @@ _HUN = (_get("integrations", {}) or {}).get("hunter", {}) or {}
 HUNTER_ENABLED = bool(_HUN.get("enabled", False))
 HUNTER_BRIDGE_URL = str(_HUN.get("bridge_url", "") or "").strip()
 HUNTER_TIMEOUT_SECONDS = int(_HUN.get("timeout_seconds", 20))
+
+# --- Integrations: Garmin (opt-in, OFF by default) --------------------------
+# UNOFFICIAL health sync (Phase H3). No public Garmin consumer API exists; the
+# community python-garminconnect library logs in with the user's OWN Garmin
+# credentials and reads the same endpoints the mobile app uses. It can break when
+# Garmin changes things — the add-on says so. Credentials live in .env ONLY
+# (GARMIN_EMAIL / GARMIN_PASSWORD), never settings.json, never logged. The library
+# is optional (imported lazily in garmin.py), so a default install needs nothing.
+_GARMIN = (_get("integrations", {}) or {}).get("garmin", {}) or {}
+GARMIN_ENABLED = bool(_GARMIN.get("enabled", False))
+GARMIN_EMAIL = os.environ.get("GARMIN_EMAIL", "").strip()
+GARMIN_PASSWORD = os.environ.get("GARMIN_PASSWORD", "").strip()
 
 # --- Secrets (environment / .env ONLY) --------------------------------------
 # ADAM_TOKEN is the product token; JARVIS_TOKEN is honored as a fallback so
@@ -706,6 +751,12 @@ def refresh_integrations(root: str | os.PathLike | None = None) -> bool:
     HUNTER_BRIDGE_URL = str(_HUN.get("bridge_url", "") or "").strip()
     HUNTER_TIMEOUT_SECONDS = int(_HUN.get("timeout_seconds", 20))
 
+    global _GARMIN, GARMIN_ENABLED, GARMIN_EMAIL, GARMIN_PASSWORD
+    _GARMIN = ints.get("garmin", {}) or {}
+    GARMIN_ENABLED = bool(_GARMIN.get("enabled", False))
+    GARMIN_EMAIL = os.environ.get("GARMIN_EMAIL", "").strip()
+    GARMIN_PASSWORD = os.environ.get("GARMIN_PASSWORD", "").strip()
+
     # .env-only secrets / Twilio identifiers.
     CALENDAR_TOKEN = os.environ.get("GOOGLE_CALENDAR_TOKEN", "").strip()
     HUNTER_TOKEN = os.environ.get("HUNTER_TOKEN", "").strip()
@@ -725,7 +776,7 @@ def ensure_dirs() -> None:
     """Create the runtime directories if missing. Called at startup so a fresh
     clone needs no manual mkdir."""
     for d in (DATA_DIR, UPLOAD_DIR, LOG_DIR, STATE_DIR, BACKUP_DIR,
-              AGENT_WORKSPACE, DRAFTS_DIR, OUTPUTS_DIR):
+              AGENT_WORKSPACE, DRAFTS_DIR, OUTPUTS_DIR, FINANCE_DIR, HEALTH_DIR):
         d.mkdir(parents=True, exist_ok=True)
     # Pre-create the configured write directories so a fresh clone can write
     # drafts/outputs immediately without a manual mkdir.

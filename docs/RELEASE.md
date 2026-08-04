@@ -76,10 +76,31 @@ Updates are delivered through **GitHub Releases** on the public releases repo �
 `update_repo` setting, default `DCom17/adam-releases`. Every install checks its
 `releases/latest` endpoint, so **publishing a release ships the update**:
 
-1. Bump `APP_VERSION` in `config.py` and build: `python scripts/make_release.py`.
-2. Publish: `.\scripts\publish-release.ps1` — it creates the release and attaches the
-   ZIP via `gh release create` (or prints the manual web steps if `gh` isn't
-   installed). Tag it to the `APP_VERSION`.
+1. Bump `APP_VERSION` in `config.py`, update `CHANGELOG.md`, and commit (the publisher
+   refuses on a dirty tree).
+2. Publish: `.\scripts\publish-release.ps1`. In one command it runs the release tests,
+   builds the guarded ZIP, **builds AND signs the installer**, attaches BOTH assets, and
+   verifies they're actually on the release before reporting success. Tags to `APP_VERSION`.
+   (No `gh`? It prints the manual web steps and lists both files to drag in.)
+
+**Every release ships a signed installer + the ZIP — enforced, not manual.** The
+publisher is fail-closed: it REFUSES rather than silently ship a ZIP-only release (the
+0.9.41/43/46/48 regression, where building the installer was a separate step this script
+never ran). Two explicit escape hatches, each a deliberate visible choice:
+- `-ZipOnly` — publish without an installer (rare; e.g. Inno Setup unavailable).
+- `-AllowUnsigned` — ship an unsigned installer when signing isn't configured
+  (SmartScreen warns users; don't use for public releases).
+
+### Signing config (one-time per machine)
+
+Signing uses Azure Trusted/Artifact Signing. `publish-release.ps1` auto-loads
+`scripts/signing.local.ps1` (gitignored + deny-guarded, never shipped) when present —
+create it once to set `ADAM_SIGNTOOL` / `ADAM_ACS_DLIB` / `ADAM_ACS_METADATA` at your
+local ACS toolkit (canonical copy lives in `<adam-signing>\set-signing-env.ps1`). With
+it in place every publish signs automatically — no per-session env setup. Verify a build
+with `Get-AuthenticodeSignature dist\adam-setup-vX.Y.Z.exe` (Status = **Valid**), not
+`signtool /pa`. Note ACS issues short-lived certs; the Microsoft timestamp keeps the
+signature valid after the cert's own 3-day window closes.
 
 ## How users update
 
@@ -102,6 +123,9 @@ The update takes effect after the server restarts (close the black window, reope
 </details>
 
 ## Building the Windows installer (v1.0 packaging)
+
+> `publish-release.ps1` now builds + signs + attaches the installer automatically (above).
+> This section covers building it **standalone** — for testing, or a manual re-attach.
 
 The installer wraps the exact guarded ZIP — every fail-closed release guard runs
 before a single installer byte exists:

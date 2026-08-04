@@ -384,7 +384,10 @@ off your own screen. Don't screenshot, photograph, or share it. Hide it when don
     <div class="body">
       <div class="muted">Something acting up? This copies a <b>secret-free</b> support bundle
         (versions, settings summary, recent activity + log tail — tokens and phone numbers
-        scrubbed) to your clipboard, ready to paste into a message or bug report.</div>
+        scrubbed) to your clipboard, ready to paste into a bug report.</div>
+      <div class="muted" style="margin-top:8px;">Then
+        <a href="https://github.com/DCom17/adam-releases/issues/new/choose" target="_blank" rel="noopener">report a problem&nbsp;→</a>
+        and paste the bundle in. A human reads every issue.</div>
       <div class="warnbox hidden" id="diagMsg"></div>
     </div>
   </section>
@@ -3196,7 +3199,7 @@ async function copyDiagnostics() {
   try {
     await navigator.clipboard.writeText(text);
     box.textContent = "Copied to clipboard — " + ((r.data.log_tail || []).length)
-      + " log lines, v" + ((r.data.app || {}).version || "?") + ". Paste it into your report.";
+      + " log lines, v" + ((r.data.app || {}).version || "?") + ". Now open “report a problem” above and paste it in.";
   } catch (e) {
     // Clipboard can be blocked (permissions / non-secure context) — show the
     // bundle in a prompt-free fallback: a temporary textarea the user can copy.
@@ -3366,7 +3369,21 @@ async function loadPhoneSetup(force) {
   }
   $("phoneSetupBody").textContent = "Checking your Tailscale setup…";
   var r = await api("/phone-setup");
+  if (r && r.status === 402) { renderPhoneLocked(r.data && r.data.detail); return; }
   renderPhoneSetup((r && r.ok && r.data) ? r.data : { tailscale_found: false });
+}
+
+// Post-trial, unlicensed: phone access is the paid tier. Show a friendly gate
+// (DOM nodes only, per the console's XSS guard) rather than the Tailscale steps.
+function renderPhoneLocked(lock) {
+  var box = $("phoneSetupBody"); box.textContent = "";
+  box.appendChild(_mk("div", (lock && lock.message) || "Phone access is a licensed feature after your free trial.", "color:#e0a341;font-weight:bold;"));
+  box.appendChild(_mk("div", "Your PC assistant stays free — a license adds Adam on your phone, in Adam's voice, from anywhere.", "margin-top:6px;"));
+  var buy = _mk("a", "Get a license →");
+  buy.setAttribute("href", (lock && lock.buy_url) || "#"); buy.setAttribute("target", "_blank"); buy.setAttribute("rel", "noopener");
+  buy.style.cssText = "display:inline-block;margin-top:8px;color:#21e6ff;font-weight:bold;";
+  box.appendChild(buy);
+  box.appendChild(_mk("div", "Already bought? Enter your key under gear → AI plan → License, then click Re-check.", "margin-top:8px;font-size:12px;"));
 }
 
 // Step 2 — token QR (SENSITIVE). Renders only after an explicit click; the raw

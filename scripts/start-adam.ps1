@@ -95,7 +95,7 @@ $localUrl = "http://localhost:$port/"
 $consoleUrl = "http://localhost:$port/console"
 $healthUrl = "http://127.0.0.1:$port/health"
 
-# Read ADAM_TOKEN from .env (read-only; same parsing as scripts\copy-token.ps1) so we
+# Read ADAM_TOKEN (or legacy JARVIS_TOKEN) from .env (read-only; same parsing as copy-token.ps1) so we
 # can open the browser ALREADY SIGNED IN. The token rides in the URL *fragment* (#token=),
 # which the app's bootstrap stores to localStorage and immediately strips from the URL.
 # A fragment is never sent to the server, so it stays out of server logs. If the token is
@@ -106,7 +106,7 @@ try {
     foreach ($line in (Get-Content -LiteralPath (Join-Path $root ".env"))) {
         $t = $line.Trim()
         if ($t.StartsWith("#")) { continue }
-        if ($t -match '^\s*ADAM_TOKEN\s*=\s*(.*)$') {
+        if ($t -match '^\s*(?:ADAM_TOKEN|JARVIS_TOKEN)\s*=\s*(.*)$') {
             $val = $Matches[1].Trim()
             if ($val.Length -ge 2 -and (($val.StartsWith('"') -and $val.EndsWith('"')) -or ($val.StartsWith("'") -and $val.EndsWith("'")))) {
                 $val = $val.Substring(1, $val.Length - 2)
@@ -160,10 +160,18 @@ Say "Starting Adam on $localUrl ..." "Cyan"
 # Title the server window "Adam" so users recognize it and it matches the
 # update/setup instructions ("close the black window titled 'Adam'"). The
 # backtick escapes `$Host so it's evaluated in the NEW window, not here at build time.
-$serverCmd = "`$Host.UI.RawUI.WindowTitle = 'Adam'; Set-Location -LiteralPath '$root'; & '$pyExe' -m uvicorn server:app --host $($c.host) --port $port"
+# --timeout-graceful-shutdown gives the on-shutdown drain room to finish an
+# in-flight code turn on Ctrl+C (cap 300s + headroom) before uvicorn force-exits;
+# a second Ctrl+C still forces immediately. See config.DRAIN_MAX_WAIT_SECONDS.
+#
+# The window is intentionally NOT -NoExit: on a CLEAN stop (Ctrl+C, or the
+# self-updater exiting to relaunch on the new version) the window closes on its
+# own, so a self-update finishes with no lingering dead window. On a CRASH
+# (non-zero exit) it pauses so the error above stays readable.
+$serverCmd = "`$Host.UI.RawUI.WindowTitle = 'Adam'; Set-Location -LiteralPath '$root'; & '$pyExe' -m uvicorn server:app --host $($c.host) --port $port --timeout-graceful-shutdown 330; `$code = `$LASTEXITCODE; if (`$code -ne 0) { Write-Host ''; Write-Host ('Adam stopped unexpectedly (exit ' + `$code + '). The lines above show why.') -ForegroundColor Yellow; Read-Host 'Press Enter to close this window' }"
 try {
     Start-Process -FilePath "powershell" `
-        -ArgumentList @("-NoExit", "-NoProfile", "-Command", $serverCmd) `
+        -ArgumentList @("-NoProfile", "-Command", $serverCmd) `
         -WorkingDirectory $root | Out-Null
 } catch {
     Say "Could not launch the server window:" "Red"
