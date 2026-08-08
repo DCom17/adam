@@ -1,6 +1,6 @@
 # Privacy Policy — Adam Local
 
-**Last updated: 2026-07-16** · Controller: **Campos Systems LLC**
+**Last updated: 2026-08-08** · Controller: **Campos Systems LLC**
 
 **Short version:** Adam Local runs on your own computer using your own AI Provider
 account. It has no telemetry, no analytics, and no crash reporting, and we operate
@@ -25,10 +25,15 @@ between your device and those services under your own accounts, governed by thei
 policies.
 
 ## 3. The limited data we handle
-- **Purchase data.** Payment is processed by our Merchant of Record, **Paddle**, the seller of record, which handles billing and tax. We receive limited
-  order information (such as your email, order ID, country, and licence tier) to
-  deliver your licence and provide support. See their privacy policy:
-  https://www.paddle.com/legal/privacy. We never receive your full card number.
+- **Purchase data.** Payment is processed by our Merchant of Record, **Polar**
+  (Polar Software Inc.), the seller of record, which handles billing and tax. We
+  receive limited order information (such as your email, order ID, country, and
+  licence tier) to deliver your licence and provide support. See their privacy
+  policy: https://polar.sh/legal/privacy. We never receive your full card number.
+- **Your licence key contains your email address.** Keys are signed offline and
+  verified on your own device — there is no licence server and no activation
+  call — so the email is embedded in the key itself rather than looked up. Treat
+  your key like a receipt: anyone you send it to can read that address.
 - **Support communications.** If you email us, we receive what you send and keep it
   to help you.
 - **Update checks.** The Software may check our public release page (hosted on

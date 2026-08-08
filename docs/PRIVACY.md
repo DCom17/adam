@@ -4,10 +4,15 @@
 talking to an AI, not a person; your messages are processed by Anthropic's
 Claude under your own account (details below).
 
-**The short version: Adam collects nothing.** There is no Adam server, no account,
-no telemetry, no analytics, no crash reporting. The maintainer never sees your
-files, your conversations, your token, or your keys — there is no infrastructure
-that could receive them. Everything runs on your own PC.
+**The short version: the Adam software collects nothing.** There is no Adam
+server, no account, no telemetry, no analytics, no crash reporting. The maintainer
+never sees your files, your conversations, your token, or your keys — there is no
+infrastructure that could receive them. Everything runs on your own PC.
+
+The one exception is **buying** Adam Plus, which — like buying anything — involves
+a payment processor who knows who paid. That is a separate thing from the software,
+and it is spelled out under "If you buy Adam Plus" below. Using Adam for free
+involves no purchase data at all.
 
 ## What stays on your machine
 
@@ -50,6 +55,26 @@ account** or is a plain software download:
 
 That's the complete list. If a future version ever adds a network call, it will
 be documented here first.
+
+## If you buy Adam Plus
+
+Adam itself is free and this section does not apply to you unless you buy.
+
+- **Who takes the payment.** Checkout is handled by **Polar**, our Merchant of
+  Record — they are the seller on the receipt and handle billing and sales tax.
+  Your card details go to them, not to us. We never see your full card number.
+- **What the maintainer receives.** Limited order information: your email
+  address, an order ID, your country, and which licence you bought. That is used
+  to issue your licence key and to help you if you write in.
+- **Your licence key contains your email address.** Keys are signed once and
+  checked entirely on your own machine — there is no licence server, no
+  activation call, and no phone-home. That is deliberate, and it is why the email
+  is baked into the key rather than looked up. Treat the key like a receipt.
+- **What does not change.** Buying does not add telemetry, an account, or any
+  network call inside the app. The list above is still the complete list.
+
+Full policy, including your rights and how long records are kept, ships with the
+app as `legal/privacy.md` (also linked from the website's Privacy page).
 
 ## Your responsibilities
 

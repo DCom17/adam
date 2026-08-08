@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Privacy — Adam Local</title>
-<meta name="description" content="Adam Local collects nothing. No accounts, no telemetry, no analytics, no crash reporting — the complete list of network calls it makes.">
+<meta name="description" content="The Adam Local software collects nothing. No accounts, no telemetry, no analytics, no crash reporting — the complete list of network calls it makes, plus exactly what a purchase involves.">
 <link rel="icon" href="icon.png" type="image/png">
 <style>
   :root {
@@ -39,10 +39,14 @@
   <p class="lede"><b>Adam is an AI assistant, powered by Claude.</b> When you talk
   to Adam you are talking to an AI, not a person; your messages are processed by
   Anthropic's Claude under your own account (details below).</p>
-  <p class="lede"><b>The short version: Adam collects nothing.</b> There is no Adam
-  server, no account, no telemetry, no analytics, no crash reporting. The maintainer
-  never sees your files, your conversations, your token, or your keys — there is no
-  infrastructure that could receive them. Everything runs on your own PC.</p>
+  <p class="lede"><b>The short version: the Adam software collects nothing.</b> There
+  is no Adam server, no account, no telemetry, no analytics, no crash reporting. The
+  maintainer never sees your files, your conversations, your token, or your keys —
+  there is no infrastructure that could receive them. Everything runs on your own PC.</p>
+  <p class="lede">The one exception is <b>buying</b> Adam Plus, which — like buying
+  anything — involves a payment processor who knows who paid. That's separate from the
+  software, and it's spelled out in full below. Using Adam for free involves no
+  purchase data at all.</p>
 
   <h2>WHAT STAYS ON YOUR MACHINE</h2>
   <ul>
@@ -85,6 +89,30 @@
   </ol>
   <p>That's the complete list. If a future version ever adds a network call, it
   will be documented here first.</p>
+
+  <h2>IF YOU BUY ADAM PLUS</h2>
+  <p>Adam is free and this section doesn't apply to you unless you buy.</p>
+  <ul>
+    <li><b>Who takes the payment.</b> Checkout is handled by <b>Polar</b>, our
+      Merchant of Record — they're the seller on the receipt and they handle billing
+      and sales tax. Your card details go to them, not to us; we never see your full
+      card number. See <a href="https://polar.sh/legal/privacy">Polar's privacy
+      policy</a>.</li>
+    <li><b>What the maintainer receives.</b> Limited order information — your email
+      address, an order ID, your country, and which licence you bought — used to issue
+      your licence key and to help you if you write in.</li>
+    <li><b>Your licence key contains your email address.</b> Keys are signed once and
+      checked entirely on your own machine: no licence server, no activation call, no
+      phone-home. That's deliberate, and it's why the email is baked into the key
+      rather than looked up. Treat the key like a receipt — anyone you send it to can
+      read that address.</li>
+    <li><b>What doesn't change.</b> Buying adds no telemetry, no account, and no new
+      network call inside the app. The list above is still the complete list.</li>
+  </ul>
+  <p>Full policy — your rights, retention, international transfers:
+  <a href="https://github.com/DCom17/adam/blob/main/web/legal/privacy.md">the complete
+  privacy policy</a>, which also ships inside the app. Requests:
+  <a href="mailto:privacy@camposenterprises.org">privacy@camposenterprises.org</a>.</p>
 
   <h2>YOUR RESPONSIBILITIES</h2>
   <p>Because everything is yours, privacy choices are yours too: what lives in your
