@@ -2,122 +2,226 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<base target="_top">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- Auth bootstrap: if opened with #token=... (desktop launcher or phone Connect-QR),
+     store the token to localStorage and strip it from the URL/history. The fragment
+     never reaches the server. No-op on normal navigation. -->
+<script>
+(function(){try{var h=(location.hash||"").replace(/^#/,"");if(h){var t=new URLSearchParams(h).get("token");if(t&&t.trim()){localStorage.setItem("jarvis_token",t.trim());localStorage.setItem("jarvis_url",location.origin);}}}catch(e){}try{if(location.hash){history.replaceState(null,document.title,location.pathname+location.search);}}catch(e){try{location.hash="";}catch(e2){}}})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#04060b">
 <meta name="robots" content="noindex, nofollow">
 <title>Adam — Garmin Setup</title>
 <link rel="icon" href="/icon.png" type="image/png" />
-<style>
-  :root { --bg:#04060b; --panel:rgba(11,18,40,.95); --cyan:#21e6ff; --cyan2:#8df2ff;
-    --green:#22c55e; --amber:#f59e0b; --red:#ef4444; --text:#f8fafc; --dim:#cbd5e1; --muted:#94a3b8;
-    --line:rgba(33,230,255,.42); --line2:rgba(129,140,248,.38); }
-  * { box-sizing:border-box; }
-  body { margin:0; min-height:100svh; background:linear-gradient(180deg,#020409,#04060b 45%,#060d16);
-    color:var(--text); font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; padding:16px; }
-  .wrap { max-width:560px; margin:0 auto; }
-  h1 { color:var(--cyan2); font-size:20px; letter-spacing:1.5px; text-shadow:0 0 10px rgba(33,230,255,.4); }
-  .frame { border:1px solid var(--line); background:var(--panel); border-radius:14px; padding:15px; margin-bottom:12px;
-    box-shadow:0 0 14px rgba(33,230,255,.1); }
-  .warn { border-color:rgba(245,158,11,.5); background:rgba(245,158,11,.06); color:var(--amber); font-size:12.5px; }
-  label { display:block; font-size:10px; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; margin:12px 0 5px; }
-  input { width:100%; background:rgba(2,6,23,.85); border:1px solid var(--line2); color:var(--text);
-    border-radius:10px; padding:11px; font:inherit; font-size:14px; }
-  .btn { background:rgba(33,230,255,.12); border:1px solid var(--line); color:var(--cyan2); border-radius:11px;
-    padding:12px 16px; font:inherit; font-size:13px; letter-spacing:1px; cursor:pointer; margin-top:12px; width:100%; }
-  .btn.ghost { background:none; color:var(--dim); }
-  .msg { font-size:13px; margin-top:10px; } .ok { color:var(--green); } .err { color:var(--red); }
-  .muted { color:var(--muted); font-size:12.5px; line-height:1.5; }
-  code { background:rgba(2,6,23,.8); padding:2px 6px; border-radius:5px; color:var(--cyan2); }
-</style>
+<!-- Shared design language for every operator page. See web/adam-ui.css. -->
+<link rel="stylesheet" href="/adam-ui.css">
 </head>
-<div class="wrap">
-  <h1>Garmin Sync</h1>
-  <div class="frame warn">
-    <b>Heads up — this is unofficial.</b> Garmin has no public app connection, so Adam signs in with
-    your Garmin email and password (kept only on this computer, never sent anywhere else) and reads the
-    same data the Garmin app shows. Garmin can change things and break this at any time. It only ever
-    reads your data into your private Health Tracker.
-  </div>
-  <div class="frame">
-    <div class="muted">One-time: Adam needs a small sync library on this computer. Tap
-      <b>Install sync library</b> below — no terminal needed. (If it ever fails, you can run
-      <code>pip install garminconnect</code> in the Adam folder instead.)</div>
-    <button class="btn" id="installBtn">INSTALL SYNC LIBRARY (one-time)</button>
-    <label for="email">Garmin email</label>
-    <input id="email" type="text" name="garmin-acct-x" autocomplete="off" autocapitalize="off"
-      autocorrect="off" spellcheck="false" data-lpignore="true" data-1p-ignore data-form-type="other"
-      placeholder="you@example.com">
-    <label for="pass">Garmin password</label>
-    <input id="pass" type="password" name="garmin-key-x" autocomplete="new-password"
-      data-lpignore="true" data-1p-ignore data-form-type="other" placeholder="••••••••">
-    <button class="btn" id="saveBtn">CONNECT GARMIN</button>
-    <button class="btn ghost" id="syncBtn">SYNC TODAY NOW</button>
-    <button class="btn ghost" id="offBtn">Disconnect</button>
-    <div id="msg" class="msg"></div>
-  </div>
-</div>
+<body>
+
+<header class="appbar">
+  <h1><img src="/logo.png" alt="" class="brand-logo"><span class="wordmark">ADAM</span><span class="pagename">Garmin Setup</span></h1>
+  <span class="spacer"></span>
+  <nav aria-label="Adam sections">
+    <a href="/settings" title="Back to all add-ons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7"/></svg><span class="label">All add-ons</span></a>
+    <a href="/console" title="Operator Console"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.5" y="4" width="19" height="16" rx="2.5"/><path d="m7 10 2.6 2.4L7 15M12.5 15.2h4.5"/></svg><span class="label">Console</span></a>
+    <button id="signOut" class="hidden" type="button">Sign out</button>
+  </nav>
+</header>
+
+<!-- Token gate — same shape and same localStorage keys as every other wizard, so
+     one sign-in covers all of them. This page used to have no gate at all: opening
+     it without a token just said "Sign in to Adam first" with no way to do so. -->
+<main id="gateView" class="hidden">
+  <section class="gate">
+    <div class="head">Sign in</div>
+    <div class="body">
+      <p class="muted">This page talks to your local server with your bearer token (the same
+        ADAM_TOKEN the Operator Console uses). It is stored on this device only.</p>
+      <div class="field">
+        <label class="block" for="tokenInput">Access token</label>
+        <input id="tokenInput" type="password" class="block" placeholder="Paste ADAM_TOKEN" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="block" for="urlInput">Server</label>
+        <input id="urlInput" type="text" class="block" autocomplete="off">
+      </div>
+      <div class="actions"><button class="primary" id="signIn" type="button">Sign in</button></div>
+      <div class="errbox hidden" id="gateErr" role="alert"></div>
+    </div>
+  </section>
+</main>
+
+<main id="wizardView" class="narrow hidden">
+
+  <section>
+    <div class="body">
+      <div class="warnbox"><b>Heads up — this one is unofficial.</b> Garmin has no public app
+        connection, so Adam signs in with your Garmin email and password (kept <b>only on this
+        computer</b>, never sent anywhere else) and reads the same data the Garmin app shows.
+        Garmin can change things and break this at any time. It only ever <b>reads</b> your data
+        into your private Health Tracker.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">Connect your watch</div>
+    <div class="body">
+      <ol class="steps">
+        <li>
+          <h3>Install the sync library</h3>
+          <p class="muted">A one-time download onto this computer — no terminal needed. It can
+            take a minute.</p>
+          <div class="actions">
+            <button class="primary" id="installBtn" type="button">Install sync library</button>
+          </div>
+          <details class="manual">
+            <summary>If that fails</summary>
+            <p class="muted">Run <code>pip install garminconnect</code> in the Adam folder, then
+              come back and connect.</p>
+          </details>
+        </li>
+        <li>
+          <h3>Sign in to Garmin</h3>
+          <p class="muted">Your Garmin credentials are stored on this computer only, and are used
+            just to read your own data.</p>
+          <div class="field">
+            <label class="block" for="email">Garmin email</label>
+            <input id="email" type="text" class="block" name="garmin-acct-x" autocomplete="off"
+              autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true"
+              data-1p-ignore data-form-type="other" placeholder="you@example.com">
+          </div>
+          <div class="field">
+            <label class="block" for="pass">Garmin password</label>
+            <input id="pass" type="password" class="block" name="garmin-key-x"
+              autocomplete="new-password" data-lpignore="true" data-1p-ignore
+              data-form-type="other" placeholder="••••••••">
+          </div>
+          <div class="actions">
+            <button class="primary" id="saveBtn" type="button">Connect Garmin</button>
+          </div>
+        </li>
+        <li>
+          <h3>Pull today's data</h3>
+          <p class="muted">After this, Adam refreshes on its own when you open the Health Tracker.</p>
+          <div class="actions">
+            <button id="syncBtn" type="button">Sync today now</button>
+            <span class="spacer-h"></span>
+            <button class="danger" id="offBtn" type="button">Disconnect</button>
+          </div>
+        </li>
+      </ol>
+      <div id="msg" class="msg" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+</main>
+
 <script>
-var LS = { get token(){ return localStorage.getItem("jarvis_token") || ""; },
-  get url(){ return (localStorage.getItem("jarvis_url") || location.origin).replace(/\/$/, ""); } };
-function $(id){ return document.getElementById(id); }
-function msg(t, cls){ var m = $("msg"); m.textContent = t; m.className = "msg " + (cls || ""); }
-async function api(path, body){
+var LS = {
+  get token() { return localStorage.getItem("jarvis_token") || ""; },
+  set token(v) { localStorage.setItem("jarvis_token", v); },
+  clearToken() { localStorage.removeItem("jarvis_token"); },
+  get url() { return (localStorage.getItem("jarvis_url") || location.origin).replace(/\/$/, ""); },
+  set url(v) { localStorage.setItem("jarvis_url", v.replace(/\/$/, "")); }
+};
+function $(id) { return document.getElementById(id); }
+function show(el) { el.classList.remove("hidden"); }
+function hide(el) { el.classList.add("hidden"); }
+function msg(t, cls) { var m = $("msg"); m.textContent = t; m.className = "msg " + (cls || ""); }
+
+async function api(path, body) {
   var opts = { method: "POST", headers: { "Authorization": "Bearer " + LS.token, "Content-Type": "application/json" } };
   if (body) opts.body = JSON.stringify(body);
   var r = await fetch(LS.url + path, opts);
-  var d = null; try { d = await r.json(); } catch(e){}
+  var d = null; try { d = await r.json(); } catch (e) {}
   if (!r.ok) throw new Error((d && d.detail) || ("HTTP " + r.status));
   return d;
 }
-async function refresh(){
+
+// --- gate ---
+function enterWizard() { hide($("gateView")); show($("wizardView")); show($("signOut")); refresh(); }
+function enterGate() { show($("gateView")); hide($("wizardView")); hide($("signOut")); }
+
+async function signIn() {
+  var t = $("tokenInput").value.trim();
+  var u = $("urlInput").value.trim();
+  if (!t) { $("gateErr").textContent = "Paste your ADAM_TOKEN."; show($("gateErr")); return; }
+  LS.token = t;
+  if (u) LS.url = u;
+  try {
+    var r = await fetch(LS.url + "/jobs", { headers: { "Authorization": "Bearer " + LS.token } });
+    if (r.status === 403) { $("gateErr").textContent = "That token was rejected."; show($("gateErr")); LS.clearToken(); return; }
+  } catch (e) {
+    $("gateErr").textContent = "Could not reach the server at " + LS.url + "."; show($("gateErr")); return;
+  }
+  hide($("gateErr"));
+  enterWizard();
+}
+function signOut() { LS.clearToken(); $("tokenInput").value = ""; enterGate(); }
+
+async function refresh() {
   try {
     var r = await fetch(LS.url + "/health/garmin/status", { headers: { "Authorization": "Bearer " + LS.token } });
+    if (r.status === 403) { enterGate(); return; }
     var s = await r.json();
     if (s.enabled && s.has_credentials && s.library_installed) msg("Connected and ready. Use Sync to pull today's data.", "ok");
-    else if (s.enabled && !s.library_installed) msg("Connected, but the library isn't installed — run pip install garminconnect.", "err");
-    else if (s.enabled) msg("Enabled, but credentials are incomplete.", "err");
-    else msg("Not connected yet.", "muted");
-  } catch(e){ msg("Sign in to Adam first.", "err"); }
+    else if (s.enabled && !s.library_installed) msg("Connected, but the sync library isn't installed — run step 1.", "err");
+    else if (s.enabled) msg("Enabled, but the credentials are incomplete.", "err");
+    else msg("Not connected yet.", "");
+  } catch (e) { msg("Could not reach your Adam server.", "err"); }
 }
-$("saveBtn").addEventListener("click", async function(){
+
+$("saveBtn").addEventListener("click", async function () {
   var btn = this; btn.disabled = true; msg("Saving…");
-  try { await api("/health/garmin/enable", { email: $("email").value.trim(), password: $("pass").value, enabled: true });
-    $("pass").value = ""; await refresh(); }
-  catch(e){ msg(e.message, "err"); } finally { btn.disabled = false; }
+  try {
+    await api("/health/garmin/enable", { email: $("email").value.trim(), password: $("pass").value, enabled: true });
+    $("pass").value = ""; await refresh();
+  } catch (e) { msg(e.message, "err"); } finally { btn.disabled = false; }
 });
-$("syncBtn").addEventListener("click", async function(){
+
+$("syncBtn").addEventListener("click", async function () {
   var btn = this; btn.disabled = true; msg("Syncing from Garmin…");
-  try { var r = await api("/health/garmin/sync", {});
-    var got = Object.keys(r.metrics || {}); var w = r.weight ? (", weight " + r.weight.weight + r.weight.unit) : "";
-    msg("Synced " + (got.length ? got.join(", ") : "no metrics") + w + ".", "ok"); }
-  catch(e){ msg(e.message, "err"); } finally { btn.disabled = false; }
+  try {
+    var r = await api("/health/garmin/sync", {});
+    var got = Object.keys(r.metrics || {});
+    var w = r.weight ? (", weight " + r.weight.weight + r.weight.unit) : "";
+    msg("Synced " + (got.length ? got.join(", ") : "no metrics") + w + ".", "ok");
+  } catch (e) { msg(e.message, "err"); } finally { btn.disabled = false; }
 });
-$("offBtn").addEventListener("click", async function(){
+
+$("offBtn").addEventListener("click", async function () {
   this.disabled = true;
-  try { await api("/health/garmin/enable", { enabled: false }); msg("Disconnected.", "muted"); }
-  catch(e){ msg(e.message, "err"); } finally { this.disabled = false; }
+  try { await api("/health/garmin/enable", { enabled: false }); msg("Disconnected.", ""); }
+  catch (e) { msg(e.message, "err"); } finally { this.disabled = false; }
+});
+
+$("installBtn").addEventListener("click", async function () {
+  var btn = this; btn.disabled = true; var label = btn.textContent; btn.textContent = "Installing…";
+  msg("Installing the sync library — this can take a minute, please wait…");
+  try {
+    var r = await api("/health/garmin/install", {});
+    if (r.installed) msg("Sync library installed — you're ready to connect.", "ok");
+    else msg((r.log || "Install didn't complete.") + " You can also run: pip install garminconnect", "err");
+    await refresh();
+  } catch (e) { msg(e.message, "err"); }
+  finally { btn.disabled = false; btn.textContent = label; }
 });
 
 // Backstop: some browsers autofill a saved same-origin login (the Adam URL +
 // token) into these fields anyway. Clear that on load — but never touch a field
 // the user is actively typing in. Runs a few times to beat late autofill.
-function clearAutofill(){
-  [$("email"), $("pass")].forEach(function(el){ if (el && el !== document.activeElement) el.value = ""; });
+function clearAutofill() {
+  [$("email"), $("pass")].forEach(function (el) { if (el && el !== document.activeElement) el.value = ""; });
 }
-window.addEventListener("load", function(){ clearAutofill(); setTimeout(clearAutofill, 250); setTimeout(clearAutofill, 700); });
+window.addEventListener("load", function () { clearAutofill(); setTimeout(clearAutofill, 250); setTimeout(clearAutofill, 700); });
 
-$("installBtn").addEventListener("click", async function(){
-  var btn = this; btn.disabled = true; var label = btn.textContent; btn.textContent = "INSTALLING…";
-  msg("Installing the sync library — this can take a minute, please wait…");
-  try {
-    var r = await api("/health/garmin/install", {});
-    if (r.installed) msg("Sync library installed ✓ — you're ready to connect and sync.", "ok");
-    else msg((r.log || "Install didn't complete.") + " You can also run: pip install garminconnect", "err");
-    await refresh();
-  } catch(e){ msg(e.message, "err"); }
-  finally { btn.disabled = false; btn.textContent = label; }
-});
-refresh();
+$("signIn").addEventListener("click", signIn);
+$("tokenInput").addEventListener("keydown", function (e) { if (e.key === "Enter") signIn(); });
+$("urlInput").addEventListener("keydown", function (e) { if (e.key === "Enter") signIn(); });
+$("signOut").addEventListener("click", signOut);
+
+$("urlInput").value = LS.url;
+if (LS.token) enterWizard(); else enterGate();
 </script>
+</body>
 </html>

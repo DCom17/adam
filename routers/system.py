@@ -285,6 +285,19 @@ async def icon_maskable():
     raise HTTPException(status_code=404, detail="icon-maskable.png not found")
 
 
+@router.get("/adam-ui.css")
+async def adam_ui_css():
+    # Shared design language for the operator pages (Add-ons, Operator Console,
+    # every setup-* wizard). Carries no secret — it's stylesheet text, so it's
+    # served un-gated like the icons. no-store because an edit during setup
+    # should show on reload without a cache clear, same rule as _static_page.
+    path = server.FRONTEND.parent / "adam-ui.css"
+    if path.exists():
+        return FileResponse(path, media_type="text/css",
+                            headers={"Cache-Control": "no-store"})
+    raise HTTPException(status_code=404, detail="adam-ui.css not found")
+
+
 @router.get("/favicon.ico")
 async def favicon():
     # Browsers request this on every page load; without a route each load

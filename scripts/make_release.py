@@ -59,6 +59,10 @@ _WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.htm
     # and /legal/<name>.md). The clickwrap records assent locally — see licensing.py.
     "license-agreement.html", "legal.html",
     "legal/eula.md", "legal/terms.md", "legal/privacy.md", "legal/refund.md",
+    # Shared stylesheet for the operator pages (Add-ons + Console + every setup-*
+    # wizard). They used to carry inline <style> blocks that drifted apart; this
+    # is now the single source of the design language. Served via /adam-ui.css.
+    "adam-ui.css",
     "sw.js", "manifest.json", "icon.png", "icon-maskable.png", "icon.ico", "logo.png",
     # Higgsfield level-up / rank-up / milestone celebration clips (web/celebrate/, served
     # via /celebrate/<name>) — mp4 (H.264, universal) + webm (VP9, codec-stripped Chromium)

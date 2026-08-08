@@ -8,96 +8,101 @@
 <script>
 (function(){try{var h=(location.hash||"").replace(/^#/,"");if(h){var t=new URLSearchParams(h).get("token");if(t&&t.trim()){localStorage.setItem("jarvis_token",t.trim());localStorage.setItem("jarvis_url",location.origin);}}}catch(e){}try{if(location.hash){history.replaceState(null,document.title,location.pathname+location.search);}}catch(e){try{location.hash="";}catch(e2){}}})();
 </script>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04060b">
 <meta name="robots" content="noindex, nofollow">
 <title>Adam — Add-ons</title>
 <link rel="icon" href="/icon.png" type="image/png" />
+<!-- Shared design language for every operator page. See web/adam-ui.css. -->
+<link rel="stylesheet" href="/adam-ui.css">
 <style>
-  :root {
-    color-scheme: dark;
-    /* Adam brand tokens — shared app design language (source: site/index.html) */
-    --bg: #04060b; --bg-soft: #071019;
-    --panel: rgba(10, 20, 30, .55); --panel-solid: #0a1420;
-    --edge: rgba(33, 230, 255, .15); --edge-hi: rgba(33, 230, 255, .4);
-    --cyan: #21e6ff; --cyan-soft: #8df2ff;
-    --ink: #eefafd; --text: #c9e4ec; --dim: #8fb9c6; --faint: #5d8894;
-    --amber: #ffaa3c; --danger: #ff4d6d; --ok: #3ddc97;
-  }
-  * { box-sizing: border-box; }
-  ::selection { background: rgba(33,230,255,.28); color: #fff; }
-  body { margin: 0; font: 14px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-         background: var(--bg); color: var(--text); }
-  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-           padding: 12px 18px; background: rgba(4,6,11,.7);
-           -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-           border-bottom: 1px solid rgba(33,230,255,.08); }
-  header h1 { display: flex; align-items: center; gap: 10px; font-size: 15px; margin: 0; font-weight: 600; }
-  /* Brand row: glowing logo + gradient ADAM wordmark + page-name micro-label */
-  .brand-logo { width: 24px; height: 24px; filter: drop-shadow(0 0 8px rgba(33,230,255,.45)); }
-  .wordmark { font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
-              font-weight: 800; letter-spacing: 6px; margin-right: -6px;
-              background: linear-gradient(100deg, #fff 30%, #8df2ff 70%, #21e6ff);
-              -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .pagename { font-size: 11px; text-transform: uppercase; letter-spacing: 3px; font-weight: 700;
-              color: var(--faint); padding-left: 12px; border-left: 1px solid var(--edge); }
-  header .spacer { flex: 1; }
-  main { max-width: 760px; margin: 0 auto; padding: 18px; }
-  section { background: var(--panel); border: 1px solid var(--edge); border-radius: 16px; margin: 0 0 14px; }
-  section > .head { padding: 11px 16px; border-bottom: 1px solid var(--edge);
-                    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
-                    font-weight: 700; letter-spacing: -0.01em; color: var(--ink);
-                    display: flex; align-items: center; gap: 10px; }
-  section > .body { padding: 13px 16px; }
-  button, input { font: inherit; }
-  input { background: #060d16; color: var(--text); border: 1px solid rgba(33,230,255,.18);
-          border-radius: 10px; padding: 7px 10px; }
-  input:focus { border-color: var(--edge-hi); outline: none; }
-  button { cursor: pointer; background: transparent; color: var(--dim);
-           border: 1px solid var(--edge); border-radius: 10px; padding: 7px 12px; }
-  button:hover { color: var(--ink); border-color: var(--edge-hi); background: rgba(33,230,255,.06); }
-  button:disabled { opacity: .55; cursor: default; }
-  button.primary { background: linear-gradient(105deg, #eafcff, #8df2ff 55%, #21e6ff);
-                   color: #03222a; font-weight: 700; border: none; padding: 8px 14px;
-                   text-transform: uppercase; letter-spacing: .6px; font-size: 12.5px; }
-  button.primary:hover { color: #03222a; background: linear-gradient(105deg, #fff, #a7f5ff 55%, #4becff); }
-  a { color: var(--cyan); }
-  a.btn { display: inline-block; text-decoration: none; background: transparent; color: var(--dim);
-          border: 1px solid var(--edge); border-radius: 10px; padding: 7px 12px; }
-  a.btn:hover { color: var(--ink); border-color: var(--edge-hi); background: rgba(33,230,255,.06); }
-  a.btn.primary { background: linear-gradient(105deg, #eafcff, #8df2ff 55%, #21e6ff);
-                  color: #03222a; font-weight: 700; border: none; padding: 8px 14px;
-                  text-transform: uppercase; letter-spacing: .6px; font-size: 12.5px; }
-  a.btn.primary:hover { color: #03222a; background: linear-gradient(105deg, #fff, #a7f5ff 55%, #4becff); }
-  label { color: var(--dim); margin-right: 4px; }
-  .muted { color: var(--dim); }
-  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
-  .hidden { display: none !important; }
-  .errbox  { color: var(--danger); border: 1px solid rgba(255,77,109,.4); background: rgba(255,77,109,.05);
-             border-radius: 10px; padding: 9px 12px; margin: 8px 0; white-space: pre-wrap; }
-  .gate { max-width: 460px; margin: 12vh auto; }
-  .spacer-h { flex: 1; }
-  /* status pills — functional tints: enabled=ok, needs_setup=amber, available=neutral */
-  .pill { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid; }
-  .pill.enabled    { color: var(--ok); border-color: rgba(61,220,151,.4); }
-  .pill.needs_setup{ color: var(--amber); border-color: rgba(255,170,60,.4); }
-  .pill.available  { color: var(--faint); border-color: rgba(93,136,148,.4); }
-  .desc { margin: 0 0 8px; }
-  .req { font-size: 12px; color: var(--faint); margin: 6px 0 10px; }
-  .cardftr { display: flex; align-items: center; gap: 10px; }
-  .tag { font-size: 11px; color: var(--faint); border: 1px solid var(--edge); border-radius: 6px; padding: 1px 6px; }
-  /* Code/token text keeps monospace (code-chip recipe) */
-  code { font-family: Consolas, "Cascadia Code", monospace; font-size: .92em; color: #b9ecf5;
-         background: rgba(33,230,255,.08); border: 1px solid var(--edge); border-radius: 6px; padding: 0 4px; }
+  /* Page-local only. Anything reusable belongs in adam-ui.css, not here. */
+  .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+  /* The phone card is the highest-value action on this page, so it gets a
+     full-width feature slot above the grid instead of competing inside it. */
+  #phoneCard { border-color: var(--edge-hi); background: var(--panel-hi); }
+  #phoneCard > .head { gap: 10px; }
+  #phoneCard .addon-icon { background: rgba(33,230,255,.14); }
 </style>
 </head>
 <body>
 
-<header>
-  <h1><img src="/logo.png" alt="" class="brand-logo"><span class="wordmark">ADAM</span><span class="pagename">Add-ons</span></h1>
+<!-- Icon sprite. Inline (no network, no CDN) and referenced by <use>, which lets
+     the card renderer stay free of innerHTML — server data only ever reaches the
+     DOM through textContent. Stroke glyphs inherit currentColor. -->
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <g id="g-stroke" fill="none" stroke="currentColor" stroke-width="1.6"
+       stroke-linecap="round" stroke-linejoin="round"></g>
+  </defs>
+  <symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>
+    <circle cx="8.5" cy="14.5" r="1.1" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="ic-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="m3.5 7.5 8.5 6 8.5-6"/>
+  </symbol>
+  <symbol id="ic-sms" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20.5 12c0 4-3.8 7-8.5 7a9.8 9.8 0 0 1-2.6-.35L4.5 20.5l1.2-3.4A6.9 6.9 0 0 1 3.5 12c0-4 3.8-7 8.5-7s8.5 3 8.5 7Z"/>
+    <path d="M9 11.5h.01M12 11.5h.01M15 11.5h.01"/>
+  </symbol>
+  <symbol id="ic-voicemail" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="6" cy="13" r="3.5"/><circle cx="18" cy="13" r="3.5"/><path d="M6 16.5h12"/>
+  </symbol>
+  <symbol id="ic-linkedin" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3.5" y="3.5" width="17" height="17" rx="3"/>
+    <path d="M8 11v6M8 8.2v.01M12 17v-3.4a2.1 2.1 0 0 1 4.2 0V17"/>
+  </symbol>
+  <symbol id="ic-system" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m12 3 8.5 4.5L12 12 3.5 7.5 12 3Z"/><path d="m3.5 12 8.5 4.5 8.5-4.5"/>
+    <path d="m3.5 16.5 8.5 4.5 8.5-4.5"/>
+  </symbol>
+  <symbol id="ic-watch" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6.5" y="6.5" width="11" height="11" rx="3.2"/>
+    <path d="M9 6.5 9.5 2.8h5L15 6.5M9 17.5l.5 3.7h5l.5-3.7M12 9.6V12l1.8 1.2"/>
+  </symbol>
+  <symbol id="ic-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6" y="2.5" width="12" height="19" rx="2.8"/><path d="M10.5 18.6h3"/>
+  </symbol>
+  <symbol id="ic-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 3v5M15 3v5M6.5 8h11v3.5a5.5 5.5 0 0 1-11 0V8ZM12 17v4"/>
+  </symbol>
+  <symbol id="ic-console" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.5" y="4" width="19" height="16" rx="2.5"/><path d="m7 10 2.6 2.4L7 15M12.5 15.2h4.5"/>
+  </symbol>
+  <symbol id="ic-desktop" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M9 20h6M12 16.5V20"/>
+  </symbol>
+</svg>
+
+<header class="appbar">
+  <h1>
+    <img src="/logo.png" alt="" class="brand-logo">
+    <span class="wordmark">ADAM</span>
+    <span class="pagename">Add-ons</span>
+  </h1>
   <span class="spacer"></span>
-  <a href="/console" onclick="if(window.parent&&window.parent!==window){event.preventDefault();window.parent.postMessage({jvl:'open-console',hash:''},'*');}">Operator Console</a>
-  <button id="refresh" class="hidden">Refresh</button>
-  <button id="signOut" class="hidden">Sign out</button>
+  <nav aria-label="Adam sections">
+    <a href="/settings" aria-current="page">Add-ons</a>
+    <a href="/console" id="consoleLink">
+      <svg aria-hidden="true" focusable="false"><use href="#ic-console"/></svg>
+      <span class="label">Operator Console</span>
+    </a>
+    <button id="refresh" class="hidden" type="button">Refresh</button>
+    <button id="signOut" class="hidden" type="button">Sign out</button>
+  </nav>
 </header>
 
 <!-- Token gate (carries no secret; token is pasted client-side, stored on this device only) -->
@@ -107,36 +112,41 @@
     <div class="body">
       <p class="muted">This page talks to your local server with your bearer token (the same
         ADAM_TOKEN the Operator Console uses). It is stored on this device only.</p>
-      <div class="row">
-        <input id="tokenInput" type="password" placeholder="Paste ADAM_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
-        <button class="primary" id="signIn">Sign in</button>
+      <div class="field">
+        <label class="block" for="tokenInput">Access token</label>
+        <input id="tokenInput" type="password" class="block" placeholder="Paste ADAM_TOKEN" autocomplete="off">
       </div>
-      <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
-      <div class="errbox hidden" id="gateErr"></div>
+      <div class="field">
+        <label class="block" for="urlInput">Server</label>
+        <input id="urlInput" type="text" class="block" autocomplete="off">
+      </div>
+      <div class="actions"><button class="primary" id="signIn" type="button">Sign in</button></div>
+      <div class="errbox hidden" id="gateErr" role="alert"></div>
     </div>
   </section>
 </main>
 
 <!-- Add-on cards -->
 <main id="cardsView" class="hidden">
-  <p class="muted">Optional capabilities. All are off by default and the core assistant never needs
-    them. Each one is set up with your own account — Adam holds no maintainer credentials.</p>
+  <p class="lede">Optional extras — all off until you turn them on, and Adam works fine without
+    any of them. Each connects to <b>your own</b> account; Adam holds no credentials of its own.</p>
+
   <section id="phoneCard">
     <div class="head">
-      <span>Connect a phone</span>
-      <span class="pill available">phone access</span>
+      <span class="addon-icon"><svg aria-hidden="true" focusable="false"><use href="#ic-phone"/></svg></span>
+      <span>Use Adam from your phone</span>
     </div>
     <div class="body">
-      <p class="desc">Use Adam from your phone over your own private Tailscale network. Opens the
-        Connect-phone tool — scan one code to sign your phone in.</p>
+      <p class="desc">Reach the whole assistant from your phone over your own private Tailscale
+        network — nothing is exposed to the public internet. Scan one code to sign the phone in.</p>
       <div class="cardftr">
-        <a class="btn primary" href="/console#connectPhoneSec"
-           onclick="if(window.parent&&window.parent!==window){event.preventDefault();window.parent.postMessage({jvl:'open-console',hash:'connectPhoneSec'},'*');}">Connect phone</a>
+        <a class="btn primary" href="/console#connectPhoneSec" id="phoneBtn">Connect phone</a>
       </div>
     </div>
   </section>
+
   <div id="cards"></div>
-  <div class="errbox hidden" id="loadErr"></div>
+  <div class="errbox hidden" id="loadErr" role="alert" aria-live="polite"></div>
 </main>
 
 <script>
@@ -150,6 +160,8 @@ var LS = {
   set url(v) { localStorage.setItem("jarvis_url", v.replace(/\/$/, "")); }
 };
 
+var SVGNS = "http://www.w3.org/2000/svg";
+
 function $(id) { return document.getElementById(id); }
 function show(el) { el.classList.remove("hidden"); }
 function hide(el) { el.classList.add("hidden"); }
@@ -159,8 +171,49 @@ function authHeaders(extra) {
   return h;
 }
 
-var PILL_LABEL = { enabled: "Enabled", needs_setup: "Needs setup", available: "Not added" };
+var PILL_LABEL = { enabled: "Active", needs_setup: "Needs setup", available: "Not added" };
 var BTN_LABEL  = { enabled: "Manage", needs_setup: "Finish setup", available: "Add" };
+
+// Groups render in this order: what needs your attention, then what's running,
+// then what you could add. Status the operator must act on comes first.
+var GROUPS = [
+  { key: "needs_setup", title: "Needs setup" },
+  { key: "enabled",     title: "Active" },
+  { key: "available",   title: "Available to add" }
+];
+
+// Add-on id -> sprite symbol. Ids come from the server registry
+// (/integrations/status). Anything unrecognised falls back to the plug glyph,
+// so a newly added add-on still renders sensibly.
+var ICON = {
+  google_calendar: "ic-calendar",
+  gmail: "ic-mail",
+  sms: "ic-sms",
+  voicemail: "ic-voicemail",
+  linkedin: "ic-linkedin",
+  hunter: "ic-system",
+  garmin: "ic-watch"
+};
+
+// --- element helpers (textContent only — server strings never become markup) ---
+function makeEl(tag, cls, text) {
+  var el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text != null) el.textContent = text;
+  return el;
+}
+
+// Build an <svg><use href="#id"></svg> without touching innerHTML. `symbolId`
+// is always one of our own local constants, never server data.
+function makeIcon(symbolId) {
+  var svg = document.createElementNS(SVGNS, "svg");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  var use = document.createElementNS(SVGNS, "use");
+  use.setAttribute("href", "#" + symbolId);
+  svg.appendChild(use);
+  return svg;
+}
 
 // --- gate ---
 function enterCards() { hide($("gateView")); show($("cardsView")); show($("signOut")); show($("refresh")); loadAddons(); }
@@ -183,49 +236,89 @@ async function signIn() {
 }
 function signOut() { LS.clearToken(); $("tokenInput").value = ""; enterGate(); }
 
-// --- render add-on cards from /integrations/status (booleans/strings only, no secret) ---
-function makeEl(tag, cls, text) {
-  var el = document.createElement(tag);
-  if (cls) el.className = cls;
-  if (text != null) el.textContent = text;   // textContent — never innerHTML of server data
-  return el;
-}
-
+// --- render one add-on card ---
 function renderCard(a) {
-  var sec = makeEl("section");
+  var sec = makeEl("section", "card");
 
   var head = makeEl("div", "head");
-  head.appendChild(makeEl("span", null, a.name));
+  var mark = makeEl("span", "addon-icon");
+  mark.appendChild(makeIcon(ICON[a.id] || "ic-plug"));
+  head.appendChild(mark);
+  head.appendChild(makeEl("span", "addon-name", a.name));
+  head.appendChild(makeEl("span", "spacer-h"));
   var status = (a.status in PILL_LABEL) ? a.status : "available";
   head.appendChild(makeEl("span", "pill " + status, PILL_LABEL[status]));
-  head.appendChild(makeEl("span", "spacer-h"));
-  if (a.write_capable) head.appendChild(makeEl("span", "tag", "writes need approval"));
   sec.appendChild(head);
 
   var body = makeEl("div", "body");
   body.appendChild(makeEl("p", "desc", a.short_description || ""));
-  if (a.requires && a.requires.length) {
-    body.appendChild(makeEl("p", "req", "Needs: " + a.requires.join(", ")));
-  }
-  // Where to set it up (PC vs phone) — only shown until it's enabled.
-  if (a.setup_hint && a.status !== "enabled") {
-    body.appendChild(makeEl("p", "req", "💻 " + a.setup_hint));
-  }
+
+  // NOTE: a.requires is deliberately NOT rendered. It carries internal config
+  // key names ("bridge_url", "GARMIN_PASSWORD") — nothing a person can act on
+  // from this page. The setup wizard asks for each value in plain words.
+  // a.setup_hint is rendered once per group by renderGroupNote(), not per card.
+
   var ftr = makeEl("div", "cardftr");
   if (a.setup_path) {
-    var btn = makeEl("a", "btn primary", (a.status in BTN_LABEL) ? BTN_LABEL[a.status] : "Set up");
+    // One cyan action per page (Connect phone). Everything else takes its cue
+    // from its own status: amber = you have unfinished business here.
+    var tone = status === "needs_setup" ? " warn" : "";
+    var btn = makeEl("a", "btn" + tone,
+                     (a.status in BTN_LABEL) ? BTN_LABEL[a.status] : "Set up");
     btn.setAttribute("href", a.setup_path);   // same-origin relative path from the server
     ftr.appendChild(btn);
   }
+  if (a.write_capable) {
+    ftr.appendChild(makeEl("span", "spacer-h"));
+    ftr.appendChild(makeEl("span", "tag", "writes need approval"));
+  }
   body.appendChild(ftr);
+
   sec.appendChild(body);
   return sec;
+}
+
+// The registry gives most add-ons in a group the SAME setup hint. Print the
+// distinct ones once above the grid instead of repeating a paragraph per card.
+function renderGroupNote(box, members) {
+  var seen = {};
+  var hints = [];
+  members.forEach(function (a) {
+    if (!a.setup_hint || a.status === "enabled") return;
+    if (seen[a.setup_hint]) return;
+    seen[a.setup_hint] = true;
+    hints.push(a.setup_hint);
+  });
+  hints.forEach(function (h) {
+    var note = makeEl("div", "groupnote");
+    note.appendChild(makeIcon("ic-desktop"));
+    note.appendChild(makeEl("span", null, h));
+    box.appendChild(note);
+  });
+}
+
+// --- loading placeholders so the layout doesn't jump when data lands ---
+function renderSkeleton(box) {
+  var grid = makeEl("div", "grid");
+  for (var i = 0; i < 6; i++) {
+    var sec = makeEl("section", "card");
+    var head = makeEl("div", "head");
+    head.appendChild(makeEl("span", "addon-icon skeleton"));
+    head.appendChild(makeEl("span", "skeleton", "Loading add-on"));
+    sec.appendChild(head);
+    var body = makeEl("div", "body");
+    body.appendChild(makeEl("p", "desc skeleton", "Reading the add-on registry from your local server."));
+    sec.appendChild(body);
+    grid.appendChild(sec);
+  }
+  box.appendChild(grid);
 }
 
 async function loadAddons() {
   hide($("loadErr"));
   var box = $("cards");
-  box.textContent = "Loading…";
+  box.textContent = "";
+  renderSkeleton(box);
   try {
     var r = await fetch(LS.url + "/integrations/status", { headers: authHeaders() });
     if (r.status === 403) { box.textContent = ""; $("loadErr").textContent = "Your session was rejected — sign in again."; show($("loadErr")); return; }
@@ -233,8 +326,25 @@ async function loadAddons() {
     var data = await r.json();
     var list = (data && data.integrations) || [];
     box.textContent = "";
-    if (!list.length) { box.appendChild(makeEl("p", "muted", "No add-ons available.")); return; }
-    list.forEach(function (a) { box.appendChild(renderCard(a)); });
+    if (!list.length) {
+      box.appendChild(makeEl("div", "empty", "No add-ons available."));
+      return;
+    }
+    GROUPS.forEach(function (g) {
+      var members = list.filter(function (a) {
+        var s = (a.status in PILL_LABEL) ? a.status : "available";
+        return s === g.key;
+      });
+      if (!members.length) return;
+      var gh = makeEl("div", "grouphead");
+      gh.appendChild(makeEl("span", null, g.title));
+      gh.appendChild(makeEl("span", "count", String(members.length)));
+      box.appendChild(gh);
+      renderGroupNote(box, members);
+      var grid = makeEl("div", "grid");
+      members.forEach(function (a) { grid.appendChild(renderCard(a)); });
+      box.appendChild(grid);
+    });
   } catch (e) {
     box.textContent = "";
     $("loadErr").textContent = "Could not reach your Adam server.";
@@ -242,11 +352,25 @@ async function loadAddons() {
   }
 }
 
+// When this page runs inside the in-app overlay (an iframe in index.html), console
+// links hand off to the parent instead of navigating the frame.
+function inFrame() { return window.parent && window.parent !== window; }
+function consoleHandoff(hash) {
+  return function (event) {
+    if (!inFrame()) return;
+    event.preventDefault();
+    window.parent.postMessage({ jvl: "open-console", hash: hash }, "*");
+  };
+}
+
 // --- wire up ---
 $("signIn").addEventListener("click", signIn);
 $("tokenInput").addEventListener("keydown", function (e) { if (e.key === "Enter") signIn(); });
+$("urlInput").addEventListener("keydown", function (e) { if (e.key === "Enter") signIn(); });
 $("signOut").addEventListener("click", signOut);
 $("refresh").addEventListener("click", loadAddons);
+$("consoleLink").addEventListener("click", consoleHandoff(""));
+$("phoneBtn").addEventListener("click", consoleHandoff("connectPhoneSec"));
 
 $("urlInput").value = LS.url;
 if (LS.token) enterCards();

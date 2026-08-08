@@ -348,8 +348,12 @@ def main() -> int:
           all(s not in html for s in ("cdn.", "unpkg", "jsdelivr", "googleapis",
                                       "<script src", "<script  src", "integrity=")))
     _links = re.findall(r"<link\b[^>]*>", html)
-    check("no remote stylesheet/link asset (local icon links only)",
-          all('rel="icon"' in ln and 'href="/' in ln for ln in _links))
+    # Intent: nothing on this page may be fetched from a third party. The page
+    # now carries one same-origin stylesheet (/adam-ui.css) alongside the icon
+    # link, so the rule is "every link is local", not "every link is an icon".
+    check("no remote stylesheet/link asset (local links only)",
+          all(('href="/' in ln and 'href="//' not in ln and "http" not in ln)
+              for ln in _links))
     check("console JS still never assigns innerHTML",
           "innerHTML =" not in html and "innerHTML=" not in html)
     # Token discipline in the STATIC page.
@@ -428,12 +432,22 @@ def _headless_qr_checks() -> None:
     # A stand-in token — NEVER a real one. 48 chars, distinctive, easy to spot.
     tok = "deadbeef" + "0" * 32 + "cafe1234"
 
+    # The console's design language lives in web/adam-ui.css (shared with the
+    # Add-ons page and every setup wizard). This stub has to serve it with the
+    # right content type — served as text/html the browser rejects it, .hidden
+    # never applies, and every QR panel starts visible.
+    css_bytes = (_P(__file__).resolve().parent / "web" / "adam-ui.css").read_bytes()
+
     class _H(http.server.BaseHTTPRequestHandler):
         def do_GET(self):           # serve the console for any path
+            if self.path.split("?")[0] == "/adam-ui.css":
+                body, ctype = css_bytes, "text/css"
+            else:
+                body, ctype = html_bytes, "text/html"
             self.send_response(200)
-            self.send_header("Content-Type", "text/html")
+            self.send_header("Content-Type", ctype)
             self.end_headers()
-            self.wfile.write(html_bytes)
+            self.wfile.write(body)
 
         def log_message(self, *a):  # quiet
             return

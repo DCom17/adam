@@ -59,3 +59,8 @@ scripts/signing.local.ps1
 
 # Internal go-to-market strategy — public repo, keep local-only
 docs/SELLING_ADAM.md
+
+# Internal Finance/Health build plan — records the maintainer's REAL account
+# balances (net worth, liquid, debt) and a local user path. Never ships in the
+# release allow-list either; untracked 2026-08-03 so no push can publish it.
+docs/PLAN-FINANCE-HEALTH.md

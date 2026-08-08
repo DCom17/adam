@@ -8,114 +8,80 @@
 <script>
 (function(){try{var h=(location.hash||"").replace(/^#/,"");if(h){var t=new URLSearchParams(h).get("token");if(t&&t.trim()){localStorage.setItem("jarvis_token",t.trim());localStorage.setItem("jarvis_url",location.origin);}}}catch(e){}try{if(location.hash){history.replaceState(null,document.title,location.pathname+location.search);}}catch(e){try{location.hash="";}catch(e2){}}})();
 </script>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04060b">
 <meta name="robots" content="noindex, nofollow">
 <title>Adam — Operator Console</title>
 <link rel="icon" href="/icon.png" type="image/png" />
+<!-- Shared design language for every operator page. See web/adam-ui.css. -->
+<link rel="stylesheet" href="/adam-ui.css">
 <style>
-  /* Adam brand tokens (shared design spec 2026-07-06). Body stays monospace on
-     purpose — this is an operator console; headings/brand take the Segoe stack. */
-  :root {
-    color-scheme: dark;
-    --bg: #04060b;
-    --bg-soft: #071019;
-    --panel: rgba(10, 20, 30, .55);
-    --panel-solid: #0a1420;
-    --edge: rgba(33, 230, 255, .15);
-    --edge-hi: rgba(33, 230, 255, .4);
-    --cyan: #21e6ff;
-    --cyan-soft: #8df2ff;
-    --ink: #eefafd;
-    --text: #c9e4ec;
-    --dim: #8fb9c6;
-    --faint: #5d8894;
-    --amber: #ffaa3c;
-    --danger: #ff4d6d;
-    --ok: #3ddc97;
+  /* Console-only components. Everything else comes from adam-ui.css — if you
+     are about to add a general-purpose rule here, add it there instead. */
+
+  /* Operator data stays monospace: it is full of ids, timestamps, paths and
+     diffs where column alignment carries meaning. Prose does not. */
+  table.data, .kv, pre.diff, code, input, select, textarea, .mono {
+    font-family: var(--font-mono);
   }
-  * { box-sizing: border-box; }
-  ::selection { background: rgba(33,230,255,.28); color: #fff; }
-  body {
-    margin: 0; font: 14px/1.45 ui-monospace, "Cascadia Code", Consolas, monospace;
-    background: var(--bg); color: var(--text);
-  }
-  a { color: var(--cyan); }
-  header {
-    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    padding: 12px 18px; background: rgba(4,6,11,.7); backdrop-filter: blur(14px);
-    border-bottom: 1px solid rgba(33,230,255,.08);
-    position: sticky; top: 0; z-index: 5;
-  }
-  /* Brand row: glowing mark + gradient wordmark; the existing h1 renders as the
-     page micro-label ("OPERATOR CONSOLE"). verTag inside it stays as-is. */
-  header .brandLogo { width: 24px; height: 24px; filter: drop-shadow(0 0 8px rgba(33,230,255,.45)); }
-  header .wordmark {
-    font: 800 15px/1 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
-    letter-spacing: 6px; padding-right: 2px;
-    background: linear-gradient(100deg, #fff 30%, #8df2ff 70%, #21e6ff);
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }
-  header h1 {
-    font: 700 11px/1.45 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
-    margin: 0; letter-spacing: 3px; text-transform: uppercase; color: var(--faint);
-  }
-  header h1 .muted { text-transform: none; letter-spacing: normal; }
-  header .spacer { flex: 1; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--faint); display: inline-block; }
-  .dot.ok { background: var(--ok); } .dot.bad { background: var(--danger); } .dot.warn { background: var(--amber); }
-  main { max-width: 1100px; margin: 0 auto; padding: 18px; }
-  section { background: var(--panel); border: 1px solid var(--edge); border-radius: 16px; margin: 0 0 18px; }
-  section > .head {
-    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-    border-bottom: 1px solid var(--edge);
-    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
-    font-weight: 700; letter-spacing: -0.01em; color: var(--ink);
-  }
-  section > .head::before { content: ""; width: 22px; height: 1px; background: var(--cyan); flex: none; opacity: .7; }
-  section > .body { padding: 12px 14px; overflow: auto; }
-  button, select, input {
-    font: 14px/1.45 ui-monospace, "Cascadia Code", Consolas, monospace;
-    color: var(--text); border-radius: 8px; padding: 5px 9px;
-  }
-  select, input { background: #060d16; border: 1px solid rgba(33,230,255,.18); border-radius: 10px; }
-  select:focus, input:focus { border-color: var(--edge-hi); outline: none; }
-  button { cursor: pointer; background: transparent; border: 1px solid var(--edge); color: var(--dim); }
-  button:hover { color: var(--ink); border-color: var(--edge-hi); background: rgba(33,230,255,.06); }
-  button.primary {
-    background: linear-gradient(105deg, #eafcff, #8df2ff 55%, #21e6ff);
-    color: #03222a; font-weight: 700; border: none; border-radius: 10px;
-    text-transform: uppercase; letter-spacing: 1px;
-  }
-  button.primary:hover { color: #03222a; }
-  label { color: var(--dim); margin-right: 4px; }
-  code { background: rgba(33,230,255,.08); border: 1px solid var(--edge); border-radius: 6px; padding: 1px 6px; color: #b9ecf5; }
-  table { border-collapse: collapse; width: 100%; font-size: 13px; }
-  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid rgba(33,230,255,.08); vertical-align: top; }
-  th { color: var(--dim); font-weight: 600; position: sticky; top: 0; background: var(--panel-solid); }
-  tr.click { cursor: pointer; } tr.click:hover td { background: rgba(33,230,255,.05); }
-  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; }
-  .kv .k { color: var(--dim); } .kv .v { word-break: break-word; white-space: pre-wrap; }
-  .pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; border: 1px solid var(--edge); }
-  .s-complete, .s-applied, .s-approved { color: var(--ok); border-color: rgba(61,220,151,.4); }
-  .s-failed, .s-interrupted, .s-conflict, .s-denied { color: var(--danger); border-color: rgba(255,77,109,.4); }
-  .s-running, .s-queued, .s-pending { color: var(--amber); border-color: rgba(255,170,60,.4); }
-  .s-cancelled, .s-expired { color: var(--faint); }
-  .muted { color: var(--faint); }
-  .warnbox { color: var(--amber); border: 1px solid rgba(255,170,60,.4); background: rgba(255,170,60,.06); border-radius: 10px; padding: 6px 9px; margin: 6px 0; white-space: pre-wrap; }
-  .errbox  { color: var(--danger); border: 1px solid rgba(255,77,109,.4); background: rgba(255,77,109,.06); border-radius: 10px; padding: 6px 9px; margin: 6px 0; white-space: pre-wrap; }
-  .okbox   { color: var(--ok); border: 1px solid rgba(61,220,151,.4); background: rgba(61,220,151,.06); border-radius: 10px; padding: 6px 9px; margin: 6px 0; white-space: pre-wrap; }
-  button.danger { border-color: rgba(255,77,109,.4); color: #ff8ba0; }
-  button.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,77,109,.06); }
-  pre.diff { margin: 6px 0 0; padding: 8px; background: #060d16; border: 1px solid var(--edge); border-radius: 10px;
+  table.data td, table.data th { font-size: 12.5px; }
+
+  /* Reachability lamp in the app bar. */
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--faint);
+         display: inline-block; flex: none; }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 8px rgba(61,220,151,.5); }
+  .dot.bad { background: var(--danger); box-shadow: 0 0 8px rgba(255,77,109,.5); }
+  .dot.warn { background: var(--amber); box-shadow: 0 0 8px rgba(255,170,60,.5); }
+
+  /* Job / approval lifecycle states. The shared .pill draws the leading dot,
+     so each state reads as shape + word + color, not color alone. */
+  .s-complete, .s-applied, .s-approved   { color: var(--ok);     border-color: rgba(61,220,151,.4);  background: rgba(61,220,151,.07); }
+  .s-failed, .s-interrupted, .s-conflict, .s-denied { color: var(--danger); border-color: rgba(255,77,109,.4); background: rgba(255,77,109,.07); }
+  .s-running, .s-queued, .s-pending      { color: var(--amber);  border-color: rgba(255,170,60,.4);  background: rgba(255,170,60,.07); }
+  .s-cancelled, .s-expired               { color: var(--faint);  border-color: rgba(93,136,148,.38); }
+
+  /* Clickable table rows (a job/approval opens its detail panel). */
+  tr.click { cursor: pointer; }
+  tr.click:hover td { background: rgba(33,230,255,.05); }
+  tr.click:focus-visible td { background: rgba(33,230,255,.08); }
+
+  /* Key/value readout inside a detail panel. */
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 14px; font-size: 12.5px; }
+  .kv .k { color: var(--faint); }
+  .kv .v { word-break: break-word; white-space: pre-wrap; }
+
+  /* Expanded row detail. */
+  .detail { background: var(--panel-solid); border: 1px solid var(--edge);
+            border-radius: var(--r-lg); padding: var(--s3); margin-top: var(--s3); }
+  .detail > .head { font-weight: 700; color: var(--ink); border: none; padding: 0 0 6px; }
+
+  /* Unified diff view. */
+  pre.diff { margin: 6px 0 0; padding: var(--s2); background: #060d16;
+             border: 1px solid var(--edge); border-radius: var(--r-md);
              max-height: 380px; overflow: auto; font-size: 12px; }
   pre.diff div { white-space: pre-wrap; word-break: break-word; }
-  .d-add { color: var(--ok); } .d-del { color: var(--danger); } .d-hunk { color: var(--cyan); } .d-meta { color: var(--dim); }
-  .gate { max-width: 460px; margin: 12vh auto; }
-  .gate .body p { color: var(--dim); }
-  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
-  .hidden { display: none !important; }
-  .detail { background: var(--panel-solid); border: 1px solid var(--edge); border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
-  .detail > .head { font-weight: 700; color: var(--ink); }
+  .d-add { color: var(--ok); } .d-del { color: var(--danger); }
+  .d-hunk { color: var(--cyan); } .d-meta { color: var(--dim); }
+
+  /* Plain tables in this page get the shared .data treatment without needing
+     every render site to add the class. */
+  section table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  section th, section td { text-align: left; padding: 6px 9px;
+                           border-bottom: 1px solid rgba(33,230,255,.08); vertical-align: top; }
+  section th { color: var(--faint); font-size: 11px; text-transform: uppercase;
+               letter-spacing: 1.1px; font-weight: 700; position: sticky; top: 0;
+               background: var(--panel-solid); font-family: var(--font); }
+  section tr:last-child td { border-bottom: none; }
+
+  /* Wide operator tables (approvals is 7 columns) must scroll inside their own
+     section rather than pushing the page sideways — on a 390px phone the
+     approvals table was making the whole body 486px wide. */
+  section > .body { overflow-x: auto; }
+
+  /* The section rule the old sheet drew before each head. */
+  section > .head::before { content: ""; width: 22px; height: 1px;
+                            background: var(--cyan); flex: none; opacity: .7; }
+  .detail > .head::before, .head.nomark::before { display: none; }
 </style>
 </head>
 <body>
@@ -147,20 +113,35 @@
 })();
 </script>
 
-<header>
-  <a href="/" id="backToAdam" title="Back to Adam"
-     onclick="if(window.parent&&window.parent!==window){event.preventDefault();window.parent.postMessage({jvl:'close-console'},'*');}"
-     style="color:var(--cyan);text-decoration:none;margin-right:8px;font-size:14px;white-space:nowrap;">‹ Adam</a>
+<header class="appbar">
+  <a href="/" id="backToAdam" title="Back to Adam" class="backlink"
+     onclick="if(window.parent&&window.parent!==window){event.preventDefault();window.parent.postMessage({jvl:'close-console'},'*');}">&lsaquo; Adam</a>
   <!-- Brand row (presentational only; no IDs, nothing JS-referenced) -->
-  <img src="/logo.png" alt="" class="brandLogo">
-  <span class="wordmark">ADAM</span>
+  <h1><img src="/logo.png" alt="" class="brand-logo"><span class="wordmark">ADAM</span><span class="pagename">Operator Console</span></h1>
   <span class="dot" id="reachDot" title="reachability"></span>
-  <h1>Operator Console <span class="muted" id="verTag"></span></h1>
+  <span class="faint metatag" id="verTag"></span>
   <span class="spacer"></span>
-  <span class="muted" id="modeTag"></span>
-  <button id="refreshAll" class="hidden">Refresh all</button>
-  <button id="signOut" class="hidden">Sign out</button>
+  <nav aria-label="Console actions">
+    <span class="tag metatag" id="modeTag"></span>
+    <a href="/settings" title="Add-ons">Add-ons</a>
+    <button id="refreshAll" class="hidden" type="button">Refresh all</button>
+    <button id="signOut" class="hidden" type="button">Sign out</button>
+  </nav>
 </header>
+
+<!-- Jump nav. Eight stacked sections in one 3,000-line page had no navigation
+     at all — reaching Approvals meant scrolling past the whole phone wizard. -->
+<div class="railwrap hidden" id="sectionRail">
+  <nav class="rail" aria-label="Console sections">
+    <a href="#statusSec">Status</a>
+    <a href="#connectPhoneSec">Connect phone</a>
+    <a href="#jobsSec">Jobs</a>
+    <a href="#changesSec">Proposed changes</a>
+    <a href="#approvalsSec">Approvals</a>
+    <a href="#auditSec">Audit log</a>
+    <a href="#diagSec">Diagnostics</a>
+  </nav>
+</div>
 
 <!-- Token gate -->
 <main id="gateView">
@@ -3521,6 +3502,7 @@ async function loadAll() {
 function showConsole() {
   $("gateView").classList.add("hidden");
   $("consoleView").classList.remove("hidden");
+  $("sectionRail").classList.remove("hidden");
   $("refreshAll").classList.remove("hidden");
   $("signOut").classList.remove("hidden");
   qrSetUrlText();          // reflect the signed-in server URL in Connect phone
@@ -3528,6 +3510,7 @@ function showConsole() {
 }
 function showGate(msg) {
   $("consoleView").classList.add("hidden");
+  $("sectionRail").classList.add("hidden");
   $("refreshAll").classList.add("hidden");
   $("signOut").classList.add("hidden");
   $("gateView").classList.remove("hidden");
@@ -3588,6 +3571,40 @@ window.addEventListener("DOMContentLoaded", function () {
     showGate();
   }
 });
+
+// --- section rail: highlight whichever section is currently in view ---------
+// Pure navigation aid. Touches no console state and no network.
+(function () {
+  var rail = document.getElementById("sectionRail");
+  if (!rail || !("IntersectionObserver" in window)) return;
+  var links = {};
+  Array.prototype.forEach.call(rail.querySelectorAll("a"), function (a) {
+    links[a.getAttribute("href").slice(1)] = a;
+  });
+  function markActive(id) {
+    Object.keys(links).forEach(function (k) { links[k].classList.toggle("active", k === id); });
+  }
+  // A click claims the highlight straight away. Without this the spy keeps the
+  // previous section lit until the scroll settles, so tapping "Approvals" left
+  // "Proposed changes" looking selected.
+  Object.keys(links).forEach(function (id) {
+    links[id].addEventListener("click", function () { markActive(id); });
+  });
+
+  var visible = {};
+  var obs = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { visible[e.target.id] = e.isIntersecting; });
+    var current = null;
+    Object.keys(links).forEach(function (id) {
+      if (!current && visible[id]) current = id;
+    });
+    if (current) markActive(current);
+  }, { rootMargin: "-96px 0px -55% 0px", threshold: 0 });
+  Object.keys(links).forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+})();
 </script>
 </body>
 </html>

@@ -3,6 +3,41 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.61 - Add-ons, every setup guide, and the console now look like one product
+
+**The settings screens had drifted apart.** Each page carried its own private copy
+of the design, so over time they stopped matching each other — the Garmin page had
+ended up in a different typeface entirely. They now share one design, and a handful
+of things that were quietly broken along the way are fixed.
+
+- **Every setup guide has a way back.** Opening an add-on's setup page used to be a
+  one-way trip: the only link out went to the Operator Console, and nothing anywhere
+  led back to Add-ons. Every page now has "All add-ons" in the top bar.
+- **Add-ons are grouped by what actually needs you.** Anything half-finished comes
+  first under "Needs setup", then what's running, then what you could add — instead
+  of one flat list where a finished add-on looked the same as an abandoned one.
+- **The pages stopped speaking in config keys.** A card used to tell you it needed
+  "bridge_url, GOOGLE_CALENDAR_TOKEN" or "GARMIN_EMAIL, GARMIN_PASSWORD" — internal
+  variable names copied straight out of the settings file, which told you nothing you
+  could act on. The setup guide asks for each thing in plain words instead.
+- **The same paragraph stopped repeating.** The "set this up on a computer" note was
+  printed in full on every single card that needed it — three times over, identically.
+  It's said once now.
+- **Explanations wrap properly.** Paragraphs broke at ragged, arbitrary points,
+  because the page was faithfully reproducing the indentation of the file they were
+  written in rather than fitting them to your screen.
+- **The top bar fits on a phone.** It used to wrap onto a second row and eat a tenth
+  of the screen before you'd read a word.
+- **The Operator Console has navigation.** Eight sections stacked in one very long
+  page, with no way to reach Approvals or Diagnostics except scrolling past the entire
+  phone-setup walkthrough. There's now a row of section links that follows you down
+  the page and tracks where you are.
+- **The console stopped sliding sideways on a phone.** The approvals table is seven
+  columns wide and was dragging the whole page with it; it now scrolls on its own.
+- **Garmin setup can actually sign you in.** Opening it without being signed in said
+  "Sign in to Adam first" — and gave you nothing to sign in with. It now has the same
+  sign-in box as every other setup page.
+
 ## 0.9.60 - Days you missed stop vanishing, and you can fix any day by tapping it
 
 **The Trends charts quietly erased the days you didn't log.** Track Monday through
