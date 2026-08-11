@@ -16,9 +16,9 @@ use the Site unlawfully or to interfere with its operation. The Site is provided
 "as is"; we may change or discontinue it at any time.
 
 ## 2. Purchases and the Merchant of Record
-Purchases are sold and processed by our **Merchant of Record, Paddle** ("**MoR**"), the **seller of record** for your transaction, which handles
+Purchases are sold and processed by our **Merchant of Record, Gumroad** ("**MoR**"), the **seller of record** for your transaction, which handles
 payment, billing, and applicable sales tax/VAT. Your purchase is also subject to the
-MoR's buyer terms (https://www.paddle.com/legal/checkout-buyer-terms). Prices are shown at checkout; you are
+MoR's buyer terms (https://gumroad.com/terms). Prices are shown at checkout; you are
 responsible for taxes the MoR calculates. We or the MoR may refuse or cancel an
 order (e.g., suspected fraud or pricing error).
 

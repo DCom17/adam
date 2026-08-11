@@ -11,9 +11,9 @@ purchase and we will arrange a refund of the licence fee. Email **adam@camposent
 with your order ID. Within 14 days, we refund on request — no reason needed.
 
 ## How refunds are processed (Merchant of Record)
-Your purchase is sold and processed by **Paddle**, the seller of
+Your purchase is sold and processed by **Gumroad**, the seller of
 record. Refunds are issued through them, and their buyer terms also apply
-(https://www.paddle.com/legal/checkout-buyer-terms). Because they hold the funds, they process the refund; we
+(https://gumroad.com/terms). Because they hold the funds, they process the refund; we
 authorise and honour it under this policy. The Merchant of Record may also issue
 refunds directly to prevent payment disputes.
 
