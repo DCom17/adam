@@ -60,7 +60,7 @@ be documented here first.
 
 Adam itself is free and this section does not apply to you unless you buy.
 
-- **Who takes the payment.** Checkout is handled by **Polar**, our Merchant of
+- **Who takes the payment.** Checkout is handled by **Gumroad**, our Merchant of
   Record — they are the seller on the receipt and handle billing and sales tax.
   Your card details go to them, not to us. We never see your full card number.
 - **What the maintainer receives.** Limited order information: your email

@@ -25,11 +25,11 @@ between your device and those services under your own accounts, governed by thei
 policies.
 
 ## 3. The limited data we handle
-- **Purchase data.** Payment is processed by our Merchant of Record, **Polar**
-  (Polar Software Inc.), the seller of record, which handles billing and tax. We
+- **Purchase data.** Payment is processed by our Merchant of Record, **Gumroad**
+  (Gumroad, Inc.), the seller of record, which handles billing and tax. We
   receive limited order information (such as your email, order ID, country, and
   licence tier) to deliver your licence and provide support. See their privacy
-  policy: https://polar.sh/legal/privacy. We never receive your full card number.
+  policy: https://gumroad.com/privacy. We never receive your full card number.
 - **Your licence key contains your email address.** Keys are signed offline and
   verified on your own device — there is no licence server and no activation
   call — so the email is embedded in the key itself rather than looked up. Treat
