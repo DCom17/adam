@@ -11,8 +11,9 @@ toggles the ADAM_SELL_MODE env var, to prove:
     entitled while an expired one is not · a valid license is entitled even past
     the trial · an explicit ADAM_SELL_MODE=0 is a kill switch over
     SELL_MODE_DEFAULT=True · an unconfigured build is always entitled · and the
-    SHIPPED build keeps a real public key committed (it ships dormant via the
-    switch, not by reverting the key).
+    SHIPPED build keeps a real public key committed (dormancy is controlled by the
+    switch, not by reverting the key) · and an ARMED build always gives a gated
+    user a real checkout to buy from.
 
 Run:  python test_licensing.py   (exit code 0 = all passed)
 """
@@ -129,7 +130,18 @@ def main() -> int:
         print("\n[8] The SHIPPED build keeps a real key committed (dormant via the switch, not a reverted key)")
         check("LICENSE_PUBLIC_KEY_HEX is not the placeholder",
               _real_configured() is True and licensing.LICENSE_PUBLIC_KEY_HEX != "REPLACE_WITH_YOUR_PUBLIC_KEY")
-        check("default build ships dormant (SELL_MODE_DEFAULT is False)", _real_default is False)
+        # The old assertion here was "SELL_MODE_DEFAULT is False". That was the right
+        # invariant while nothing was for sale: arming a paywall with no checkout traps
+        # a user with no way out. Adam Plus went on sale 2026-08-11 (Gumroad), so the
+        # invariant tightens rather than disappears — an ARMED build must be one a gated
+        # user can actually buy and redeem from. ADAM_SELL_MODE=0 is still the kill
+        # switch, proven in section [6] above.
+        if _real_default is True:
+            check("armed build has a real signing key configured", _real_configured() is True)
+            check("armed build sends gated users to a real checkout",
+                  isinstance(licensing.BUY_URL, str) and licensing.BUY_URL.startswith("https://"))
+        else:
+            check("dormant build never enforces", licensing._sell_mode() is False)
 
     finally:
         licensing._configured = _real_configured

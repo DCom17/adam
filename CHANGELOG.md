@@ -3,6 +3,28 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.62 - Adam Plus is on sale, and there's now somewhere to put your key
+
+**Adam Plus — phone and remote access — is available to buy.** A one-time $24.99,
+no subscription, yours offline and forever, with a 30-day free trial before
+anything asks you for money. The desktop app stays completely free, in full, as it
+always has been.
+
+- **The licence field appears.** Until now it was hidden, because nothing was for
+  sale and an empty box helps nobody. Settings now has a **License** field: paste
+  the key from your purchase email and press Activate. It's checked entirely on
+  your own machine — Adam never contacts anyone to verify it, and it keeps working
+  with no internet at all.
+- **You get 30 days before any of this matters.** Install Adam and everything —
+  phone, remote access, the lot — simply works. The trial countdown appears in
+  Settings so you always know where you stand, rather than discovering it the day
+  it stops.
+- **When a trial ends, the assistant doesn't.** Only phone and remote access need a
+  licence. Adam on your desktop carries on exactly as before — every feature, no
+  nagging, no reduced mode. That was the promise and it hasn't changed.
+- **Your key arrives by email**, usually within a few hours of buying, sent by a
+  human. You don't need to wait for it to start using Adam.
+
 ## 0.9.61 - Add-ons, every setup guide, and the console now look like one product
 
 **The settings screens had drifted apart.** Each page carried its own private copy

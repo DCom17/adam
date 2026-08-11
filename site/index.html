@@ -391,7 +391,7 @@
       Download for Windows
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
     </a>
-    <div class="cta-sub">Free beta · Windows 10/11 ·
+    <div class="cta-sub">Free download · Windows 10/11 ·
       <a href="https://github.com/DCom17/adam-releases/releases">all releases &amp; changelog</a></div>
   </div>
   <div class="orb-zone"><canvas id="orbCanvas" aria-hidden="true"></canvas></div>
@@ -586,7 +586,7 @@
       <div class="body"><b>Optional: put it on your phone.</b> The in-app wizard walks you through
         connecting over your own Tailscale network, and the app installs to your
         home screen like any other.
-        <div class="note">Phone &amp; remote access is <a href="#pricing">Adam Plus</a> — free while Adam's in beta.</div></div>
+        <div class="note">Phone &amp; remote access is <a href="#pricing">Adam Plus</a> — a one-time $24.99, with a 30-day free trial.</div></div>
     </div>
   </div>
 </section>
@@ -609,32 +609,33 @@
       <h3>Optional: Tailscale</h3>
       <p>Free for personal use — it's the private network that carries Adam to your
       phone. (Phone &amp; remote access is the <a href="#pricing">Adam Plus</a> upgrade,
-      free while Adam's in beta.)</p>
+      a one-time $24.99 after a 30-day free trial.)</p>
     </div>
   </div>
 </section>
 
 <!-- ============================================================================
-     PRICING — TEASER (free beta -> paid at launch). Publishable as-is: it primes
-     the future paid phone tier but sells NOTHING yet (no live checkout).
-     Guardrails still in force until selling is real:
-       * NO buy button until (1) the Merchant-of-Record checkout exists and a real
-         CHECKOUT_URL is wired, AND (2) the signing keypair is generated + the public
-         key is pasted into licensing.py (and licensing.py is in the make_release
-         allow-list). Until then the Plus card's CTA is the free beta download, not
-         a purchase — do NOT re-add a CHECKOUT_URL buy link before both are done.
-     Price + model per SELLING_ADAM.md (2026-07-16): desktop free forever; phone/
-     remote is a ONE-TIME $24.99 (perpetual) upgrade AFTER the free beta; 30-day
-     local trial once selling is live. Switch .per / copy if it ever goes recurring.
-     Phone-access copy elsewhere (Tailscale "what you need" card, step 5) is
-     reconciled to frame phone/remote as the Adam Plus upgrade, free while in beta.
+     PRICING — LIVE (went paid 2026-08-11). Both preconditions are met: the
+     Merchant-of-Record checkout exists (Gumroad, adamlocal.gumroad.com/l/adam-plus)
+     and the signing keypair is generated with the public key in licensing.py, which
+     is on the make_release allow-list.
+     Model per SELLING_ADAM.md: desktop free forever; phone/remote is a ONE-TIME
+     $24.99 perpetual upgrade with a 30-day local trial. Switch .per / copy if it
+     ever goes recurring.
+     ⚠️ If you change the price or the store, the claim appears in MORE places than
+     this card. Sweep the whole file — the buy button, the price label, the Plus
+     lede + fineprint, the hero and foot cta-sub lines, the Tailscale "what you
+     need" card, and step 5 of the walkthrough ALL asserted "free while in beta"
+     and had to be reconciled by hand. Also update web/legal/{refund,terms,privacy}.md,
+     docs/PRIVACY.md and site/{refund,terms,privacy}.html, which name the seller
+     of record.
 ============================================================================ -->
 <section id="pricing">
   <div class="label rv">Pricing</div>
   <h2 class="rv">Free on your desk. A little more to carry it everywhere.</h2>
   <p class="section-sub rv">Adam runs free on your PC, in full — forever. Putting it on your phone
-  and reaching it from anywhere will be the one paid upgrade: a single price, yours to keep.
-  It's <b>free for everyone while Adam's in beta</b> — the price below is what it becomes at launch.</p>
+  and reaching it from anywhere is the one paid upgrade: a single price, yours to keep.
+  Try it free for 30 days.</p>
   <div class="plans">
     <div class="plan rv">
       <div class="tag">Desktop</div>
@@ -655,9 +656,9 @@
     <div class="plan featured rv">
       <div class="tag">Desktop + Phone</div>
       <div class="name">Adam Plus</div>
-      <div class="price"><span class="amt">$24.99</span><span class="per">one-time · at launch</span></div>
+      <div class="price"><span class="amt">$24.99</span><span class="per">one-time</span></div>
       <div class="lede">Everything in Adam, plus the whole assistant in your pocket, reachable from anywhere.
-      <b>Free for every beta tester right now.</b></div>
+      <b>One payment. Yours forever.</b></div>
       <ul>
         <li>Everything in the free desktop app</li>
         <li>Adam on your phone's home screen</li>
@@ -665,11 +666,11 @@
         <li>Talk to Adam from anywhere, encrypted, no relay</li>
       </ul>
       <div class="plan-cta">
-        <a class="solid" href="https://github.com/DCom17/adam-releases/releases/latest/download/adam-setup.exe">Get it free in the beta</a>
+        <a class="solid" href="https://adamlocal.gumroad.com/l/adam-plus">Get Adam Plus — $24.99</a>
       </div>
-      <div class="fineprint">Free while Adam's in beta — the whole thing, phone included.
-      After launch it's a one-time $24.99 (no subscription), yours forever and offline, with a
-      30-day free trial. You always keep the free desktop app.</div>
+      <div class="fineprint">A one-time $24.99 — no subscription, yours forever and offline,
+      after a 30-day free trial. You always keep the free desktop app. Your licence key is
+      emailed to you after purchase, usually within a few hours. 14-day money-back guarantee.</div>
     </div>
   </div>
   <p class="pricing-note rv">You bring your own Claude (a Claude subscription or an Anthropic API key);
@@ -695,7 +696,7 @@
       Download for Windows
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
     </a>
-    <div class="cta-sub">Free beta · no account needed</div>
+    <div class="cta-sub">Free download · no account needed</div>
   </div>
 </div>
 

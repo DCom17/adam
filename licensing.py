@@ -174,7 +174,7 @@ def is_configured() -> bool:
 #   * flip SELL_MODE_DEFAULT below to True in the build you cut to start selling.
 # An explicit env value always wins, so ADAM_SELL_MODE=0 is also a kill switch that forces
 # enforcement off even when the compiled default is True.
-SELL_MODE_DEFAULT = False
+SELL_MODE_DEFAULT = True   # ARMED 2026-08-11 — Adam Plus is on sale (Gumroad).
 
 
 def _sell_mode() -> bool:
