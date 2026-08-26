@@ -33,6 +33,34 @@ UPLOAD_ALLOWED_EXT = {
 }
 
 
+# Leading bytes each binary format must actually start with. Only formats with a
+# stable, well-known signature are listed — the text types (.txt/.md/.csv/.json/
+# .py/…) have none, so there is nothing to check and they are skipped rather than
+# guessed at. A tuple of (offset, magic) pairs; any one matching is enough.
+_UPLOAD_MAGIC: dict[str, tuple[tuple[int, bytes], ...]] = {
+    ".png":  ((0, b"\x89PNG\r\n\x1a\n"),),
+    ".gif":  ((0, b"GIF87a"), (0, b"GIF89a")),
+    ".jpg":  ((0, b"\xff\xd8\xff"),),
+    ".jpeg": ((0, b"\xff\xd8\xff"),),
+    ".bmp":  ((0, b"BM"),),
+    ".pdf":  ((0, b"%PDF-"),),
+    ".webp": ((0, b"RIFF"), (8, b"WEBP")),
+    # ISO-BMFF: the brand box starts at offset 4 for both HEIC and HEIF.
+    ".heic": ((4, b"ftyp"),),
+    ".heif": ((4, b"ftyp"),),
+}
+
+
+def _ext_matches_content(ext: str, data: bytes) -> bool:
+    """True when the bytes look like what the extension claims, or when the type
+    has no signature to check. Stops a file from being handed to the image
+    pipeline (or to Claude's Read tool) as something it isn't."""
+    sigs = _UPLOAD_MAGIC.get(ext)
+    if not sigs:
+        return True
+    return any(data[off:off + len(magic)] == magic for off, magic in sigs)
+
+
 def _heic_to_jpeg(data: bytes, name: str) -> tuple[bytes, str]:
     """Convert iPhone HEIC/HEIF bytes to JPEG so the Read tool can view them."""
     import io
@@ -65,15 +93,34 @@ async def upload(request: Request, response: Response, file: UploadFile = File(.
     """Accept one file (image or doc), store it off-vault, return its server path.
     The path is then sent as an attachment on a later /ask or /ask_async turn, where
     Claude's Read tool views it. iPhone HEIC photos are converted to JPEG first."""
-    data = await file.read()
+    # Enforce the cap DURING the read, not after it. A bare file.read()
+    # materialises the entire body as one bytes object before the size check can
+    # reject it, so the 413 arrived only once the cost had already been paid.
+    # Reading in chunks lets an oversized upload be refused after one megabyte.
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > config.UPLOAD_MAX_BYTES:
+            raise HTTPException(status_code=413, detail="File too large (25 MB max)")
+        chunks.append(chunk)
+    data = b"".join(chunks)
     if not data:
         raise HTTPException(status_code=400, detail="Empty file")
-    if len(data) > config.UPLOAD_MAX_BYTES:
-        raise HTTPException(status_code=413, detail="File too large (25 MB max)")
     raw_name = file.filename or "upload"
     ext = Path(raw_name).suffix.lower()
     if ext not in UPLOAD_ALLOWED_EXT:
         raise HTTPException(status_code=415, detail=f"Unsupported type: {ext or 'unknown'}")
+    # The extension alone decided what this file was; nothing looked at the bytes.
+    if not _ext_matches_content(ext, data):
+        raise HTTPException(
+            status_code=415,
+            detail=f"File contents don't match the {ext} extension — rename it to "
+                   "its real type and try again.",
+        )
     safe = re.sub(r"[^A-Za-z0-9._-]", "_", raw_name)[:60] or "upload"
     if ext in (".heic", ".heif"):
         try:
@@ -105,7 +152,9 @@ async def upload(request: Request, response: Response, file: UploadFile = File(.
             "action_type": "write", "target": str(dest), "allowed": True,
             "approved": True, "risk": "low", "reason": f"upload save failed: {e}",
         })
-        raise HTTPException(status_code=500, detail=f"Save failed: {e}")
+        # The exception text carries the absolute destination path (and on Windows
+        # the account name inside it). Logged above, not returned.
+        raise HTTPException(status_code=500, detail="Could not save the upload")
     permissions.record_audit_event({
         "action_type": "write", "target": str(dest), "allowed": True,
         "requires_approval": False, "approved": True, "risk": "low",

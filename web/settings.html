@@ -24,6 +24,18 @@
   #phoneCard { border-color: var(--edge-hi); background: var(--panel-hi); }
   #phoneCard > .head { gap: 10px; }
   #phoneCard .addon-icon { background: rgba(33,230,255,.14); }
+
+  /* An add-on that ships but isn't ready for users yet. Dimmed and inert rather
+     than hidden: it still tells the user the capability is coming, and nothing
+     about the registry, the setup page or the server routes has to change. */
+  .card.soon { opacity: .62; }
+  .card.soon .addon-name { color: var(--dim); }
+  .soonbtn {
+    display: inline-flex; align-items: center; padding: 7px 12px; border-radius: 8px;
+    border: 1px dashed var(--edge); color: var(--faint); font-size: 12.5px;
+    cursor: not-allowed; user-select: none;
+  }
+  .soonnote { margin-top: 8px; font-size: 12px; color: var(--faint); }
 </style>
 </head>
 <body>
@@ -85,6 +97,10 @@
           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
     <rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M9 20h6M12 16.5V20"/>
   </symbol>
+  <symbol id="ic-archive" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 7.5h18M5 7.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V7.5M4 4h16M10 11.5h4"/>
+  </symbol>
 </svg>
 
 <header class="appbar">
@@ -140,12 +156,30 @@
       <p class="desc">Reach the whole assistant from your phone over your own private Tailscale
         network — nothing is exposed to the public internet. Scan one code to sign the phone in.</p>
       <div class="cardftr">
-        <a class="btn primary" href="/console#connectPhoneSec" id="phoneBtn">Connect phone</a>
+        <a class="btn primary" href="/setup-phone" id="phoneBtn">Connect phone</a>
       </div>
     </div>
   </section>
 
   <div id="cards"></div>
+
+  <section id="backupCard">
+    <div class="head">
+      <span class="addon-icon"><svg aria-hidden="true" focusable="false"><use href="#ic-archive"/></svg></span>
+      <span>Back up your data</span>
+    </div>
+    <div class="body">
+      <p class="desc">Download everything Adam can't rebuild — your trackers, sessions and
+        settings — as a single file. Adam keeps a copy of each file before it changes it,
+        but that doesn't help if the machine itself is gone. Your API keys are deliberately
+        left out, so the file is safe to keep in Drive or on a USB stick.</p>
+      <div class="cardftr">
+        <button class="btn primary" id="backupBtn" type="button">Download backup</button>
+        <span class="muted" id="backupMsg" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+  </section>
+
   <div class="errbox hidden" id="loadErr" role="alert" aria-live="polite"></div>
 </main>
 
@@ -185,6 +219,15 @@ var GROUPS = [
 // Add-on id -> sprite symbol. Ids come from the server registry
 // (/integrations/status). Anything unrecognised falls back to the plug glyph,
 // so a newly added add-on still renders sensibly.
+// Add-ons that ship but are not ready for users yet. The card renders dimmed
+// with a "coming soon" note and no way in, instead of being removed — the user
+// still sees the capability is planned, and nothing else has to change: the
+// server registry, the setup page and its routes all stay exactly as they are.
+// Re-enabling one is deleting its line from here.
+var COMING_SOON = {
+  linkedin: "LinkedIn posting isn't ready yet. It'll switch on in a later update."
+};
+
 var ICON = {
   google_calendar: "ic-calendar",
   gmail: "ic-mail",
@@ -257,6 +300,19 @@ function renderCard(a) {
   // key names ("bridge_url", "GARMIN_PASSWORD") — nothing a person can act on
   // from this page. The setup wizard asks for each value in plain words.
   // a.setup_hint is rendered once per group by renderGroupNote(), not per card.
+
+  var soonNote = COMING_SOON[a.id];
+  if (soonNote) {
+    // Dim the whole card and replace the way in with an inert marker, so the
+    // add-on can't be started while it isn't working.
+    sec.className = "card soon";
+    var sftr = makeEl("div", "cardftr");
+    sftr.appendChild(makeEl("span", "soonbtn", "Available soon"));
+    body.appendChild(sftr);
+    body.appendChild(makeEl("p", "soonnote", soonNote));
+    sec.appendChild(body);
+    return sec;
+  }
 
   var ftr = makeEl("div", "cardftr");
   if (a.setup_path) {
@@ -370,7 +426,41 @@ $("urlInput").addEventListener("keydown", function (e) { if (e.key === "Enter") 
 $("signOut").addEventListener("click", signOut);
 $("refresh").addEventListener("click", loadAddons);
 $("consoleLink").addEventListener("click", consoleHandoff(""));
-$("phoneBtn").addEventListener("click", consoleHandoff("connectPhoneSec"));
+// NO handoff for the phone button. It used to open the Operator Console at
+// #connectPhoneSec; Connect phone is its own add-on page now, so it behaves like
+// every other add-on card — a plain link that navigates normally, including
+// inside the in-app overlay. Leaving the handoff wired here silently overrode
+// the href and sent overlay users back to the console.
+
+// The backup is a token-gated route, so a plain <a href> can't fetch it — the
+// browser wouldn't send the Authorization header. Pull it as a blob and hand the
+// browser a temporary object URL to save.
+$("backupBtn").addEventListener("click", async function () {
+  var btn = $("backupBtn"), msg = $("backupMsg");
+  btn.disabled = true;
+  msg.textContent = "Packing your data…";
+  try {
+    var res = await fetch(LS.url + "/export", { headers: { "Authorization": "Bearer " + LS.token } });
+    if (!res.ok) throw new Error("Export failed (" + res.status + ")");
+    var blob = await res.blob();
+    // Prefer the server's filename (it carries the timestamp).
+    var name = "adam-backup.zip";
+    var cd = res.headers.get("content-disposition") || "";
+    var m = cd.match(/filename="?([^"';]+)"?/i);
+    if (m) name = m[1];
+    var href = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = href; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    // Revoke on the next tick — revoking immediately can cancel the download.
+    setTimeout(function () { URL.revokeObjectURL(href); }, 30000);
+    msg.textContent = "Saved " + name;
+  } catch (e) {
+    msg.textContent = e.message || "Backup failed";
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 $("urlInput").value = LS.url;
 if (LS.token) enterCards();

@@ -6,12 +6,16 @@ from __future__ import annotations
 import asyncio
 import json
 import platform
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.background import BackgroundTask
 
 import config
 import integration_registry
@@ -20,7 +24,7 @@ import licensing
 import merge
 import permissions
 import updater
-from security import require_token, token_matches
+from security import redact_secrets, require_token, token_matches
 
 import server
 
@@ -91,22 +95,10 @@ async def connect_info():
 
 
 def _redact(text: str) -> str:
-    """Scrub every configured secret (and the owner's phone number) out of a
-    diagnostics line. Belt-and-suspenders: none of these should ever be logged
-    in the first place, but a support bundle gets pasted into chats/issues, so
-    it must be safe even if a future log line slips."""
-    secrets = [
-        config.ADAM_TOKEN, config.CALENDAR_TOKEN, config.HUNTER_TOKEN,
-        config.GMAIL_TOKEN, config.LINKEDIN_CLIENT_SECRET,
-        config.LINKEDIN_ACCESS_TOKEN, config.TWILIO_AUTH_TOKEN,
-        config.OWNER_PHONE,
-        # Claude's stderr can echo a bad key back into a job error message.
-        getattr(config, "ANTHROPIC_API_KEY", ""),
-    ]
-    for s in secrets:
-        if s and s in text:
-            text = text.replace(s, "***")
-    return text
+    """Diagnostics-bundle scrubber. Thin alias kept because this name is used
+    throughout this module; the implementation moved to security.py so server.py
+    can scrub the same way without importing a router (which would be circular)."""
+    return redact_secrets(text)
 
 
 @router.get("/diagnostics", dependencies=[Depends(require_token)])
@@ -220,6 +212,170 @@ async def drain(max_wait: int | None = None):
             "max_wait_s": max_wait if max_wait is not None else config.DRAIN_MAX_WAIT_SECONDS}
 
 
+# --- Data export ------------------------------------------------------------
+
+# Directory names under data/ that never belong in a backup: regenerable, huge,
+# or noise. backups/ especially — including it would nest every previous
+# pre-write copy inside every new export.
+#
+# baseline/ is the updater's 3-way-merge reference (the last-shipped file set).
+# It is machinery, not user data, and it is rebuilt from the installed version —
+# but it is a full copy of the install tree, so it dominates the archive: a first
+# export measured 603 MB, of which 655 MB of source was baseline.tmp. Restoring
+# it onto another machine would also be actively wrong, since it must describe
+# the version installed THERE.
+_EXPORT_SKIP_DIRS = {
+    "logs", "backups", "uploads", "agent_workspace", "baseline", "baseline.tmp",
+}
+
+# Never exported, even by name match inside an included directory. The VAPID
+# private key is regenerated on demand, and a .env in the data tree would put
+# every API key into a file the user is about to copy to cloud storage.
+#
+# The SQLite sidecars matter for CORRECTNESS, not size. Each .db goes into the
+# archive via sqlite3's backup API, which produces a standalone file with the
+# WAL already checkpointed into it. Shipping the source database's -wal/-shm
+# alongside that snapshot means a restore drops a STALE log next to a newer
+# database — which SQLite may replay or roll back, quietly corrupting the very
+# data this feature exists to protect.
+_EXPORT_SKIP_GLOBS = (
+    "*.pem", "*.log", ".env", ".env.*", "*.tmp",
+    "*.db-wal", "*.db-shm", "*.db-journal",
+)
+
+
+def _sqlite_snapshot(src: Path, dest: Path) -> bool:
+    """Copy a SQLite DB with the backup API rather than the filesystem.
+
+    A plain file copy of a database the server is still writing can capture a
+    torn page or miss a live WAL, producing a backup that only fails at restore
+    time. backup() takes a transactionally consistent snapshot of a live DB."""
+    import sqlite3
+    try:
+        src_con = sqlite3.connect(f"file:{src}?mode=ro", uri=True)
+        try:
+            dst_con = sqlite3.connect(str(dest))
+            try:
+                src_con.backup(dst_con)
+            finally:
+                dst_con.close()
+        finally:
+            src_con.close()
+        return True
+    except Exception as e:  # noqa: BLE001 — a locked/corrupt DB must not kill the export
+        server.log.warning("export: sqlite snapshot failed for %s: %s", src.name, e)
+        return False
+
+
+def _build_export(zip_path: Path) -> dict:
+    """Write the backup ZIP. Returns a small manifest of what went in."""
+    import fnmatch
+    import zipfile
+
+    included: list[str] = []
+    skipped_dbs: list[str] = []
+    staging = Path(tempfile.mkdtemp(prefix="adam_export_db_"))
+    try:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            data_dir = config.DATA_DIR
+            if data_dir.is_dir():
+                for path in sorted(data_dir.rglob("*")):
+                    if not path.is_file():
+                        continue
+                    rel = path.relative_to(data_dir)
+                    if any(part in _EXPORT_SKIP_DIRS for part in rel.parts[:-1]):
+                        continue
+                    if any(fnmatch.fnmatch(path.name, g) for g in _EXPORT_SKIP_GLOBS):
+                        continue
+                    arc = str(Path("data") / rel)
+                    if path.suffix == ".db":
+                        snap = staging / f"{rel.as_posix().replace('/', '_')}"
+                        if _sqlite_snapshot(path, snap):
+                            zf.write(snap, arc)
+                            included.append(arc)
+                        else:
+                            skipped_dbs.append(arc)
+                        continue
+                    try:
+                        zf.write(path, arc)
+                        included.append(arc)
+                    except OSError:
+                        continue    # a file that vanished or is locked mid-walk
+
+            # settings.json is the user's own configuration and carries no
+            # credentials by design (secrets live in .env) — a restore without
+            # it would lose every preference.
+            settings = config.CONFIG_ROOT / "settings.json"
+            if settings.is_file():
+                zf.write(settings, "settings.json")
+                included.append("settings.json")
+
+            zf.writestr("RESTORE.txt", _EXPORT_README)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+
+    return {"files": len(included), "skipped_databases": skipped_dbs}
+
+
+_EXPORT_README = """Adam backup
+===========
+
+This archive holds the data Adam cannot regenerate: your trackers, sessions,
+job history, saved state and settings.
+
+TO RESTORE
+----------
+1. Install Adam on the new machine and start it once, so it creates its folders.
+2. Stop Adam.
+3. Copy the `data` folder from this archive over the one in your Adam folder,
+   and `settings.json` next to it, replacing what is there.
+4. Start Adam.
+
+WHAT IS DELIBERATELY NOT IN HERE
+--------------------------------
+* `.env` — your API keys and access token. Left out so this file stays safe to
+  put on a USB stick or in cloud storage. Re-enter them from Setup after a
+  restore; they take a minute and are the only thing you have to redo.
+* Logs, old pre-write backups, uploads and the agent scratch folder. All
+  regenerable, and they would dwarf everything worth keeping.
+* Your vault/brain folder. That lives wherever you pointed Adam at it (often a
+  synced Drive folder) and is backed up by whatever already backs that up.
+"""
+
+
+@router.get("/export", dependencies=[Depends(require_token)])
+async def export_data():
+    """Download everything that would be painful to lose, as one ZIP.
+
+    Adam kept per-file pre-write copies in data/backups, which is a good undo
+    but not a backup: nothing covered 'this machine is gone'. The trackers are
+    the sharp edge — months of finance and health entries that exist in exactly
+    one SQLite file. Databases are snapshotted through sqlite3's backup API so
+    the archive is consistent even while turns are running."""
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    tmp_dir = Path(tempfile.mkdtemp(prefix="adam_export_"))
+    zip_path = tmp_dir / f"adam-backup-{stamp}.zip"
+    try:
+        manifest = await asyncio.to_thread(_build_export, zip_path)
+    except Exception as e:  # noqa: BLE001
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        server.log.exception("export failed")
+        raise HTTPException(status_code=500, detail="Could not build the backup") from e
+
+    permissions.record_audit_event({
+        "action_type": "data_exported", "target": zip_path.name, "risk": "low",
+        "reason": "owner requested a backup", "files": manifest["files"],
+        "size_bytes": zip_path.stat().st_size,
+    })
+    return FileResponse(
+        zip_path,
+        media_type="application/zip",
+        filename=zip_path.name,
+        # The archive lives in a temp dir only until the response is flushed.
+        background=BackgroundTask(shutil.rmtree, tmp_dir, ignore_errors=True),
+    )
+
+
 @router.get("/update-conflicts", dependencies=[Depends(require_token)])
 async def get_update_conflicts():
     """Files a recent update held back because the user had also customized them in
@@ -296,6 +452,19 @@ async def adam_ui_css():
         return FileResponse(path, media_type="text/css",
                             headers={"Cache-Control": "no-store"})
     raise HTTPException(status_code=404, detail="adam-ui.css not found")
+
+
+@router.get("/qr-encoder.js")
+async def qr_encoder_js():
+    # Vendored QR encoder (qrcode-generator, MIT, Kazuhiko Arase), shared by the
+    # Connect-phone page and the Operator Console. It is ~2,300 lines; keeping one
+    # copy behind a route beats inlining it into two pages that then drift.
+    # Carries no secret — library source — so it is served un-gated like the CSS.
+    path = server.FRONTEND.parent / "qr-encoder.js"
+    if path.exists():
+        return FileResponse(path, media_type="application/javascript",
+                            headers={"Cache-Control": "no-store"})
+    raise HTTPException(status_code=404, detail="qr-encoder.js not found")
 
 
 @router.get("/favicon.ico")
@@ -393,6 +562,17 @@ async def setup_hunter_page():
 async def setup_garmin_page():
     """Serve the standalone Garmin (unofficial health sync) setup wizard."""
     return _static_page("setup-garmin.html")
+
+
+@router.get("/setup-phone")
+async def setup_phone_page():
+    """Serve the standalone Connect-phone page.
+
+    This used to be a section buried in the Operator Console, which is a strange
+    place to send someone whose only goal is getting Adam onto their phone. It is
+    now an add-on page like every other one, reached from Settings -> Add-ons.
+    The console keeps a signpost at #connectPhoneSec pointing here."""
+    return _static_page("setup-phone.html")
 
 
 @router.get("/hunter-dashboard")

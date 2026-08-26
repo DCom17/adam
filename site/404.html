@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found — Adam</title>
+<meta name="description" content="That page doesn't exist. Head back to the Adam home page to download the app or read the docs.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon.png" type="image/png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<style>
+  :root {
+    --bg: #04060b; --panel: rgba(10, 20, 30, .55);
+    --edge: rgba(33, 230, 255, .15); --cyan: #21e6ff;
+    --ink: #eefafd; --text: #c9e4ec; --dim: #8fb9c6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    font: 16px/1.65 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex; align-items: center; justify-content: center;
+    padding: 32px 20px; text-align: center;
+  }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 540px; }
+  .logo { width: 64px; height: 64px; margin-bottom: 26px;
+          filter: drop-shadow(0 0 16px rgba(33,230,255,.5)); }
+  .code { font-size: 13px; letter-spacing: .34em; text-transform: uppercase;
+          color: var(--cyan); margin-bottom: 14px; }
+  h1 { font-size: clamp(26px, 5vw, 38px); line-height: 1.2; color: var(--ink);
+       font-weight: 600; margin-bottom: 16px; }
+  p { color: var(--dim); margin-bottom: 30px; }
+  .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 13px 24px; border-radius: 11px;
+    font-weight: 600; font-size: 15px;
+    background: var(--cyan); color: #04121a;
+    border: 1px solid transparent; transition: transform .2s, box-shadow .2s;
+  }
+  .btn:hover { text-decoration: none; transform: translateY(-1px);
+               box-shadow: 0 8px 26px rgba(33,230,255,.3); }
+  .btn.ghost { background: var(--panel); color: var(--text); border-color: var(--edge); }
+  .btn.ghost:hover { box-shadow: none; border-color: rgba(33,230,255,.4); }
+  .foot { margin-top: 34px; font-size: 13px; color: #5d8894; }
+  .foot a { color: #5d8894; }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <img class="logo" src="logo.png" alt="Adam logo">
+    <div class="code">Error 404</div>
+    <h1>That page isn't here.</h1>
+    <p>The link may be out of date, or the address may have a typo in it.
+       Everything about Adam lives on the home page.</p>
+    <div class="btns">
+      <a class="btn" href="/">Back to Adam</a>
+      <a class="btn ghost" href="https://github.com/DCom17/adam-releases/releases/latest/download/adam-setup.exe">Download for Windows</a>
+    </div>
+    <div class="foot">
+      Looking for something specific?
+      <a href="/#pricing">Pricing</a> ·
+      <a href="/#faq">FAQ</a> ·
+      <a href="https://github.com/DCom17/adam-releases/issues/new/choose">Support</a>
+    </div>
+  </main>
+</body>
+</html>

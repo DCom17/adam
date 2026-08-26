@@ -330,6 +330,41 @@ def prune_backups() -> int:
 # --- Audit log --------------------------------------------------------------
 
 
+# audit.jsonl gets a line per write, per policy decision and per approval, and
+# unlike voice_server.log (RotatingFileHandler, 2 MiB x 5) it had no ceiling at
+# all — on a long-lived install it grows until the disk complains. Same shape as
+# the log handler: roll at a size cap, keep a bounded number of generations.
+# Ceiling is AUDIT_MAX_BYTES * (AUDIT_BACKUPS + 1), about 20 MiB.
+AUDIT_MAX_BYTES = 5 * 1024 * 1024
+AUDIT_BACKUPS = 3
+
+
+def _audit_generation(n: int) -> Path:
+    """audit.jsonl.1, .2, … — plain suffixing, NOT Path.with_suffix, which would
+    replace '.jsonl' rather than append to it."""
+    return Path(f"{config.AUDIT_LOG_FILE}.{n}")
+
+
+def _rotate_audit_if_needed() -> None:
+    """Roll the audit log once it passes the cap. Best-effort and silent: a
+    rotation problem must never stop the event from being recorded, and the
+    caller's action must never fail because of housekeeping."""
+    try:
+        if config.AUDIT_LOG_FILE.stat().st_size < AUDIT_MAX_BYTES:
+            return
+    except OSError:
+        return  # no file yet, or unreadable — nothing to roll
+    try:
+        _audit_generation(AUDIT_BACKUPS).unlink(missing_ok=True)
+        for n in range(AUDIT_BACKUPS - 1, 0, -1):
+            src = _audit_generation(n)
+            if src.exists():
+                src.replace(_audit_generation(n + 1))
+        config.AUDIT_LOG_FILE.replace(_audit_generation(1))
+    except Exception:
+        pass
+
+
 def record_audit_event(event: dict) -> None:
     """Append one structured audit record (JSON line) to the audit log.
 
@@ -338,8 +373,18 @@ def record_audit_event(event: dict) -> None:
     if not config.PERM_AUDIT_LOG_ENABLED:
         return
     record = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **event}
+    # Housekeeping is isolated from the append on purpose. Sharing one try block
+    # would mean a rotation error skipped the write and silently DROPPED the
+    # event — the audit log failing exactly when something interesting happened.
     try:
         config.AUDIT_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+    try:
+        _rotate_audit_if_needed()
+    except Exception:
+        pass
+    try:
         with config.AUDIT_LOG_FILE.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(record, default=str) + "\n")
     except Exception:

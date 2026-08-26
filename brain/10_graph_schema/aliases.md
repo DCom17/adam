@@ -66,6 +66,7 @@ The `graph_linker.py` script reads this table.
 | dashboard sync | [[Dashboard Sync Bridge]] | safe |
 | quest eligibility | [[Daily Quests]] | safe — specific Adam term |
 | Quest Eligibility Filter | [[Daily Quests]] | safe |
+| Quest Classification Rule | [[Daily Quests]] | safe |
 | stat gate | [[XP System]] | safe |
 | boss gate | [[Boss System]] | safe |
 

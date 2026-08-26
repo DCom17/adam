@@ -76,11 +76,11 @@ For each task confirmed complete today:
 
 Read `11_dashboard/dashboard_state.json` for current XP totals. Do NOT re-read `xp_log.csv` or `quest_log.csv` in full — append new entries only. Only read `11_dashboard/xp_rules.md` and `11_dashboard/stat_definitions.md` when there is a novel or uncertain XP eligibility question — skip for routine shutdowns where quest types are familiar.
 
-**Before evaluating any action for XP, apply the [[Daily Quests|Quest Eligibility Filter]]:**
+**Before evaluating any action for XP, classify it per the [[Daily Quests|Quest Classification Rule]]** (`stat_definitions.md`):
 
 - **Stat gate:** Does the action meet qualifying evidence criteria for at least one stat in `stat_definitions.md`?
 - **Boss gate:** Does the action directly advance a confirmed milestone for an active boss?
-- Fails both gates → skip it entirely. Do not award XP regardless of whether the task was completed.
+- Fails both gates → it's an **ops quest**: if completed, award only its staged micro bounty (1–3 XP, Discipline), within the 6 micro XP/day cap — never more, never re-classed upward.
 
 For each action that passes at least one gate and has confirmed evidence:
 - Check whether evidence exists in today's daily log or via user confirmation.

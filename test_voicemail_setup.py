@@ -155,7 +155,7 @@ def main() -> int:
     twilio_voicemail.probe = lambda sid, tok, num, timeout=None: {"ok": True, "number_owned": True, "number_configured": True}
     good_en = client.post("/integrations/voicemail/enable", headers=AUTH,
                           json={"account_sid": "ACgood", "auth_token": SECRET,
-                                "number": "+15550000000", "owner_name": "Diego",
+                                "number": "+15550000000", "owner_name": "Alex",
                                 "transcribe_mode": "twilio"})
     ej = good_en.json()
     check("enable success -> ok:true", ej.get("ok") is True)
@@ -165,7 +165,7 @@ def main() -> int:
     check("settings.json now enables voicemail (valid JSON)",
           written["integrations"]["voicemail"]["enabled"] is True)
     check("settings.json stored the owner name + transcribe mode",
-          written["integrations"]["voicemail"]["owner_name"] == "Diego"
+          written["integrations"]["voicemail"]["owner_name"] == "Alex"
           and written["integrations"]["voicemail"]["transcribe_mode"] == "twilio")
     check("settings.json preserved the sibling integration",
           written["integrations"]["sms"] == {"enabled": False})

@@ -77,7 +77,7 @@ from models import (  # noqa: F401 — re-exports
     VoicemailGreetingRequest, VoicemailTestRequest, VoicemailWireRequest,
 )
 from rate_limit import limiter, rate_limit_handler
-from security import require_token  # noqa: F401 — re-export; routes Depends() on it
+from security import redact_secrets, require_token  # noqa: F401 — require_token is re-exported; routes Depends() on it
 
 # --- Configuration ----------------------------------------------------------
 
@@ -451,8 +451,8 @@ def _addon_awareness_note() -> str:
     parts.append(
         "USE ME ON YOUR PHONE (built-in — this is a major capability, treat it like a "
         "headline add-on): the user can run Adam, voice and all, from their phone while "
-        "it talks to this same PC. To set it up: open the gear menu (the cog) -> Operator "
-        "Console -> the 'Connect phone' section — scanning the QR there uses Adam on the "
+        "it talks to this same PC. To set it up: open the gear menu (the cog) -> Settings "
+        "-> Add-ons -> 'Connect phone' — scanning the QR there uses Adam on the "
         "SAME Wi-Fi, and setting up Tailscale (guide: docs/CONNECT_YOUR_PHONE.md) lets them "
         "use it ANYWHERE, on the go. When the user asks what you can do, about add-ons, or "
         "about using you on the go / on mobile, ALWAYS mention this and offer to walk them "
@@ -472,8 +472,10 @@ def _addon_awareness_note() -> str:
 AUTH_REQUIRED_SENTINEL = "JVL_AUTH_REQUIRED:"
 AUTH_REQUIRED_MESSAGE = (
     "Adam isn't signed in to Claude. Open a terminal (or the black Adam window), "
-    "type  claude  and press Enter, then type  /login  and follow the prompts to sign "
-    "in. Then try again."
+    "type  claude  and press Enter, then type  /login  . Your browser should open by "
+    "itself — if it doesn't, Claude prints a web address you can copy into your "
+    "browser instead. If the website gives you a code at the end, copy that code back "
+    "into the Claude window and press Enter. Then try again."
 )
 _AUTH_FAILURE_MARKERS = (
     "/login", "claude login", "not logged in", "log in to", "not authenticated",
@@ -482,10 +484,51 @@ _AUTH_FAILURE_MARKERS = (
 
 
 def _is_claude_auth_failure(err: str) -> bool:
-    """True if Claude's stderr looks like a not-signed-in / auth failure (vs any
-    other crash). Keyword match on the CLI's own wording."""
+    """True if Claude's error text looks like a not-signed-in / auth failure (vs
+    any other crash). Keyword match on the CLI's own wording."""
     e = (err or "").lower()
     return any(m in e for m in _AUTH_FAILURE_MARKERS)
+
+
+def _claude_failure_text(stdout_raw: str, stderr_raw: str) -> str:
+    """Everything the CLI told us about a failed run — stderr AND stdout.
+
+    The CLI does not always speak on stderr. A not-signed-in run exits 1 with an
+    EMPTY stderr and puts the reason in stdout's JSON body:
+
+        {"subtype":"success","is_error":true,"result":"Not logged in · Please run /login", ...}
+
+    The failure ladder below used to read stderr only, so it saw "", matched no
+    marker, and fell through to a bare "Connection error — session reset" for the
+    user — while the words "Please run /login" sat in the output it had just
+    thrown away. (Observed 2026-08-11 on a fresh install: the log line reads
+    "Claude exited 1:" with nothing after the colon.) Always feed this to the
+    ladder, never stderr alone."""
+    parts: list[str] = []
+    if stderr_raw and stderr_raw.strip():
+        parts.append(stderr_raw.strip())
+    raw = (stdout_raw or "").strip()
+    if raw:
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, ValueError):
+            parts.append(raw)          # not JSON — the text itself is the clue
+        else:
+            if isinstance(data, dict):
+                for key in ("result", "error", "message"):
+                    val = data.get(key)
+                    if isinstance(val, str) and val.strip():
+                        parts.append(val.strip())
+            else:
+                parts.append(raw)
+    # Scrubbed HERE, at the single point where subprocess output becomes a
+    # failure string, rather than at each of the call sites that log it or put
+    # it in a 502 body — a new call site then inherits the scrub instead of
+    # quietly reopening the hole. The CLI echoes a rejected key back on stderr,
+    # and this text reaches both voice_server.log and the client.
+    # Marker matching downstream (usage-limit / auth / session-gone) is
+    # unaffected: those are English phrases, not secret-shaped.
+    return redact_secrets("\n".join(parts).strip())
 
 
 # A --resume whose session the CLI can't find in the current cwd — it aged out of the
@@ -977,6 +1020,28 @@ def _brain_bootstrap_note(vault_path: str) -> str:
         "02_command_memory/long_term_memory.md). Never answer a personal question from prior "
         "memory, and never claim you don't know one, without reading these first. Read CLAUDE.md "
         "in that folder for the brain's full operating protocol and commands."
+        # The app puts four one-tap buttons in front of a brand-new user, and the very
+        # first one starts the onboarding. Those are DEFINED procedures in the brain,
+        # but the procedure files are not in context — only CLAUDE.md's head is
+        # injected, and it merely *references* BOOTSTRAP.md. So "Bootstrap Adam" was
+        # being improvised: a fresh install answered it by proposing five empty files
+        # for approval, which reads as though Adam doesn't recognise its own command.
+        # Name the buttons and order the read.
+        "\n\nSTARTER COMMANDS — the app shows the user one-tap buttons: \"Bootstrap Adam\", "
+        "\"Start my day\", \"Good morning\", \"What can you do?\". These are DEFINED procedures "
+        "in the brain, not casual phrases. When the user sends one, do NOT improvise and do NOT "
+        "open with a batch of file proposals — read the procedure first, then walk the user "
+        "through it conversationally, one small step at a time.\n"
+        f"  - \"Bootstrap Adam\" -> read {vault / 'BOOTSTRAP.md'} IN FULL, then run it from its "
+        "Step 0. It is a warm, brief INTERVIEW, not a form: greet, ask a few questions at a "
+        "time, confirm as you go, and write files as you learn things. Never lead with empty "
+        "scaffolding for the user to approve before any conversation has happened, and never "
+        "answer it with a bare 'tell me about yourself'.\n"
+        "  - \"Start my day\", \"Good morning\", \"Get up to speed\", \"How'd we do\", \"See you "
+        "tomorrow\", \"Big picture me\", \"Give me credit\", \"Save\" -> follow that command's "
+        "own section in the brain's CLAUDE.md, including its reads.\n"
+        "If a starter command's procedure file is missing or unreadable, say so plainly and "
+        "offer to continue without it — never invent a substitute procedure."
     )
     # Inline the TOP of the brain's own CLAUDE.md so its persona + protocol are present
     # immediately, before any file read. Capped hard: the shipped brain/CLAUDE.md is ~44KB
@@ -1335,7 +1400,12 @@ _ensure_vapid_keypair()
 
 # --- App setup --------------------------------------------------------------
 
-app = FastAPI(title="Adam")
+# docs_url/redoc_url/openapi_url are off deliberately. FastAPI serves all three
+# without auth by default, and nothing in this app gates them — there is no auth
+# middleware, only per-route dependencies. On a box reachable over the tailnet
+# that handed any caller a complete map of ~150 routes and every request model.
+# The schema is a development convenience with no runtime consumer here.
+app = FastAPI(title="Adam", docs_url=None, redoc_url=None, openapi_url=None)
 app.state.limiter = limiter
 # Graceful 429 (plain-language body + Retry-After) instead of slowapi's bare one.
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
@@ -1706,6 +1776,32 @@ async def _kill_proc_tree(proc: asyncio.subprocess.Process) -> None:
         pass
 
 
+def _raise_claude_failure(err: str) -> None:
+    """Translate the CLI's own words into the friendly failure the client renders.
+    Shared by both stream failure branches so a new marker is added in ONE place
+    and can't land on one branch only. Returns normally when nothing matched —
+    the caller then raises its own last-resort 502 carrying `err` verbatim."""
+    limit_msg = _usage_limit_message(err) or _billing_message(err)
+    if limit_msg:
+        raise HTTPException(status_code=502, detail=f"{LIMIT_SENTINEL} {limit_msg}")
+    if _is_claude_auth_failure(err):
+        # Surfaced to the user as clear sign-in guidance, not "connection error".
+        raise HTTPException(status_code=502,
+                            detail=f"{AUTH_REQUIRED_SENTINEL} {AUTH_REQUIRED_MESSAGE}")
+    if _is_session_not_found(err):
+        # A gone resume id: the CLI can't find this session in this cwd (it aged out,
+        # or the sid was minted in another workspace). Signal run_claude to re-run once
+        # fresh instead of raising a crash the user reads as "Connection error, sir."
+        raise SessionNotFound(err)
+
+
+# Raw stdout kept for the failure ladder. A failing CLI run explains itself in a few
+# short lines, so a small bounded tail is enough — and bounded matters now that EVERY
+# mode streams (a tool result can be megabytes; we must not accumulate them).
+RAW_TAIL_LINES = 20
+RAW_TAIL_LINE_CHARS = 2000
+
+
 async def _read_stream_result(proc, job_id: str | None, timeout: int) -> dict:
     """Consume a --output-format stream-json turn line by line: tool_use events
     feed the live activity buffer; the terminal 'result' event is returned in
@@ -1716,16 +1812,30 @@ async def _read_stream_result(proc, job_id: str | None, timeout: int) -> dict:
     deadline = loop.time() + timeout
     stderr_task = asyncio.create_task(proc.stderr.read())
     result_event: dict | None = None
+    raw_tail: list[str] = []
+    oversize_lines = 0
     try:
         while True:
             remaining = deadline - loop.time()
             if remaining <= 0:
                 raise asyncio.TimeoutError
-            line = await asyncio.wait_for(proc.stdout.readline(), timeout=remaining)
+            try:
+                line = await asyncio.wait_for(proc.stdout.readline(), timeout=remaining)
+            except ValueError:
+                # One line blew past STREAM_LINE_LIMIT — a tool result embedding a huge
+                # file. Losing that event costs one activity bubble; killing the turn
+                # over it would cost the user their whole weekly review. Skip and read
+                # on (the reader may resync mid-line; the JSON guard below eats that).
+                oversize_lines += 1
+                continue
             if not line:
                 break
+            text = line.decode("utf-8", errors="replace")
+            raw_tail.append(text[:RAW_TAIL_LINE_CHARS])
+            if len(raw_tail) > RAW_TAIL_LINES:
+                del raw_tail[: len(raw_tail) - RAW_TAIL_LINES]
             try:
-                ev = json.loads(line.decode("utf-8", errors="replace"))
+                ev = json.loads(text)
             except json.JSONDecodeError:
                 continue   # partial/noise line — never kill the turn over telemetry
             if not isinstance(ev, dict):
@@ -1749,33 +1859,45 @@ async def _read_stream_result(proc, job_id: str | None, timeout: int) -> dict:
     if job_id and job_id in CANCELLED_JOBS:
         raise TurnStopped()
     if proc.returncode != 0:
-        log.error("Claude exited %s: %s", proc.returncode, stderr[:500])
-        # Same friendly-failure ladder as the non-stream path (B2-I): a plan cap
-        # or exhausted credit mid-code-chat must not read as a raw crash.
-        limit_msg = _usage_limit_message(stderr) or _billing_message(stderr)
-        if limit_msg:
-            raise HTTPException(status_code=502, detail=f"{LIMIT_SENTINEL} {limit_msg}")
-        if _is_claude_auth_failure(stderr):
-            raise HTTPException(status_code=502,
-                                detail=f"{AUTH_REQUIRED_SENTINEL} {AUTH_REQUIRED_MESSAGE}")
-        if _is_session_not_found(stderr):
-            # A gone resume id: the CLI can't find this session in the code cwd (it
-            # aged out, or the sid was minted in another workspace). The non-stream
-            # path recovers inline; the stream path can't (no message/session_id here),
-            # so signal run_claude to re-run once fresh instead of raising a crash the
-            # user sees as "Connection error, sir." on every code turn until they resend.
-            raise SessionNotFound(stderr)
-        raise HTTPException(status_code=502, detail=f"Claude failed: {stderr[:500]}")
+        # stderr is not the whole story here either: the CLI's own explanation
+        # (e.g. "Not logged in · Please run /login") arrives on STDOUT with stderr
+        # empty. See _claude_failure_text. Two sources, in order: the terminal
+        # result event if we got one, else the raw stdout tail — because a run that
+        # dies before emitting any stream event (the fresh-install not-signed-in
+        # case) has NO result event, and reading only that would hand the ladder an
+        # empty string and resurrect the v0.9.64 "Connection error" black hole for
+        # every mode at once. Never let this narrow to one source again.
+        err = ""
+        if isinstance(result_event, dict):
+            err = _claude_failure_text(json.dumps(result_event), stderr)
+        if not err:
+            err = _claude_failure_text("\n".join(raw_tail), stderr)
+        log.error("Claude exited %s: %s", proc.returncode, err[:500] or "(no output)")
+        # Same friendly-failure ladder the non-stream path ran (B2-I): a plan cap or
+        # exhausted credit must not read as a raw crash.
+        _raise_claude_failure(err)
+        raise HTTPException(status_code=502,
+                            detail=f"Claude failed: {err[:500] or '(no output)'}")
     if not isinstance(result_event, dict):
-        log.error("Claude stream ended without a result event")
-        raise HTTPException(status_code=502, detail="Claude returned no result")
+        # Exit 0 with no result event. Rare, but it must not dead-end as a bare
+        # "no result": the same three explanations can arrive here (a run that
+        # printed its complaint and stopped), so the tail goes through the ladder
+        # before the last-resort error, and carries its own words when nothing matched.
+        err = _claude_failure_text("\n".join(raw_tail), stderr)
+        log.error("Claude stream ended without a result event: %s", err[:500] or "(no output)")
+        _raise_claude_failure(err)
+        raise HTTPException(status_code=502,
+                            detail="Claude returned no result" + (f": {err[:400]}" if err else ""))
+    if oversize_lines:
+        log.warning("stream: skipped %s oversize line(s) (> %s bytes) — activity events only",
+                    oversize_lines, STREAM_LINE_LIMIT)
     return result_event
 
 
 async def run_claude(
     message: str, session_id: str | None, timeout: int = CLAUDE_TIMEOUT_SECONDS,
     mode: str = "voice", attachments: list[str] | None = None,
-    job_id: str | None = None,
+    job_id: str | None = None, untrusted: bool = False,
 ) -> dict:
     """Spawn claude.exe in the vault and return parsed JSON output.
 
@@ -1852,7 +1974,12 @@ async def run_claude(
     # the prompt — verified by scripts/agent-write-probe.ps1.
     # A 'code' chat (explicitly escalated + flag-gated above) opts OUT of the
     # restriction for that chat only — raw Claude Code, same as legacy_direct.
-    restrict = config.AGENT_RESTRICT_TOOLS and mode != "code"
+    # `untrusted` forces the restricted spawn no matter how the box is configured.
+    # An inbound SMS body is text this machine did not author, wrapped in an
+    # instruction to ACT on it — the one input path where a prompt injection has a
+    # sender rather than a user behind it. On a box running legacy_direct that
+    # would otherwise be a raw, full-tool spawn. Untrusted input never gets that.
+    restrict = (config.AGENT_RESTRICT_TOOLS and mode != "code") or untrusted
     if restrict:
         # The agent's safe-write capabilities apply in BOTH voice and work mode — the
         # user talks to ONE Adam (their daily voice driver with a bundled brain) and
@@ -1864,7 +1991,9 @@ async def run_claude(
         # The live apply posture, so the agent's story about what happens to a change
         # matches reality — never a phantom "waiting in your approval panel" when nothing
         # waits. See _effective_auto_apply for the exact rule (toggle OR tier).
-        auto_apply = _effective_auto_apply()
+        # An untrusted turn never auto-applies, whatever the tier says, so the note
+        # it reads matches the posture it actually runs under (see the apply loop).
+        auto_apply = _effective_auto_apply() and not untrusted
         prompt = prompt + _draft_mode_note(auto_apply)
         # Reconnect the brain: --add-dir gives READ access to the vault but Claude Code
         # loads no CLAUDE.md memory from it, so without this Adam never learns the user's
@@ -1902,7 +2031,7 @@ async def run_claude(
     # Skipped in a code chat — it describes the restricted posture, which is exactly
     # what a code chat is NOT running under; CODE_SYSTEM_PROMPT is the truth there.
     if mode != "code":
-        prompt = prompt + _capability_awareness_note(_effective_auto_apply())
+        prompt = prompt + _capability_awareness_note(_effective_auto_apply() and not untrusted)
         # Live Finance + Health snapshot, so planning + money/health questions use
         # real local numbers (empty + cheap when the trackers aren't used). H4.
         prompt = prompt + _trackers_snapshot_note()
@@ -1914,13 +2043,14 @@ async def run_claude(
     # a configured model ID retiring and silently breaking every fresh install.
     if config.VOICE_MODEL and config.VOICE_MODEL.lower() != "default":
         cmd += ["--model", config.VOICE_MODEL]
-    if mode == "code":
-        # stream-json emits per-tool events while the turn runs — that's the live
-        # activity feed on the phone. (--verbose is required with -p+stream-json.)
-        # The terminal 'result' event carries the same payload json mode returns.
-        cmd += ["--output-format", "stream-json", "--verbose"]
-    else:
-        cmd += ["--output-format", "json"]
+    # stream-json on EVERY mode. The per-tool events it emits while the turn runs are
+    # the ONLY source of /poll's `progress` — the orb's activity bubbles and the
+    # "#3 Read: …" line beside the elapsed counter. While this was code-mode only, the
+    # turns that most need to look alive (a weekly review, daily planning: minutes of
+    # tool work in voice/operator mode) sat behind a silent orb with nothing to show.
+    # (--verbose is required with -p + stream-json.) The terminal 'result' event carries
+    # the same payload plain json mode returned, so everything downstream is unchanged.
+    cmd += ["--output-format", "stream-json", "--verbose"]
     if session_id:
         cmd += ["--resume", session_id]
 
@@ -2011,87 +2141,43 @@ async def run_claude(
         JOB_PROGRESS.pop(job_id, None)
 
     try:
-        if mode == "code":
-            if stdin_payload is not None:
-                # Deliver the long message, then close stdin so `-p` sees EOF.
-                proc.stdin.write(stdin_payload)
-                await proc.stdin.drain()
-                proc.stdin.close()
-            try:
-                data = await _read_stream_result(proc, job_id, timeout)
-            except asyncio.TimeoutError:
-                await _kill_proc_tree(proc)
-                await proc.wait()
-                log.error("Claude turn timed out after %ss (mode=%s)", timeout, mode)
-                raise HTTPException(status_code=504, detail="Claude timed out")
-            except SessionNotFound:
-                # Resume target is gone. Re-run this turn ONCE as a fresh session
-                # (session_id=None can't loop, and a spawn with no --resume can't raise
-                # session-not-found) so the first reply still lands — the same recovery
-                # the non-stream returncode/result-error branches already do. The dead
-                # proc has already exited, so there's no tree to kill.
-                if session_id:
-                    log.info("resume %s not found (code) — retrying once as a fresh session",
-                             str(session_id)[:12])
-                    return await run_claude(message, None, timeout=timeout, mode=mode,
-                                            attachments=attachments, job_id=job_id)
-                raise HTTPException(status_code=502, detail="Claude returned no result")
-            except (HTTPException, TurnStopped):
-                raise
-            except Exception:
-                # A stream-reader crash (oversize line, decode error) must never
-                # orphan a bypassPermissions claude.exe running unwatched.
-                await _kill_proc_tree(proc)
-                await proc.wait()
-                raise
-        else:
-            try:
-                # Only pass input= when a long message rides stdin — the normal
-                # path stays the plain communicate() every fake/test stubs.
-                comm = (proc.communicate(input=stdin_payload)
-                        if stdin_payload is not None else proc.communicate())
-                stdout, stderr = await asyncio.wait_for(comm, timeout=timeout)
-            except asyncio.TimeoutError:
-                # Kill the whole tree — claude.exe spawns helpers (node, MCP) that
-                # a bare proc.kill() leaves running.
-                await _kill_proc_tree(proc)
-                await proc.wait()
-                log.error("Claude turn timed out after %ss (mode=%s)", timeout, mode)
-                raise HTTPException(status_code=504, detail="Claude timed out")
-
-            if job_id and job_id in CANCELLED_JOBS:
-                raise TurnStopped()   # the user stopped this turn mid-flight
-
-            if proc.returncode != 0:
-                err = stderr.decode("utf-8", errors="replace").strip()
-                log.error("Claude exited %s: %s", proc.returncode, err[:500])
-                limit_msg = _usage_limit_message(err) or _billing_message(err)
-                if limit_msg:
-                    raise HTTPException(status_code=502,
-                                        detail=f"{LIMIT_SENTINEL} {limit_msg}")
-                if _is_claude_auth_failure(err):
-                    # Surfaced to the user as clear sign-in guidance, not "connection error".
-                    raise HTTPException(status_code=502,
-                                        detail=f"{AUTH_REQUIRED_SENTINEL} {AUTH_REQUIRED_MESSAGE}")
-                if session_id and _is_session_not_found(err):
-                    # The resume id points at a session the CLI can't find here. Re-run this
-                    # turn ONCE as a fresh session (session_id=None → can't loop, and a spawn
-                    # with no --resume can't raise session-not-found) so the first reply lands
-                    # instead of erroring. That session's context is already unrecoverable;
-                    # fresh is the only forward path — the same recovery the client does on the
-                    # user's manual retry, moved server-side so they never see the failure.
-                    log.info("resume %s not found — retrying once as a fresh session",
-                             str(session_id)[:12])
-                    return await run_claude(message, None, timeout=timeout, mode=mode,
-                                            attachments=attachments, job_id=job_id)
-                raise HTTPException(status_code=502, detail=f"Claude failed: {err[:500]}")
-
-            raw = stdout.decode("utf-8", errors="replace").strip()
-            try:
-                data = json.loads(raw)
-            except json.JSONDecodeError:
-                log.error("Claude returned non-JSON output: %s", raw[:500])
-                raise HTTPException(status_code=502, detail="Claude returned non-JSON output")
+        # ONE turn transport for every mode (see the --output-format note above).
+        # The old plain-json branch that lived here is gone — two ladders drifting
+        # apart is exactly how the v0.9.64 not-signed-in black hole survived as long
+        # as it did. Everything the CLI can say now lands in one place.
+        if stdin_payload is not None:
+            # Deliver the long message, then close stdin so `-p` sees EOF.
+            proc.stdin.write(stdin_payload)
+            await proc.stdin.drain()
+            proc.stdin.close()
+        try:
+            data = await _read_stream_result(proc, job_id, timeout)
+        except asyncio.TimeoutError:
+            await _kill_proc_tree(proc)
+            await proc.wait()
+            log.error("Claude turn timed out after %ss (mode=%s)", timeout, mode)
+            raise HTTPException(status_code=504, detail="Claude timed out")
+        except SessionNotFound:
+            # Resume target is gone. Re-run this turn ONCE as a fresh session
+            # (session_id=None can't loop, and a spawn with no --resume can't raise
+            # session-not-found) so the first reply still lands instead of erroring.
+            # That session's context is already unrecoverable; fresh is the only
+            # forward path. The dead proc has exited, so there's no tree to kill.
+            if session_id:
+                log.info("resume %s not found (%s) — retrying once as a fresh session",
+                         str(session_id)[:12], mode)
+                return await run_claude(message, None, timeout=timeout, mode=mode,
+                                        attachments=attachments, job_id=job_id,
+                                        untrusted=untrusted)
+            raise HTTPException(status_code=502, detail="Claude returned no result")
+        except (HTTPException, TurnStopped):
+            raise
+        except Exception:
+            # A stream-reader crash (decode error, cancellation) must never orphan a
+            # claude.exe running unwatched — least of all a bypassPermissions one.
+            await _kill_proc_tree(proc)
+            await proc.wait()
+            raise
     finally:
         if job_id:
             RUNNING_PROCS.pop(job_id, None)
@@ -2115,7 +2201,10 @@ async def run_claude(
     # message for the limit case.
     _subtype = str(data.get("subtype") or "")
     if data.get("is_error") or _subtype.startswith("error"):
-        err_text = str(data.get("result") or data.get("error") or _subtype or "unknown error")
+        # Exit-0 error path: the reason arrives in the JSON body rather than on
+        # stderr, so it misses _claude_failure_text's scrub and needs its own.
+        err_text = redact_secrets(
+            str(data.get("result") or data.get("error") or _subtype or "unknown error"))
         log.error("Claude result error (subtype=%s): %s", _subtype or "?", err_text[:500])
         limit_msg = _usage_limit_message(err_text) or _billing_message(err_text)
         if limit_msg:
@@ -2130,7 +2219,8 @@ async def run_claude(
             log.info("resume %s not found (result error) — retrying once fresh",
                      str(session_id)[:12])
             return await run_claude(message, None, timeout=timeout, mode=mode,
-                                    attachments=attachments, job_id=job_id)
+                                    attachments=attachments, job_id=job_id,
+                                    untrusted=untrusted)
         raise HTTPException(status_code=502, detail=f"Claude failed: {err_text[:300]}")
 
     display, spoken = _extract_spoken(data.get("result", ""), mode)
@@ -2165,6 +2255,22 @@ async def run_claude(
             # refused/conflicted change comes back unapplied with its status, never
             # silently forced.
             global_auto = _get_auto_apply()
+            if untrusted:
+                # A turn driven by text this machine did not author holds EVERY
+                # change for a human tap — including brain self-writes and
+                # anything the active tier would auto-approve. Without this, an
+                # Unrestricted box turns an inbound message into an unreviewed
+                # write, and PERM_WRITE_DIRS there includes APP_ROOT.
+                log.warning(
+                    "untrusted turn proposed %d change(s) — all held for approval",
+                    len(proposed),
+                )
+                permissions.record_audit_event({
+                    "action_type": "untrusted_turn_proposals_held",
+                    "count": len(proposed),
+                    "risk": "high",
+                    "session_id": sid,
+                })
             for p in proposed:
                 brain_self = proposed_changes.is_brain_self_write(p)
                 # Capability-tier / permission-aware auto-apply: a change auto-applies
@@ -2182,7 +2288,7 @@ async def run_claude(
                 # Auto-apply when: the global pref is on, OR it's a brain self-write
                 # (in-vault, non-destructive), OR the policy doesn't require approval for it.
                 # Everything else stays pending for the user to approve.
-                if not (global_auto or brain_self or policy_auto):
+                if untrusted or not (global_auto or brain_self or policy_auto):
                     continue
                 try:
                     proposed_changes.approve(p["id"])
@@ -2357,7 +2463,12 @@ async def _run_sms_job(body: str) -> None:
     ts = int(time.time() * 1000)
     try:
         out = await run_claude(
-            SMS_WRAP.format(body=body), None, timeout=ASYNC_CLAUDE_TIMEOUT_SECONDS
+            SMS_WRAP.format(body=body), None, timeout=ASYNC_CLAUDE_TIMEOUT_SECONDS,
+            # The body is text that arrived over the network, and SMS_WRAP tells the
+            # agent to ACT on it. Twilio's signature proves the message came through
+            # our account and the From allow-list proves the sender number, but
+            # neither says anything about who wrote the words. Treat them as hostile.
+            untrusted=True,
         )
         _store_last_result(out["result"], out["session_id"], ts)
         await asyncio.to_thread(_send_push, out["result"], out["session_id"], ts)

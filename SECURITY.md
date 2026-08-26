@@ -58,7 +58,38 @@ in `CHANGELOG.md`.
   shell, and external writes only through the review-and-approve flow.
 - **Rate limits on every route.** See `rate_limit.py`.
 - **Bounded input.** Every request model rejects unknown fields and caps
-  string size; see `models.py`.
+  string size; see `models.py`. Uploads are checked against the size cap while
+  they are read, and their contents must match the extension they claim.
+- **No interactive schema.** `/docs`, `/redoc` and `/openapi.json` are disabled;
+  auth here is a per-route dependency, not middleware, so leaving them on would
+  have published a route map to anyone who could reach the port.
+- **Untrusted input runs clamped.** An inbound SMS is text this machine did not
+  author, handed to the agent with an instruction to act on it. Those turns are
+  forced into the restricted spawn and never auto-apply a change, whatever the
+  configured capability tier says.
+- **Subprocess output is scrubbed.** The Claude CLI echoes a rejected API key
+  back on stderr, and that text reaches both the log and the client. It is
+  redacted at the point it becomes a failure string, not at each call site.
+
+## Data at rest — what Adam does not do
+
+Adam does **not** encrypt your data on disk. Notes, trackers, conversation
+history and settings sit in ordinary files and SQLite databases that anyone with
+your OS account, or the drive, can read.
+
+This is a deliberate consequence of the design rather than an oversight: the data
+never leaves your machine, so there is no service holding it — and equally none
+encrypting it. App-level encryption would mean a key that either lives next to
+the data (protecting nothing) or can be lost (destroying everything), and it
+would not protect against the realistic threat, which is someone reaching your
+unlocked machine or your drive.
+
+**Use full-disk encryption instead** — BitLocker on Windows. It is the correct
+layer, it covers everything else on the disk, and it is one setting.
+
+`Settings → Back up your data` exports what cannot be regenerated as a single
+ZIP. It excludes `.env`, private keys, logs and old backups by design, so the
+archive is safe to keep in cloud storage.
 
 ## Supported versions
 

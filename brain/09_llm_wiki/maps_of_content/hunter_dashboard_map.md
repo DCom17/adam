@@ -61,17 +61,17 @@ See: `11_dashboard/stat_definitions.md` for evidence criteria.
 
 ## Quest System
 
-### Quest Eligibility Filter
+### Quest Classification (Full-Day Board)
 
-Before any action becomes a quest, it must pass at least one gate:
+Every planned item becomes a quest; the gates decide its class:
 - **Stat gate:** action meets qualifying evidence in `stat_definitions.md`
 - **Boss gate:** action directly advances a confirmed boss milestone
 
-Failing both gates → task only. No quest ID, no XP potential.
+Passes either gate → achievement quest (normal bounty, real XP). Fails both → **ops quest** (work shifts, chores, errands): `micro`, 1–3 XP, Discipline, capped 6 micro XP/day.
 
 ### Quest Types
 
-[[Daily Quests]] — 3–5 recommended during [[Daily Planning]]. Reset each day.
+[[Daily Quests]] — one per planned item during [[Daily Planning]] (full-day board). Reset each day.
 
 [[Weekly Quests]] — longer-scope objectives spanning the full week.
 

@@ -250,8 +250,11 @@ async def set_capability_tier(body: CapabilityTierBody):
 
 
 # --- AI plan (the two-door choice: subscription vs pay-as-you-go) ------------
-# 'subscription' = the CLI's own Claude login; note programmatic use like Adam
-# draws on the plan's separate Agent-SDK credit, not the flat interactive quota.
+# 'subscription' = the CLI's own Claude login; usage counts against whatever
+# limits that plan carries, and Adam pauses if the user reaches them. Don't
+# re-add specifics about how Anthropic meters plans — the details shift, we
+# can't verify them from here, and stale claims shipped in a wizard are worse
+# than no claim at all.
 # 'api_key' = the user's Anthropic API key, prepaid pay-as-you-go, with
 # the budget governor + cost meter keeping it bounded. The key itself lives in
 # .env and is injected only into the claude.exe subprocess env (run_claude).

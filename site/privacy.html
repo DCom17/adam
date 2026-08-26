@@ -5,7 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Privacy — Adam Local</title>
 <meta name="description" content="The Adam Local software collects nothing. No accounts, no telemetry, no analytics, no crash reporting — the complete list of network calls it makes, plus exactly what a purchase involves.">
+<link rel="canonical" href="https://adam.camposenterprises.org/privacy.html">
 <link rel="icon" href="icon.png" type="image/png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Adam">
+<meta property="og:title" content="Privacy — Adam Local">
+<meta property="og:description" content="What Adam does and doesn't collect, the complete list of network calls it makes, and exactly what a purchase involves.">
+<meta property="og:image" content="https://adam.camposenterprises.org/og.png">
+<meta property="og:url" content="https://adam.camposenterprises.org/privacy.html">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root {
     --bg: #05070d; --panel: #0a121c; --edge: rgba(33,230,255,.22);
@@ -114,16 +125,71 @@
   privacy policy</a>, which also ships inside the app. Requests:
   <a href="mailto:privacy@camposenterprises.org">privacy@camposenterprises.org</a>.</p>
 
+  <h2>THIS WEBSITE</h2>
+  <p>Separately from the app, this site itself: <b>it sets no cookies, loads no
+  third-party scripts or fonts, and runs no analytics.</b> Nothing here tracks you,
+  which is why you were never shown a cookie banner — there is nothing to consent to.
+  It is a set of static files served by GitHub Pages, who see ordinary web server
+  request data (including your IP address) in the course of delivering them, as any
+  host does.</p>
+  <p>If privacy-respecting, cookie-free visitor counts are ever switched on, they will
+  be named here before they go live, and they will remain the kind that records no
+  personal data and follows nobody between sites.</p>
+
+  <h2>YOUR DATA ON YOUR OWN DISK</h2>
+  <p>Adam stores your notes, trackers and history as ordinary files and databases in
+  its data folder. <b>They are not separately encrypted by Adam</b> — anyone with
+  access to your Windows account, or to the drive itself, can read them, exactly as
+  they could read your documents. That is the honest trade for a tool that keeps
+  everything local and never holds your data hostage behind a service.</p>
+  <p>If your machine holds sensitive material, turn on <b>BitLocker</b> (Windows
+  Settings → Privacy &amp; security → Device encryption), which is the right layer for
+  this and protects everything else on the disk too. Adam's one-click backup
+  (Settings → Back up your data) deliberately leaves your API keys out, so the backup
+  file is safe to keep in cloud storage.</p>
+
+  <h2>WHO WE ARE, AND YOUR RIGHTS</h2>
+  <p><b>Campos Systems LLC</b> (Arizona, USA) is the controller for the limited
+  purchase information described above. It is the only personal data we hold; the
+  software itself sends us nothing.</p>
+  <ul>
+    <li><b>Why we hold it (legal basis).</b> To perform the contract you entered when
+      you bought a licence — issuing your key, honouring refunds, and answering support
+      — and to meet tax and accounting obligations.</li>
+    <li><b>How long.</b> Order records are kept as long as tax law requires (seven
+      years in the US), because they are financial records. Support correspondence is
+      deleted once the issue is closed and no longer useful.</li>
+    <li><b>We do not sell your data</b>, share it with advertisers, or use it to market
+      to you. There is no mailing list.</li>
+    <li><b>Your rights.</b> You can ask for a copy of what we hold, ask us to correct
+      it, or ask us to delete it. Write to
+      <a href="mailto:privacy@camposenterprises.org">privacy@camposenterprises.org</a>
+      and we will reply. Deleting your order record does not switch off your licence —
+      your key keeps working, because nothing checks in with us. Note that we cannot
+      delete records the law requires us to keep, and that Gumroad holds its own copy
+      under its own policy.</li>
+    <li><b>Children.</b> Adam is not directed at children and we do not knowingly
+      collect data from anyone under 16.</li>
+  </ul>
+
   <h2>YOUR RESPONSIBILITIES</h2>
   <p>Because everything is yours, privacy choices are yours too: what lives in your
   notes folder, whether to enable add-ons, and who can reach your PC. Keep your
   access token private (rotate it with <code>ROTATE-TOKEN.cmd</code> if it may have
   leaked), and use the supported Tailscale path — not a public tunnel — for phone
   access.</p>
+  <p><b>Support requests on GitHub are public.</b> Anyone can read an issue you open,
+  including search engines. Don't paste your access token, your licence key, or
+  personal details into one — send those to
+  <a href="mailto:privacy@camposenterprises.org">privacy@camposenterprises.org</a>
+  instead. Diagnostics bundles from inside the app are redacted before they leave your
+  machine, but read what you're pasting anyway.</p>
 
-  <p class="foot">This page describes Adam v0.9.x and matches the PRIVACY.md that
-  ships inside the app. Questions:
-  <a href="https://github.com/DCom17/adam/issues">GitHub Issues</a>.</p>
+  <p class="foot">Effective 12 August 2026. This page describes Adam v0.9.x and matches
+  the PRIVACY.md that ships inside the app. Material changes will be posted here with a
+  new effective date. Questions:
+  <a href="https://github.com/DCom17/adam/issues">GitHub Issues</a> (public) or
+  <a href="mailto:privacy@camposenterprises.org">privacy@camposenterprises.org</a>.</p>
 </div>
 </body>
 </html>

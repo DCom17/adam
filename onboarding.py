@@ -317,6 +317,67 @@ def _claude_signin_check(cfg) -> dict:
                   "credentials elsewhere, so this can be a false alarm)")
 
 
+# Keyword markers for reading a failed turn's stderr. Mirrors server.py's
+# _AUTH_FAILURE_MARKERS / limit handling — duplicated deliberately rather than
+# importing server.py, which would drag the whole FastAPI app into the doctor.
+_LIVE_AUTH_MARKERS = (
+    "/login", "claude login", "not logged in", "log in to", "not authenticated",
+    "authenticat", "invalid api key", "unauthorized", "no api key", "credentials",
+)
+_LIVE_LIMIT_MARKERS = ("usage limit", "rate limit", "quota", "limit reached")
+
+
+def _claude_live_turn_check(cfg, claude_path: str, timeout: int = 90) -> dict:
+    """Complete a REAL one-shot Claude turn — the only check that proves the
+    user's first message will work.
+
+    The sign-in heuristic above only proves credentials exist on disk; a stored
+    credential that is expired, revoked, or for the wrong account still passes it
+    and then dies on the first real message with a bare "connection error". This
+    spends one tiny turn to find that out during setup instead.
+
+    Opt-in (doctor --live / the wizard) because it costs a real API call, and the
+    plain doctor advertises itself as read-only."""
+    if not claude_path:
+        return _check("Claude live turn", FAIL,
+                      "can't test — Claude Code was not found on this machine")
+    cmd = [claude_path, "-p", "--output-format", "json", "Reply with the single word OK."]
+    model = str(getattr(cfg, "VOICE_MODEL", "") or "")
+    if model and model.lower() != "default":
+        cmd[2:2] = ["--model", model]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
+                              cwd=str(ROOT))
+    except subprocess.TimeoutExpired:
+        return _check("Claude live turn", WARN,
+                      f"no reply within {timeout}s — this can just be a slow first run. "
+                      "Open Adam and send a message; if it fails, run this again.")
+    except OSError as e:
+        return _check("Claude live turn", FAIL, f"could not run Claude: {e}")
+    if proc.returncode == 0:
+        return _check("Claude live turn", PASS,
+                      "completed a real turn — your first message will work")
+    err = ((proc.stderr or "") + " " + (proc.stdout or "")).strip()
+    low = err.lower()
+    if any(m in low for m in _LIVE_AUTH_MARKERS):
+        return _check("Claude live turn", FAIL,
+                      "Claude ran but is NOT signed in. Open a terminal, type  claude  "
+                      "and press Enter, then type  /login  . If your browser doesn't "
+                      "open on its own, copy the web address Claude prints into it; if "
+                      "the site gives you a code at the end, paste that code back into "
+                      "the Claude window. Then run this check again.")
+    if any(m in low for m in _LIVE_LIMIT_MARKERS):
+        return _check("Claude live turn", WARN,
+                      "Claude is signed in but the plan's usage limit is reached. It "
+                      "resets on your plan's schedule; or switch to pay-as-you-go in "
+                      "Settings -> AI plan.")
+    # Unknown failure: show the CLI's own words. A user with a real error message
+    # can search it or send it on; "connection error" gives them nothing.
+    excerpt = " ".join(err.split())[:300] or f"exit code {proc.returncode}, no output"
+    return _check("Claude live turn", FAIL,
+                  f"Claude could not complete a turn. Its own error was: {excerpt}")
+
+
 def _voice_service_check(cfg) -> dict:
     """Advisory: the optional high-quality Adam voice. Not installed is a valid
     setup (browser-voice fallback); installed-but-dead earns a WARN pointing at
@@ -503,7 +564,7 @@ def _python_deps_check() -> dict:
     return _check("Python dependencies", PASS, "all required packages import")
 
 
-def run_doctor(reload_config: bool = True) -> list[dict]:
+def run_doctor(reload_config: bool = True, live: bool = False) -> list[dict]:
     """Return a list of PASS/WARN/FAIL checks (plain-language details, no secrets).
 
     `reload_config=True` re-imports config so the doctor reflects edits made during
@@ -565,9 +626,14 @@ def run_doctor(reload_config: bool = True) -> list[dict]:
                              "Claude Code not found — install it, or set claude_exe "
                              "in settings.json"))
 
-    # 2b. Claude sign-in (advisory) — --version succeeds signed-out, so this is
-    # the check that catches a skipped first sign-in BEFORE the first message.
-    checks.append(_claude_signin_check(cfg))
+    # 2b. Claude sign-in. The heuristic only proves credentials exist on disk —
+    # an expired or wrong-account credential passes it and still dies on the
+    # user's first message. When `live` is set (doctor --live, and the wizard
+    # before it launches Adam), actually complete a turn instead of guessing.
+    if live:
+        checks.append(_claude_live_turn_check(cfg, claude_path))
+    else:
+        checks.append(_claude_signin_check(cfg))
 
     # 3. settings.json present, or example defaults in use.
     checks.append(_settings_presence_check())

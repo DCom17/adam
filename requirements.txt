@@ -9,8 +9,10 @@ slowapi==0.1.9
 # Web Push (PWA notifications)
 pywebpush==2.3.0
 
-# HEIC/HEIF -> JPEG conversion for iPhone photo uploads
-Pillow==12.2.0
+# HEIC/HEIF -> JPEG conversion for iPhone photo uploads.
+# Pillow decodes bytes a user handed us, so it sits directly on the upload
+# attack path — 12.2.0 carried 20 known CVEs (PYSEC-2026-2253..3496).
+Pillow==12.3.0
 pillow-heif==1.4.0
 
 # Multipart form parsing for file uploads (FastAPI UploadFile)
@@ -21,5 +23,5 @@ python-multipart==0.0.32
 httpx==0.28.1
 # direct imports that previously rode in as transitive deps (server.py
 # imports cryptography for VAPID keygen; models.py imports pydantic directly)
-cryptography==49.0.0
+cryptography==50.0.0
 pydantic==2.13.4

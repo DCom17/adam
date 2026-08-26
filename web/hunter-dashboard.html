@@ -2083,7 +2083,11 @@ window.Celebrate = (function () {
     else if(type==="rank") start([{type:"rank",from:opt.from||"C",to:opt.to||"B"}]);
   }
 
-  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  // Full five-character escape. Every attribute this file writes is double-quoted
+  // today, so &<> alone happened to be enough — but that is a property of the call
+  // sites, not of the escaper, and it silently stops being true the first time
+  // someone writes a single-quoted one.
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
 
   // Optional on-device preview: load the dashboard with #celebrate  (or #celebrate=rank|profile|attr|multi).
   // Inert in normal use — nothing runs unless that token is in the URL.
@@ -2166,6 +2170,44 @@ function numV4_(value) {
   var n = Number(String(value || "0").replace("%", "").trim());
   return isNaN(n) ? 0 : n;
 }
+
+// --- canonical level curve (xp_rules.md) -----------------------------------
+// XP_to_next(L) = 50 * (L + 1);  Cumulative(1) = 0, Cumulative(L) = 50*(L(L+1)/2 - 1).
+// The board's own character_level cell is formula-driven and has historically
+// measured something else (a stat-level composite) or gone stale, while total_xp
+// is rewritten by every sync. Derive from total_xp so this window can never
+// disagree with what Adam says in chat.
+function levelCumulativeXpV4_(level) {
+  // toStatNumberV4_ (not numV4_) so a display-formatted "2,135" still parses.
+  var L = Math.max(1, Math.floor(toStatNumberV4_(level, 0)));
+  if (L <= 1) return 0;
+  return 50 * ((L * (L + 1)) / 2 - 1);
+}
+function levelFromXpV4_(totalXp) {
+  var xp = toStatNumberV4_(totalXp, 0);
+  if (!(xp > 0)) return 1;
+  var L = Math.floor((-1 + Math.sqrt(1 + 8 * (xp / 50 + 1))) / 2);
+  if (!isFinite(L) || L < 1) L = 1;
+  // Correct for float drift at the boundaries in both directions.
+  while (levelCumulativeXpV4_(L + 1) <= xp) L++;
+  while (L > 1 && levelCumulativeXpV4_(L) > xp) L--;
+  return L;
+}
+function levelProgressV4_(totalXp) {
+  var xp = toStatNumberV4_(totalXp, 0);
+  if (xp < 0) xp = 0;
+  var level = levelFromXpV4_(xp);
+  var start = levelCumulativeXpV4_(level);
+  var end = levelCumulativeXpV4_(level + 1);
+  return {
+    level: level,
+    nextLevel: level + 1,
+    xpIntoLevel: xp - start,
+    xpRemaining: Math.max(0, end - xp),
+    levelCost: end - start
+  };
+}
+
 function extractBossIdV4_(value) {
   var text = String(value || "").trim();
   var match = text.match(/BOSS-\d+|B-\d+/i);
@@ -2293,9 +2335,17 @@ function getFatigueModeV4_(fatigueValue) {
   return { label: "PUSH MODE", className: "good", note: "Energy is available. Spend it wisely." };
 }
 
+function normalizeRankV4_(value) {
+  return String(value === null || value === undefined ? "" : value)
+    .trim().toUpperCase().replace(/\s*RANK\s*$/, "").trim();
+}
+
 function getRankGateV4_(state, stats, rankRules) {
   var currentRank = String(state.rank || "E Rank").trim();
-  var characterLevel = numV4_(state.character_level || state.level || 0);
+  // Same derived level the profile card shows, so the two never disagree.
+  var characterLevel = (state.total_xp !== undefined && state.total_xp !== null && String(state.total_xp).trim() !== "")
+    ? levelFromXpV4_(state.total_xp)
+    : numV4_(state.character_level || state.level || 0);
   var statLevels = stats.map(function(s){ return numV4_(s.level || 0); }).filter(function(n){ return !isNaN(n); });
   var avgStat = statLevels.length ? Math.round((statLevels.reduce(function(a,b){return a+b;},0) / statLevels.length) * 10) / 10 : 0;
   var lowestStat = statLevels.length ? Math.min.apply(null, statLevels) : 0;
@@ -2303,9 +2353,12 @@ function getRankGateV4_(state, stats, rankRules) {
   if (!rankRules || rankRules.length === 0) {
     return { current: currentRank, next: "D Rank", status: "LOCKED", missing: ["Rank rules not loaded."], avgStat: avgStat, lowestStat: lowestStat };
   }
+  // The vault writes "E"; the Rank_Rules tab writes "E Rank". Match on the tier
+  // letter so a synced rank doesn't fall through and read as CLEARED / MAX.
   var idx = -1;
+  var wanted = normalizeRankV4_(currentRank);
   for (var i = 0; i < rankRules.length; i++) {
-    if (String(rankRules[i].rank || "").trim() === currentRank) { idx = i; break; }
+    if (normalizeRankV4_(rankRules[i].rank) === wanted) { idx = i; break; }
   }
   if (idx === -1 || idx >= rankRules.length - 1) {
     return { current: currentRank, next: "MAX", status: "CLEARED", missing: [], avgStat: avgStat, lowestStat: lowestStat };
@@ -2383,11 +2436,21 @@ function render(data) {
   var fatigueMode = data.fatigueMode || {};
   var systemAlert = data.systemAlert || {};
 
-  var level = safeV4_(state.character_level || state.level || "0");
+  // Derive level + XP-to-next from total_xp when we have it; the board's own
+  // character_level / xp_to_next cells are unreliable (see levelFromXpV4_).
+  var rawTotalXp = state.total_xp;
+  var hasTotalXp = hasStatValueV4_(rawTotalXp);
+  var hasBoardLevel = hasStatValueV4_(state.character_level) || hasStatValueV4_(state.level);
+  // No total_xp AND no level = a board that has never been synced. Show it as a
+  // fresh Level 1 rather than "LV 0 // Unknown XP to reach Level 1".
+  var curve = hasTotalXp ? levelProgressV4_(rawTotalXp)
+            : (hasBoardLevel ? null : levelProgressV4_(0));
+
+  var level = safeV4_(curve ? curve.level : (state.character_level || state.level || "0"));
   var rank = safeV4_(state.rank || "E Rank");
-  var totalXp = safeV4_(state.total_xp || "0");
-  var xpToNext = safeV4_(state.xp_to_next || "");
-  var nextLevel = safeV4_(Number(state.character_level || state.level || 0) + 1 || "");
+  var totalXp = safeV4_(hasTotalXp ? numV4_(rawTotalXp) : "0");
+  var xpToNext = safeV4_(curve ? curve.xpRemaining : (state.xp_to_next || ""));
+  var nextLevel = safeV4_(curve ? curve.nextLevel : (Number(state.character_level || state.level || 0) + 1 || ""));
   var fatigue = safeV4_(state.fatigue || "0");
   var momentum = safeV4_(state.momentum || "Stable");
   var mainQuest = safeV4_(state.main_quest || "Use the system.");
@@ -2493,7 +2556,10 @@ function render(data) {
           '<div class="status-label">Total XP</div><div class="status-value">' + totalXp + '</div>' +
           '<div class="expand-body">' +
             '<div class="detail-line"><strong>What it means:</strong> Total XP is the accumulated evidence of completed quests, milestones, boss progress, and confirmed actions.</div>' +
-            '<div class="detail-line"><strong>Next Level:</strong> ' + (xpToNext || "Unknown") + ' XP needed to reach Level ' + (nextLevel || "?") + '</div>' +
+            (curve
+              ? ('<div class="detail-line"><strong>This level:</strong> ' + curve.xpIntoLevel + ' / ' + curve.levelCost + ' XP into Level ' + curve.level + '</div>' +
+                 '<div class="detail-line"><strong>Next Level:</strong> ' + curve.xpRemaining + ' more XP to reach Level ' + curve.nextLevel + '</div>')
+              : ('<div class="detail-line"><strong>Next Level:</strong> ' + (xpToNext || "Unknown") + ' XP needed to reach Level ' + (nextLevel || "?") + '</div>')) +
           '</div>' +
         '</div>' +
         '<div class="expand-card status-card metric-card fatigue-card" onclick="toggleCardV4(this)">' +

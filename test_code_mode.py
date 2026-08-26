@@ -76,18 +76,9 @@ def check(name: str, cond: bool) -> None:
 _RESULT_TEXT = "Edited the file. <<SPEAK>>Done, sir.<<SPEAK>>"
 
 
-class _FakeJsonProc:
-    """--output-format json path: everything arrives via communicate()."""
-    returncode = 0
-    pid = 4242
-
-    async def communicate(self):
-        payload = {"result": _RESULT_TEXT, "session_id": "sid-test-1"}
-        return (json.dumps(payload).encode("utf-8"), b"")
-
-
 class _FakeStreamProc:
-    """--output-format stream-json path: NDJSON lines via stdout.readline()."""
+    """--output-format stream-json path: NDJSON lines via stdout.readline().
+    The only spawn shape left — every mode streams now, so there is no json fake."""
 
     def __init__(self, lines: list[bytes], returncode: int = 0):
         self._lines = list(lines)
@@ -131,9 +122,7 @@ def _run(mode: str, job_id: str | None = None) -> tuple[dict, dict]:
     async def fake_exec(*cmd, **kw):
         captured["cmd"] = list(cmd)
         captured["cwd"] = kw.get("cwd")
-        if "stream-json" in cmd:
-            return _FakeStreamProc(_stream_lines(_DEFAULT_STREAM))
-        return _FakeJsonProc()
+        return _FakeStreamProc(_stream_lines(_DEFAULT_STREAM))
 
     real_exec = asyncio.create_subprocess_exec
     real_audit = permissions.record_audit_event
@@ -252,8 +241,12 @@ def main() -> int:
         check("work unrestricted (legacy_direct install)", "--disallowedTools" not in cmd)
         check("work cwd is vault (legacy_direct install)", cap["cwd"] == server.VAULT_PATH)
     check("work never gets bypassPermissions", "--permission-mode" not in cmd)
-    check("work keeps plain json output",
-          cmd[cmd.index("--output-format") + 1] == "json" and "--verbose" not in cmd)
+    # Streaming is NOT a code-mode privilege — it's the one turn transport. Work and
+    # voice stream too, which is the only way a long operator turn (weekly review,
+    # daily planning) can show live activity instead of a silent orb. What still
+    # separates the modes is the sandbox, the tool denial and bypassPermissions above.
+    check("work streams too (activity feed)",
+          cmd[cmd.index("--output-format") + 1] == "stream-json" and "--verbose" in cmd)
     check("wire mode is 'work'", out.get("mode") == "work")
 
     print("\n[6b] brain bootstrap note reconnects the vault in voice/work (not code)")

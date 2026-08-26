@@ -23,10 +23,10 @@ This file defines how to update the [[Hunter Tracker]] during daily and weekly w
 
 ### 2. Evaluate Evidence
 
-Before evaluating any action for XP, apply the [[Daily Quests|Quest Eligibility Filter]]:
+Before evaluating any action for XP, classify it per the [[Daily Quests|Quest Classification Rule]] (`stat_definitions.md`):
 - **Stat gate:** Does the action meet qualifying evidence criteria for at least one stat in `stat_definitions.md`?
 - **Boss gate:** Does the action directly advance a confirmed milestone for an active boss?
-- Fails both gates → skip it. Do not award XP regardless of completion.
+- Fails both gates → **ops quest**: award only its staged micro bounty (1–3 XP, Discipline) if completed, within the 6 micro XP/day cap — never more.
 
 For each action that passes at least one gate and is confirmed completed:
 - Identify the relevant stat(s)
@@ -58,7 +58,10 @@ If a stat is repeatedly low, a daily quest is repeatedly missed, or the user rep
 Recalculate and update `dashboard_state.json`:
 - Add XP to relevant stats
 - Check if any stat leveled up (XP ≥ xp_to_next)
-- Recalculate character_level using the formula in `rank_rules.md`
+- Recalculate `character_level` from `total_xp` against the curve in `xp_rules.md`,
+  and recalculate `xp_to_next` as the XP remaining to the next level. A single large
+  award (boss clear, milestone) can cross several levels at once — resolve all of them,
+  don't advance one level per award.
 - Update fatigue (increment if high-XP day; decrement if rest day)
 - Update momentum (increment if XP earned; reset if missed)
 - Update next_best_action based on weakest stat and active boss
@@ -135,33 +138,38 @@ Rules:
 - The payload is structured dashboard data only, never the full vault.
 - It's a proposal: report it as staged-for-approval, never claim the board updated until the server confirms it ran.
 
-### Protected Fields — DO NOT OVERWRITE
+### State Fields — the payload wins
 
-These State tab cells are formula-driven. Never include them in the sync payload `state` block:
-
-| Cell | Field | Source |
-|---|---|---|
-| State!B2 | character_level | Calculated from XP_Log + Level_Curve |
-| State!D2 | total_xp | SUM of XP_Log confirmed entries |
-| State!E2 | xp_to_next | Calculated from Level_Curve |
-
-Claude/Adam writes ONLY these State fields:
+`dashboard_state.json` is the source of truth. **Every** State field belongs in the
+sync payload's `state` block, computed in the vault:
 
 | Cell | Field | Who sets it |
 |---|---|---|
-| State!A2 | date | Claude — current date |
-| State!C2 | rank | Claude — from rank_rules |
-| State!F2 | fatigue | Claude — 0–100 assessed score |
-| State!G2 | momentum | Claude — readable label |
-| State!H2 | next_best_action / system_directive | Claude — strong directive |
-| State!I2 | active_boss | Claude — current primary boss |
-| State!J2 | main_quest | Claude — current main quest |
-| State!K2 | last_updated | Claude — timestamp |
+| State!A2 | date | Adam — current date |
+| State!B2 | character_level | Adam — from `total_xp` against the `xp_rules.md` curve |
+| State!C2 | rank | Adam — from `rank_rules.md` (never promoted without confirmation) |
+| State!D2 | total_xp | Adam — cumulative XP across all 8 stats |
+| State!E2 | xp_to_next | Adam — XP **remaining** to the next level: `Cumulative(level + 1) − total_xp` |
+| State!F2 | fatigue | Adam — 0–100 assessed score |
+| State!G2 | momentum | Adam — readable label |
+| State!H2 | next_best_action / system_directive | Adam — strong directive |
+| State!I2 | active_boss | Adam — current primary boss |
+| State!J2 | main_quest | Adam — current main quest |
+| State!K2 | last_updated | Adam — timestamp |
+
+`character_level`, `rank`, and `xp_to_next` also carry a fallback formula in the
+Sheet, for a board that has never been synced. A payload value **overwrites** the
+formula; a blank or omitted value leaves the cell alone. So omitting them is not
+"safe" — it freezes those three cells on whatever the Sheet last computed, which
+is how a board ends up reporting a level that contradicts the one Adam just
+reported in chat.
 
 XP architecture:
-- XP_Log is the source of truth for earned XP.
-- Level_Curve is the source of truth for level thresholds.
-- State!D2 and State!E2 are Sheet formulas — do not manually calculate or inject these.
+- `xp_log.csv` is the source of truth for earned XP; `dashboard_state.json` holds the current totals.
+- `xp_rules.md` is the source of truth for level thresholds: `XP_to_next(L) = 50 × (L + 1)`, `Cumulative(L) = 50 × (L(L+1)/2 − 1)`.
+- Recompute `character_level` from `total_xp` on every update — including when a
+  large one-off award (a boss clear, a milestone) crosses several levels at once.
+  Never carry the previous level forward.
 - Only append to XP_Log when evidence is confirmed (approved = TRUE).
 
 ### System Directive Rule
@@ -200,7 +208,7 @@ During [[Daily Planning|daily planning]], read but do not write to Hunter files 
 2. Read active and [[Weekly Quests|weekly quests]]
 3. Read `boss_tracker.md` — note which boss is active and nearest milestone
 4. Identify the 2 weakest stats
-5. Recommend 3–5 [[Daily Quests|daily quests]] weighted toward weak stats and active boss
+5. Build the full-day quest board — one quest per planned item; weight achievement-quest suggestions toward weak stats and the active boss
 6. Present quests to user before staging the [[Calendar Packet Workflow|calendar packet]]
 
 ---

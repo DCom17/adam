@@ -42,28 +42,21 @@ The assistant should:
    - wake/sleep constraints
    - any meals, breaks, or personal obligations
 
-5. Apply [[Daily Quests|Quest Eligibility Filter]].
+5. Apply the [[Daily Quests|Quest Classification Rule]] (Full-Day Board).
 
    From the user's input, list every item on the day — all tasks, errands, commitments, and calendar blocks.
 
-   For each item, apply two gates:
+   **Every item becomes a quest — the board mirrors the whole day.** For each item, the two gates decide its class, not whether it appears:
 
    **Stat gate:** Does this action meet the qualifying evidence criteria for at least one stat in `11_dashboard/stat_definitions.md`?
    **Boss gate:** Does this action directly advance a confirmed milestone for an active boss in `11_dashboard/boss_tracker.md`?
 
-   - Passes either gate → quest-eligible
-   - Fails both gates → task only (no quest ID, no XP potential)
+   - Passes either gate → **achievement quest**: type `routine` / `boss_step` / `milestone`, normal bounty, linked stat/boss. Real XP.
+   - Fails both gates → **ops quest**: obligatory day items — work shifts, chores, errands, admin, appointments. Type `micro`, bounty 1–3 XP, `linked_stat: Discipline`, `linked_boss: none`. Deliberately trivial (the user has to do these anyway); the 6 micro XP/day cap governs them at shutdown.
 
-   Common failures (both gates fail):
-   - Errands with no stat or boss linkage (ordering supplies, running errands)
-   - Passive scheduled time with no intentional investment
-   - Admin tasks that don't advance a boss milestone
-   - Planning or intention without execution
-   - Passive entertainment or routine co-presence
+   Not a quest at all: planning or intention without execution, passive entertainment, routine co-presence — things the user isn't actually *doing* on the plan.
 
-   Do not assign quest IDs to ineligible items.
-
-6. Generate Daily Quest Recommendations from eligible items only.
+6. Generate the Daily Quest board from all planned items.
 
    Use this template for each quest:
 
@@ -77,11 +70,11 @@ The assistant should:
    Suggested Time Block: [time range or "flexible"]
    ```
 
-   **Quest count rule:** Generate one quest for every item that passes the eligibility filter. Do not pad to hit a minimum. Do not cut to hit a maximum. If only 2 items pass, the quest board has 2 quests. If 9 pass, it has 9. Use judgment above ~8 — if the list is getting unmanageable, flag it and ask the user to prioritize rather than silently dropping quests.
+   **Quest count rule:** Generate one quest for every planned item. Do not pad to hit a minimum. Do not cut to hit a maximum. The ~8 "flag and ask the user to prioritize" judgment applies to **achievement quests only** — ops quests don't count toward it (a full day of obligations is normal, not overload). Never silently drop quests.
 
    Present two outputs to the user before proceeding to step 7:
-   - **Full schedule** — every item including non-quest tasks
-   - **Quest board** — eligible quests only (exact count, no artificial cap)
+   - **Full schedule** — every item with its times
+   - **Quest board** — every quest with its class (achievement vs ops) and bounty
 
    Do not write XP during planning. Only create planned quests.
 
@@ -123,6 +116,8 @@ After sign-off fires and calendar events are committed, immediately:
 4. Report it as staged for approval (or done only if the server confirms / auto-run). Don't claim the board updated until told.
 
 **Why this step exists:** `dashboard_state.json` is the source of truth, but the Sheet only reflects it once a `hunter.sync` block is pushed and approved. Build the payload from today's state every time so the board always shows today's planned quests after a commit.
+
+**The state write is not optional and is not the packet.** A quest board living only in `latest_calendar_packet.md` is NOT a synced board. If you did not write `dashboard_state.json` this turn, you have not staged the sync — do not say "board synced."
 
 ## INPUT Validation
 

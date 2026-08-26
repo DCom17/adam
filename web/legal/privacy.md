@@ -87,6 +87,30 @@ supporting the Software.
 The Software is intended for users **18 and older** (see the EULA). We do not
 knowingly collect personal information from children.
 
-## 11. Changes and contact
+## 11. Security of your data on your own device
+The Software stores your notes, trackers, conversation history and settings as
+ordinary files and SQLite databases in its data folder. **It does not separately
+encrypt them at rest.** Anyone with access to your operating-system account, or to
+the drive itself, can read them, in the same way they could read your documents.
+This follows from the local-first design: there is no service holding your data,
+and equally no service encrypting it for you.
+
+We recommend enabling full-disk encryption (**BitLocker** on Windows), which is
+the appropriate layer for this and protects the rest of the device at the same
+time. You remain responsible for the physical and account security of the machine
+the Software runs on, and for keeping your access token private.
+
+The Software includes a backup function (Settings → *Back up your data*) that
+packages the data you cannot rebuild into a single archive. It deliberately
+excludes your `.env` — API keys and access token — so the archive is safe to store
+in cloud storage; re-enter those from Setup after a restore.
+
+**Support requests made on our public issue tracker are public.** Anyone,
+including search engines, can read them. Do not include your access token, your
+licence key, or personal details in a public issue — use the email address below
+for anything sensitive. Diagnostics bundles generated inside the app are redacted
+of configured secrets before they leave your machine, but review what you paste.
+
+## 12. Changes and contact
 We may update this Policy; the "Last updated" date shows the current version.
 Questions or requests: **privacy@camposenterprises.org** · Campos Systems LLC.

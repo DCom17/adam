@@ -264,6 +264,30 @@ Copy-Item "data\backups\20260622_141530_notes.md" "data\drafts\notes.md" -Force
 
 Backups are plain copies — no special tooling needed to restore them.
 
+### Exporting everything (whole-machine backup)
+
+The per-file copies above are an **undo**, not a backup: they help when a write
+went wrong, and not at all when the machine is gone. For that, use
+**Settings → Back up your data** (or `GET /export` with your token), which
+downloads one ZIP containing:
+
+- every SQLite database — jobs, sessions, usage, and the finance and health
+  trackers, which is the data with no other copy anywhere;
+- `data/state/` (preferences, approvals, licence, trial);
+- `settings.json`;
+- a `RESTORE.txt` with the steps.
+
+Databases are snapshotted through `sqlite3`'s backup API rather than copied off
+disk, so the archive is consistent even if a turn is running while you export.
+
+**Deliberately excluded:** `.env` (your API keys and access token), private keys,
+logs, `data/backups/`, uploads and the agent scratch dir. That keeps the archive
+safe to store in Drive or on a USB stick — the trade is that you re-enter your
+keys from Setup after a restore.
+
+Your vault/brain folder is *not* included; it lives wherever you pointed Adam at
+it and is covered by whatever already backs that location up.
+
 > The permission layer is wired into every write the server performs (uploads and
 > applied proposed changes run through it) and the approval endpoints are live. Claude's
 > own in-subprocess edits are kept off your files by **safe agent mode** (next). See

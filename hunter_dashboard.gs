@@ -158,8 +158,12 @@ function setupLevelCurve_(ss) {
   const rows = [];
   let cumulative = 0;
 
+  // Canonical curve — must match brain/11_dashboard/xp_rules.md:
+  //   XP_to_next(L) = 50 * (L + 1)   -> cumulative L2=100, L5=700, L8=1750
+  // Any other curve here silently makes the board's levels disagree with the
+  // levels Adam reports from the vault.
   for (let level = 1; level <= 100; level++) {
-    const xpToNext = Math.round(20 + 4 * level + 0.5 * Math.pow(level, 2));
+    const xpToNext = 50 * (level + 1);
     rows.push([level, xpToNext, cumulative]);
     cumulative += xpToNext;
   }
@@ -208,14 +212,17 @@ function setupInitialBosses_(ss) {
 function setupRankRules_(ss) {
   const sh = ss.getSheetByName("Rank_Rules");
 
+  // Gates must match brain/11_dashboard/rank_rules.md — the Rank card compares
+  // the live character level against this tab, so drift here shows the user a
+  // gate the assistant does not recognise.
   const rows = [
     ["E Rank", 0, 0, 0, "Starting rank", "None", "None"],
-    ["D Rank", 15, 12, 5, "Two weeks usable data", "Basic consistency", "Review confirmed"],
-    ["C Rank", 30, 24, 12, "Two major milestones or one mini-boss", "Visible weekly consistency", "Review confirmed"],
-    ["B Rank", 45, 38, 22, "Two boss clears or equivalent", "60-day consistency >70%", "Review confirmed"],
-    ["A Rank", 60, 52, 35, "Three boss clears", "90-day consistency >75%", "Real-world artifacts"],
-    ["S Rank", 75, 68, 50, "Four boss clears", "180-day consistency >80%", "Multiple verified outcomes"],
-    ["Master Rank", 90, 85, 75, "Long-horizon proof", "Sustained excellence", "Manual mastery gate"]
+    ["D Rank", 10, 10, 7, "At least 1 boss milestone confirmed", "Early consistent progress", "User confirms rank-up"],
+    ["C Rank", 25, 22, 18, "3 boss milestones confirmed OR 1 boss cleared", "Visible weekly consistency", "User confirms rank-up"],
+    ["B Rank", 40, 36, 32, "1 boss cleared + 3 milestones, OR 2 bosses cleared", "60-day consistency >70%", "User confirms rank-up"],
+    ["A Rank", 60, 54, 48, "At least 2 bosses cleared", "Sustained real-world performance", "User confirms rank-up"],
+    ["S Rank", 75, 68, 62, "At least 3 bosses cleared", "Sustained months of performance", "User confirms rank-up"],
+    ["National Rank", 90, 84, 78, "At least 5 bosses cleared", "Exceptional evidence across domains", "User confirms rank-up"]
   ];
 
   sh.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
@@ -225,10 +232,16 @@ function setupState_(ss) {
   const sh = ss.getSheetByName("State");
 
   sh.getRange(2, 1).setFormula("=TODAY()");
-  sh.getRange(2, 2).setFormula(`=FLOOR(MIN(0.6*AVERAGE(Stats!C2:C9)+0.4*AVERAGE(SMALL(Stats!C2:C9,{1,2,3,4}))+MIN(10,SUMIF(Bosses!F:F,"Cleared",Bosses!D:D)*0.8),AVERAGE(Stats!C2:C9)+12,MIN(Stats!C2:C9)+20))`);
-  sh.getRange(2, 3).setFormula(`=IFS(B2>=90,"Master Rank",B2>=75,"S Rank",B2>=60,"A Rank",B2>=45,"B Rank",B2>=30,"C Rank",B2>=15,"D Rank",TRUE,"E Rank")`);
+  // character_level and xp_to_next are FALLBACK formulas only — a sync that
+  // carries them overwrites these cells (updateState_). Both read off total_xp
+  // and the Level_Curve so an un-synced sheet still agrees with xp_rules.md.
+  // (They used to measure a stat-level composite and a hard-coded blank, which
+  // is why the board could show LV 5 / "Unknown XP" at 2,135 XP.)
+  sh.getRange(2, 2).setFormula(`=IF(D2="","",LOOKUP(D2,Level_Curve!$C$2:$C$101,Level_Curve!$A$2:$A$101))`);
+  sh.getRange(2, 3).setFormula(`=IFS(B2>=90,"National Rank",B2>=75,"S Rank",B2>=60,"A Rank",B2>=40,"B Rank",B2>=25,"C Rank",B2>=10,"D Rank",TRUE,"E Rank")`);
   sh.getRange(2, 4).setFormula("=SUM(Stats!B2:B9)");
-  sh.getRange(2, 5).setValue("");
+  // xp_to_next = XP REMAINING to the next level (matches dashboard_state.json).
+  sh.getRange(2, 5).setFormula(`=IF(OR(B2="",D2=""),"",INDEX(Level_Curve!$C$2:$C$101,MATCH(B2+1,Level_Curve!$A$2:$A$101,0))-D2)`);
   sh.getRange(2, 6).setValue(25);
   sh.getRange(2, 7).setValue("Stable");
   sh.getRange(2, 8).setValue("Run daily planning.");
@@ -534,8 +547,11 @@ function updateState_(ss, state, syncDate, now) {
   const sh = mustGetSheet_(ss, 'State');
   const headers = getHeaders_(sh);
 
-  // Preserve formula-driven fields from the sheet.
-  const protectedFields = ['character_level', 'rank', 'xp_to_next'];
+  // These cells carry a sheet formula as a FALLBACK for users who never sync
+  // them. When the payload supplies a real value it wins — the vault
+  // (dashboard_state.json) is the source of truth, not the spreadsheet.
+  // Blank/absent payload values leave the existing cell (and its formula) alone.
+  const formulaFallbackFields = ['character_level', 'rank', 'xp_to_next'];
 
   const rowNum = 2;
   const lastCol = sh.getLastColumn();
@@ -548,10 +564,12 @@ function updateState_(ss, state, syncDate, now) {
 
   headers.forEach((h, i) => {
     if (!h) return;
-    if (protectedFields.indexOf(h) !== -1) return;
-    if (Object.prototype.hasOwnProperty.call(stateWithDefaults, h)) {
-      row[i] = stateWithDefaults[h];
+    if (!Object.prototype.hasOwnProperty.call(stateWithDefaults, h)) return;
+    const value = stateWithDefaults[h];
+    if (formulaFallbackFields.indexOf(h) !== -1) {
+      if (value === null || value === undefined || String(value).trim() === "") return;
     }
+    row[i] = value;
   });
 
   sh.getRange(rowNum, 1, 1, lastCol).setValues([row]);

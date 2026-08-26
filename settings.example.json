@@ -3,7 +3,7 @@
 
   "claude_exe": "",
 
-  "_ai_plan_comment": "How Claude usage is paid for. auth_mode 'api_key' (recommended, supported) = pay-as-you-go on your own Anthropic API key (stored in .env as ANTHROPIC_API_KEY, reaches only the spawned claude.exe); clear per-use cost, unaffected by Claude subscription-plan changes; recommended model: Sonnet. auth_mode 'subscription' = Adam runs through your own Claude Code sign-in; note that programmatic tools like Adam draw on your plan's SEPARATE monthly programmatic/Agent-SDK allowance (varies by plan), NOT the flat interactive quota, and pause when it is exhausted; recommended model: Opus. api_budget_monthly_usd is the pay-as-you-go monthly ceiling — Adam pauses (never overspends) when the month's metered cost reaches it; 0 disables the ceiling. Change all of this from Settings -> AI plan in the app.",
+  "_ai_plan_comment": "How Claude usage is paid for. auth_mode 'api_key' (recommended, supported) = pay-as-you-go on your own Anthropic API key (stored in .env as ANTHROPIC_API_KEY, reaches only the spawned claude.exe); clear per-use cost, unaffected by Claude subscription-plan changes; recommended model: Sonnet. auth_mode 'subscription' = Adam runs on the Claude subscription you already pay for, within that plan's normal limits; Adam pauses if you reach them; recommended model: Opus. api_budget_monthly_usd is the pay-as-you-go monthly ceiling — Adam pauses (never overspends) when the month's metered cost reaches it; 0 disables the ceiling. Change all of this from Settings -> AI plan in the app.",
   "auth_mode": "subscription",
   "voice_model": "claude-opus-4-8",
   "api_budget_monthly_usd": 10,

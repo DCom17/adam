@@ -54,7 +54,7 @@ _ROOT_FILES = [
     "calendar_bridge.gs",
     "hunter_dashboard.gs", "hunter_verify.gs",
 ]
-_WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.html", "setup-email.html", "setup-linkedin.html", "setup-sms.html", "setup-voicemail.html", "setup-hunter.html", "setup-garmin.html", "hunter-dashboard.html", "finance.html", "health.html",
+_WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.html", "setup-email.html", "setup-linkedin.html", "setup-sms.html", "setup-voicemail.html", "setup-hunter.html", "setup-garmin.html", "setup-phone.html", "hunter-dashboard.html", "finance.html", "health.html",
     # First-run EULA clickwrap + bundled legal docs (served via /license-agreement, /legal,
     # and /legal/<name>.md). The clickwrap records assent locally — see licensing.py.
     "license-agreement.html", "legal.html",
@@ -63,6 +63,10 @@ _WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.htm
     # wizard). They used to carry inline <style> blocks that drifted apart; this
     # is now the single source of the design language. Served via /adam-ui.css.
     "adam-ui.css",
+    # Vendored QR encoder (qrcode-generator, MIT). Shared by setup-phone.html and
+    # the Operator Console; ~2,300 lines, so one file behind /qr-encoder.js rather
+    # than an inline copy in each page. Ships or Connect-phone draws nothing.
+    "qr-encoder.js",
     "sw.js", "manifest.json", "icon.png", "icon-maskable.png", "icon.ico", "logo.png",
     # Higgsfield level-up / rank-up / milestone celebration clips (web/celebrate/, served
     # via /celebrate/<name>) — mp4 (H.264, universal) + webm (VP9, codec-stripped Chromium)
@@ -132,6 +136,7 @@ _DENY_GLOBS = [
     "docs/NEXT_PHASE_PROMPT.md", "docs/PARKING_LOT.md",
     "docs/PERSONAL_FIX_PORTING_LOG.md", "docs/DEVICE_ACCEPTANCE_RUN_*.md",
     "docs/NAME_DECISION_EVIDENCE.md", "docs/SELLING_ADAM.md",
+    "docs/PAYWALL-VERIFICATION-*.md",  # describes the vendor key-minting + enforcement internals
     # vendor license-signing tools + any signing key never ship
     "scripts/vendor/*",
     # maintainer-only local signing config (installer code-signing paths) never ships

@@ -152,6 +152,17 @@ def main() -> int:
     check("server uses config.CORS_ALLOWED_ORIGINS (restricted list active)",
           config.CORS_ALLOWED_ORIGINS == [ALLOWED_ORIGIN] and acao(r_ok) == ALLOWED_ORIGIN)
 
+    print("\n[7] Interactive schema surfaces are off")
+    # FastAPI serves /docs, /redoc and /openapi.json unauthenticated by default.
+    # There is no auth middleware here (only per-route dependencies), so leaving
+    # them on published a full route + model map to anyone who can reach the port.
+    for path in ("/docs", "/redoc", "/openapi.json"):
+        check(f"{path} -> 404 (unauthenticated)", client.get(path).status_code == 404)
+        check(f"{path} -> 404 (even with a valid token)",
+              client.get(path, headers={"Authorization": "Bearer " + TOKEN}).status_code == 404)
+    # The map must not leak via the app object either.
+    check("app exposes no openapi_url", server.app.openapi_url is None)
+
     print(f"\n{'=' * 48}")
     print(f"  {_passed} passed, {_failed} failed")
     print(f"  sandbox: {_SANDBOX}")

@@ -345,9 +345,21 @@ def main() -> int:
             )
 
             class _FakeProc:
-                returncode = 0
-                async def communicate(self):
-                    return (json.dumps({"result": VOICE_REPLY, "session_id": "sV"}).encode(), b"")
+                """stream-json spawn (every mode uses it): NDJSON via readline()."""
+                def __init__(self):
+                    self._lines = [json.dumps({
+                        "type": "result", "subtype": "success",
+                        "result": VOICE_REPLY, "session_id": "sV"}).encode() + b"\n"]
+                    self.returncode = None
+                    self.stdout = self
+                    self.stderr = self
+                async def readline(self):
+                    return self._lines.pop(0) if self._lines else b""
+                async def read(self):
+                    return b""
+                async def wait(self):
+                    self.returncode = 0
+                    return 0
 
             async def _fake_exec(*a, **k):
                 return _FakeProc()

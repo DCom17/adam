@@ -60,14 +60,30 @@ def check(name: str, cond: bool) -> None:
         print(f"  FAIL  {name}")
 
 
-class _FakeJsonProc:
-    returncode = 0
+class _FakeStreamProc:
+    """Every mode spawns --output-format stream-json now: NDJSON on readline(),
+    the terminal 'result' event carrying what json mode used to return in one blob."""
     pid = 4242
 
-    async def communicate(self):
-        payload = {"result": "Done. <<SPEAK>>Done, sir.<<SPEAK>>",
-                   "session_id": "sid-plan-1", "total_cost_usd": 0.0421}
-        return (json.dumps(payload).encode("utf-8"), b"")
+    def __init__(self):
+        self._lines = [json.dumps({
+            "type": "result", "subtype": "success",
+            "result": "Done. <<SPEAK>>Done, sir.<<SPEAK>>",
+            "session_id": "sid-plan-1", "total_cost_usd": 0.0421,
+        }).encode("utf-8") + b"\n"]
+        self.returncode: int | None = None
+        self.stdout = self
+        self.stderr = self
+
+    async def readline(self):
+        return self._lines.pop(0) if self._lines else b""
+
+    async def read(self):
+        return b""      # stderr
+
+    async def wait(self):
+        self.returncode = 0
+        return 0
 
 
 def _run_voice(captured: dict):
@@ -76,7 +92,7 @@ def _run_voice(captured: dict):
     async def fake_exec(*cmd, **kw):
         captured["cmd"] = list(cmd)
         captured["env"] = kw.get("env")
-        return _FakeJsonProc()
+        return _FakeStreamProc()
 
     real_exec = asyncio.create_subprocess_exec
     real_audit = permissions.record_audit_event

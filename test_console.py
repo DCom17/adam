@@ -319,12 +319,27 @@ def main() -> int:
     check("approvals list carries no secret",
           _no_secret(client.get("/approvals", headers=AUTH).text))
 
-    print("\n[16] Connect phone — local SPLIT-QR handoff (static structure, v1.0 Slice 3.1)")
-    html = client.get("/console").text
-    check("has a Connect phone section", 'id="connectPhoneSec"' in html)
-    check("section sits after Status, before Jobs",
-          html.find('id="connectPhoneSec"') > html.find('id="statusSec"')
-          and html.find('id="connectPhoneSec"') < html.find('id="jobsSec"'))
+    print("\n[16] Connect phone — its own add-on page (static structure)")
+    # Connect phone MOVED out of the Operator Console into web/setup-phone.html,
+    # reached from Settings -> Add-ons like every other add-on. The console keeps a
+    # signpost so the section rail and any old #connectPhoneSec link still land
+    # somewhere sensible. These first four checks pin that split: the console must
+    # point at the page and must NOT have kept a second copy of the machinery.
+    console_html = client.get("/console").text
+    check("console keeps a Connect phone signpost", 'id="connectPhoneSec"' in console_html)
+    check("signpost sits after Status, before Jobs",
+          console_html.find('id="connectPhoneSec"') > console_html.find('id="statusSec"')
+          and console_html.find('id="connectPhoneSec"') < console_html.find('id="jobsSec"'))
+    check("signpost links to the add-on page", 'href="/setup-phone"' in console_html)
+    check("console kept NO copy of the QR machinery",
+          'id="qrComboCanvas"' not in console_html
+          and "qrComboPayload" not in console_html
+          and "Kazuhiko Arase" not in console_html)
+
+    # Everything below is the moved page itself.
+    html = client.get("/setup-phone").text
+    check("the add-on page is served", "<title>Adam — Connect Phone</title>" in html)
+    check("page has a way back to the add-ons list", 'href="/settings"' in html)
     check("has the 3-step layout (Step 1/2/3)",
           "Step 1 — Open Adam on phone" in html
           and "Step 2 — Copy access token" in html
@@ -342,11 +357,23 @@ def main() -> int:
     check("QR encoder is vendored + attributed (MIT)",
           "VENDORED QR ENCODER" in html and "Kazuhiko Arase" in html and "MIT" in html)
     check("QR encoder is pinned to a commit", "@ commit " in html)
+    # The encoder is one shared file now (/qr-encoder.js) instead of an inline copy
+    # in each page, so assert the SERVED asset — not the HTML that references it.
+    _enc = client.get("/qr-encoder.js")
+    check("shared QR encoder is served", _enc.status_code == 200)
     check("QR encoder exposes the local API (getModuleCount/isDark)",
-          "getModuleCount" in html and "isDark" in html)
+          "getModuleCount" in _enc.text and "isDark" in _enc.text)
+    check("QR encoder keeps its MIT attribution in the file",
+          "Kazuhiko Arase" in _enc.text and "MIT" in _enc.text)
+    check("QR encoder is served as JavaScript, not HTML",
+          "javascript" in _enc.headers.get("content-type", ""))
+    # Intent is unchanged — nothing here may come from a third party. The page now
+    # carries one SAME-ORIGIN script tag, so the rule is "every script is local",
+    # not "there are no script tags".
+    _scripts = re.findall(r'<script\b[^>]*\bsrc=[^>]*>', html)
     check("no CDN / remote script asset",
-          all(s not in html for s in ("cdn.", "unpkg", "jsdelivr", "googleapis",
-                                      "<script src", "<script  src", "integrity=")))
+          all(s not in html for s in ("cdn.", "unpkg", "jsdelivr", "googleapis", "integrity="))
+          and all(('src="/' in s and 'src="//' not in s and "http" not in s) for s in _scripts))
     _links = re.findall(r"<link\b[^>]*>", html)
     # Intent: nothing on this page may be fetched from a third party. The page
     # now carries one same-origin stylesheet (/adam-ui.css) alongside the icon
@@ -354,7 +381,7 @@ def main() -> int:
     check("no remote stylesheet/link asset (local links only)",
           all(('href="/' in ln and 'href="//' not in ln and "http" not in ln)
               for ln in _links))
-    check("console JS still never assigns innerHTML",
+    check("page JS still never assigns innerHTML",
           "innerHTML =" not in html and "innerHTML=" not in html)
     # Token discipline in the STATIC page.
     check("served HTML carries no secret token value", _no_secret(html))
@@ -370,14 +397,12 @@ def main() -> int:
           "window.__jvlQrUrlPayload" in html and "window.__jvlQrTokenPayload" in html)
     check("token text is hidden by default",
           'id="qrTokenText" class="hidden"' in html.replace('  ', ' '))
-    # The QR path is client-only: no new endpoint / no new write path.
-    check("single POST sink unchanged (still exactly one)",
-          html.count('method: "POST"') == 1)
+    # The QR path is client-only. On its own page that is stronger than it was in
+    # the console: the page has NO write path at all, so assert zero, not "one".
+    check("Connect phone page has no POST sink at all",
+          'method: "POST"' not in html and "postApi(" not in html)
     check("QR generation uses the LOCAL encoder, not the network",
           "qrcode(0" in html)
-    post_targets = re.findall(r'postApi\(\s*"([^"]*)"', html)
-    check("Connect phone added no new POST target",
-          all(p.startswith(("/proposed-changes/", "/approvals/")) for p in post_targets))
     # Easy path (default) — single combo QR = <url>/#token=<token>; the split flow is
     # preserved behind a "cautious mode" toggle, hidden by default.
     check("has a one-scan combo QR button", 'id="qrComboShow"' in html and "Show sign-in QR" in html)
@@ -428,7 +453,9 @@ def _headless_qr_checks() -> None:
               f"{type(e).__name__})")
         return
 
-    html_bytes = (_P(__file__).resolve().parent / "web" / "console.html").read_bytes()
+    # Connect phone lives on its own add-on page now (web/setup-phone.html); the
+    # console only signposts it. Point the stub at the page that actually draws.
+    html_bytes = (_P(__file__).resolve().parent / "web" / "setup-phone.html").read_bytes()
     # A stand-in token — NEVER a real one. 48 chars, distinctive, easy to spot.
     tok = "deadbeef" + "0" * 32 + "cafe1234"
 
@@ -437,11 +464,19 @@ def _headless_qr_checks() -> None:
     # right content type — served as text/html the browser rejects it, .hidden
     # never applies, and every QR panel starts visible.
     css_bytes = (_P(__file__).resolve().parent / "web" / "adam-ui.css").read_bytes()
+    # The QR encoder is an external file now (shared with the console instead of
+    # inlined twice). Serve it with the right content type or the page loads with
+    # no `qrcode` global and every canvas silently stays blank — a real asset the
+    # stub must know about, not an optional extra.
+    js_bytes = (_P(__file__).resolve().parent / "web" / "qr-encoder.js").read_bytes()
 
     class _H(http.server.BaseHTTPRequestHandler):
-        def do_GET(self):           # serve the console for any path
-            if self.path.split("?")[0] == "/adam-ui.css":
+        def do_GET(self):           # serve the phone page for any unknown path
+            _p = self.path.split("?")[0]
+            if _p == "/adam-ui.css":
                 body, ctype = css_bytes, "text/css"
+            elif _p == "/qr-encoder.js":
+                body, ctype = js_bytes, "application/javascript"
             else:
                 body, ctype = html_bytes, "text/html"
             self.send_response(200)
@@ -471,7 +506,10 @@ def _headless_qr_checks() -> None:
             pg.goto(f"http://127.0.0.1:{port}/console")
             pg.evaluate("([t, u]) => { localStorage.setItem('jarvis_token', t);"
                         " localStorage.setItem('jarvis_url', u); }", [tok, url])
-            pg.evaluate("() => showConsole()")   # reveal console; QR needs no real sign-in
+            # Reveal the page past its token gate; the QR path needs no real
+            # sign-in. On the console this was showConsole(); the add-on page
+            # uses the same enterWizard() name as every other setup wizard.
+            pg.evaluate("() => enterWizard()")
             def decode(canvas_sel):
                 png = pg.locator(canvas_sel).screenshot()
                 img = Image.open(io.BytesIO(png)).convert("L")

@@ -37,8 +37,8 @@
         ADAM_TOKEN the Operator Console uses). It is stored on this device only.</p>
       <p class="muted">Easiest way in: on your computer, start Adam with the <b>Start Adam</b>
         launcher (<code>scripts\start-adam.ps1</code>) — it opens you already signed in, so you
-        won't see this box. On a phone, open the Operator Console's <b>Connect phone</b> and scan the
-        sign-in QR. To copy the token by hand, run <code>scripts\copy-token.ps1</code> and paste it above.</p>
+        won't see this box. On a phone, open <b>Settings &rarr; Add-ons &rarr; Connect phone</b>
+        and scan the sign-in QR. To copy the token by hand, run <code>scripts\copy-token.ps1</code> and paste it above.</p>
       <div class="row">
         <input id="tokenInput" type="password" placeholder="Paste ADAM_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
         <button class="primary" id="signIn">Sign in</button>
@@ -138,12 +138,12 @@ Twilio — the same kind of one-time "deploy this" step the Calendar and Email a
       <ol class="steps">
         <li>
           <h3>Personalize the greeting (optional)</h3>
-          <p class="muted">Your first name, so the greeting says "you've reached <i>Diego's</i> assistant".
+          <p class="muted">Your first name, so the greeting says "you've reached <i>Alex's</i> assistant".
             Leave blank for a neutral greeting. The default voice is a deep British voice that needs no
             extra setup.</p>
           <div class="row">
             <label style="min-width:96px;">Your name</label>
-            <input id="ownerName" type="text" placeholder="Diego" style="flex:1;min-width:200px;" autocomplete="off">
+            <input id="ownerName" type="text" placeholder="Alex" style="flex:1;min-width:200px;" autocomplete="off">
             <button id="buildTwimlBtn">Build my greeting</button>
           </div>
           <div class="row">

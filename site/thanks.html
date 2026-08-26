@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thanks — Adam</title>
+<meta name="description" content="Your Adam download is on its way. Here's what happens next, and where to paste your licence key if you bought Adam Plus.">
+<link rel="canonical" href="https://adam.camposenterprises.org/thanks.html">
+<link rel="icon" href="icon.png" type="image/png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Adam">
+<meta property="og:title" content="Thanks — Adam">
+<meta property="og:description" content="What happens next after downloading or buying Adam.">
+<meta property="og:image" content="https://adam.camposenterprises.org/og.png">
+<meta property="og:url" content="https://adam.camposenterprises.org/thanks.html">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root {
+    --bg: #04060b; --panel: rgba(10, 20, 30, .55);
+    --edge: rgba(33, 230, 255, .15); --edge-hi: rgba(33, 230, 255, .4);
+    --cyan: #21e6ff; --cyan-soft: #8df2ff;
+    --ink: #eefafd; --text: #c9e4ec; --dim: #8fb9c6; --faint: #5d8894;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    font: 16px/1.68 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased; padding: 44px 20px 60px;
+  }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 660px; margin: 0 auto; }
+  .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; }
+  .brand img { width: 36px; height: 36px; filter: drop-shadow(0 0 10px rgba(33,230,255,.45)); }
+  .brand span { font-weight: 600; color: var(--ink); letter-spacing: .04em; }
+  .label { font-size: 12px; letter-spacing: .3em; text-transform: uppercase;
+           color: var(--cyan); margin-bottom: 12px; }
+  h1 { font-size: clamp(27px, 5vw, 36px); line-height: 1.2; color: var(--ink);
+       font-weight: 600; margin-bottom: 14px; }
+  .lede { color: var(--dim); margin-bottom: 34px; font-size: 17px; }
+  h2 { font-size: 18px; color: var(--ink); font-weight: 600; margin-bottom: 10px; }
+  .card { border: 1px solid var(--edge); border-radius: 14px; background: var(--panel);
+          padding: 22px 24px; margin-bottom: 16px; }
+  .card p { color: var(--dim); font-size: 15px; }
+  .card p + p { margin-top: 10px; }
+  ol { margin: 10px 0 0 20px; color: var(--dim); font-size: 15px; }
+  ol li { margin-bottom: 7px; }
+  .btn { display: inline-block; margin-top: 18px; padding: 13px 24px; border-radius: 11px;
+         font-weight: 600; font-size: 15px; background: var(--cyan); color: #04121a; }
+  .btn:hover { text-decoration: none; }
+  .foot { margin-top: 38px; padding-top: 22px; border-top: 1px solid rgba(33,230,255,.1);
+          font-size: 13.5px; color: var(--faint); }
+  .foot a { color: var(--faint); margin-right: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="brand" href="/">
+    <img src="logo.png" alt="Adam logo">
+    <span>ADAM</span>
+  </a>
+
+  <div class="label">You're set</div>
+  <h1>Thanks — here's what happens next.</h1>
+  <p class="lede">Whether you just downloaded Adam or bought Adam Plus, this is the whole
+  of what's left to do.</p>
+
+  <div class="card">
+    <h2>If you just downloaded Adam</h2>
+    <ol>
+      <li>Run <b>adam-setup.exe</b>. It's signed by Campos Systems LLC — if Windows shows a
+        SmartScreen notice on a brand-new release, choose <i>More info → Run anyway</i>.</li>
+      <li>Adam opens in your browser and walks you through connecting your own Claude —
+        either a Claude subscription or an Anthropic API key.</li>
+      <li>That's it. Everything else is optional and can wait.</li>
+    </ol>
+    <a class="btn" href="https://github.com/DCom17/adam-releases/releases/latest/download/adam-setup.exe">Download for Windows</a>
+  </div>
+
+  <div class="card">
+    <h2>If you bought Adam Plus</h2>
+    <p><b>You don't need to wait for anything.</b> Install Adam and use phone and remote
+    access straight away — the 30-day trial is already running, so nothing is locked while
+    your key is on its way.</p>
+    <p>Your licence key is emailed to you, usually within a few hours. Each key is signed to
+    your email address, which is why it isn't instant. When it lands, open Adam →
+    <b>Settings</b> → paste it into the licence field. It applies immediately; no restart.</p>
+    <p>Nothing shows up after a day? Check spam first, then
+    <a href="https://github.com/DCom17/adam-releases/issues/new/choose">open an issue</a> —
+    but don't paste the key itself into a public issue.</p>
+  </div>
+
+  <div class="card">
+    <h2>Worth doing early</h2>
+    <p>Once Adam is running, open <b>Settings → Back up your data</b> and save a copy
+    somewhere. It packages your trackers, sessions and settings into a single file and
+    leaves your API keys out, so it's safe to keep in Drive. It takes a second now and
+    saves the one thing you can't recover later.</p>
+  </div>
+
+  <div class="foot">
+    <a href="/">Home</a>
+    <a href="/#faq">FAQ</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="refund.html">Refunds</a>
+    <a href="https://github.com/DCom17/adam-releases/issues/new/choose">Support</a>
+  </div>
+</div>
+</body>
+</html>

@@ -5,8 +5,18 @@ This vault is the user's personal AI command center and shared-brain memory syst
 ## First Run
 
 If `01_identity/user_profile.md` is still the blank template, this is a fresh
-install. Run **"Bootstrap Adam"** (see `BOOTSTRAP.md`) to personalize the
-system before anything else.
+install. Run **"Bootstrap Adam"** to personalize the system before anything else.
+
+**"Bootstrap Adam" is a procedure, not a prompt to improvise on.** When the user
+says it — it is one of the one-tap buttons the app shows on first run — read
+`BOOTSTRAP.md` in full first, then follow it from its Step 0.
+
+It is a **warm, brief interview**: greet, ask a few questions at a time, confirm
+as you go, and create files as you learn what goes in them. Do not open by
+proposing a batch of empty files for approval, and do not answer it with a bare
+"tell me about yourself" — both leave the user staring at something that looks
+like you didn't recognise the command. The conversation comes first; the files
+follow from it.
 
 ## Modules
 
@@ -232,7 +242,7 @@ When the user says "Start my day" or "Run daily planning", run two phases. The p
 2. Read `06_calendar/calendar_lessons.md` and apply every standing lesson when building the day.
 3. Read `11_dashboard/dashboard_state.json` for level, fatigue, momentum, active boss, weak stats.
 4. Have a real conversation — confirmation and deltas, not interrogation. Ask only the gaps: what changed, what's new, energy level, anything the briefing flagged under "Questions Adam should ask."
-5. Apply the Quest Eligibility Filter to every item surfaced: stat gate or boss gate. Passing items become quests; everything else is a task only.
+5. Apply the Quest Classification Rule to every item surfaced (Full-Day Board): **every planned item becomes a quest**. Stat gate or boss gate passing → achievement quest (normal bounty, real XP); failing both → ops quest (work shifts, chores, errands, admin) at `micro` class, 1–3 XP, linked to Discipline — trivial by design, capped at 6 micro XP/day.
 6. **Run the Adaptive Gap-Fill engine.** After fixed commitments and confirmed tasks are placed, read `02_command_memory/operating_patterns.md` and detect open blocks. Propose beneficial `[FLEX]` fills tuned to today's state per `06_calendar/gap_fill_protocol.md`. Present each with the *why*; cap at ~2–3. Approved fills join the packet and ride the sign-off chain.
 
 **Capture every item the moment it's said — never leave the plan in conversation memory only.** As each task, appointment, commitment, or errand is named, append it to `06_calendar/latest_calendar_packet.md` that turn — a durable LOCAL write, not an external commit (Google Calendar stays untouched until sign-off). Capturing is never gated on the user confirming: write it to the packet and tell them it's held; confirmation gates the external commit only. This exists so an interrupted conversation (the user walks away, the app backgrounds, the session rolls over before sign-off) never loses the plan — any later turn re-reads the packet and continues from it instead of rebuilding the day. "Do not stage prematurely" means do not COMMIT to the external calendar early; it does not mean withhold the plan from the packet. Do not access Google Calendar during Phase 1.
@@ -290,7 +300,7 @@ When the user says "How'd we do":
 9. If there are unprocessed phone captures, process them using the "Get up to speed" routine (includes automatic archiving of captures older than 7 days).
 10. Review `06_calendar/commit_preview.md` for unresolved previews. If one exists, ask whether the events were committed, skipped, or remain pending. Do not access Google Calendar. Then archive: move ALL `Resolved` entries from `commit_preview.md` to `06_calendar/packet_archive/commit_archive.md` and remove them from `commit_preview.md`. Only pending/active previews stay in the main file.
 11. Move confirmed completed tasks from `active_tasks.md` to `05_tasks/completed_log.md`.
-12. Evaluate confirmed completed actions for Hunter XP using `dashboard_state.json` (not full CSV reads). Apply Quest Eligibility Filter — stat gate or boss gate. Award XP with confirmed evidence only. Append entries to `xp_log.csv` and `quest_log.csv`. Update `dashboard_state.json`. No rank promotion without user confirmation. (The push to the Sheet happens via the `hunter.sync` block at "See you tomorrow" / "Give me credit" — not here.)
+12. Evaluate confirmed completed actions for Hunter XP using `dashboard_state.json` (not full CSV reads). Apply the Quest Classification Rule — gate-passing quests earn their normal bounty; ops quests (fail both gates) earn only their staged 1–3 micro XP within the 6/day cap. Award XP with confirmed evidence only. Append entries to `xp_log.csv` and `quest_log.csv`. Update `dashboard_state.json`. No rank promotion without user confirmation. (The push to the Sheet happens via the `hunter.sync` block at "See you tomorrow" / "Give me credit" — not here.)
 13. Update `05_tasks/waiting_on.md` if anything is newly blocked or resolved.
 14. Add any durable information learned today to `02_command_memory/memory_candidates.md`.
 15. Add a "Tomorrow Starting Point" section to today's daily log.
@@ -399,7 +409,7 @@ The Hunter Tracker is the gamified progression layer for the Adam system. It liv
 
 Active during: "Start my day", "How'd we do" / "See you tomorrow", "Big picture me", and phone inbox processing when relevant.
 
-- "Start my day": read `dashboard_state.json`, active bosses, weak stats, fatigue, momentum. Generate one quest per eligible item. Flag and ask user to prioritize if list exceeds ~8.
+- "Start my day": read `dashboard_state.json`, active bosses, weak stats, fatigue, momentum. Generate one quest per planned item (full-day board — achievement or ops class per the Quest Classification Rule). Flag and ask user to prioritize if achievement quests exceed ~8.
 - "How'd we do": evaluate completed actions for XP when evidence exists. Update XP logs, quest logs, weakness logs, and dashboard state (the Sheet push happens via the `hunter.sync` block at "See you tomorrow").
 - "Big picture me": update boss progress, weakness trends, weekly quests, rank gate progress, dashboard state.
 

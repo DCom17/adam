@@ -55,21 +55,9 @@ def check(name: str, cond: bool) -> None:
         print(f"  FAIL  {name}")
 
 
-class _FakeJsonProc:
-    """--output-format json path: everything arrives via communicate()."""
-    returncode = 0
-    pid = 4242
-
-    def __init__(self, result_text: str):
-        self._result = result_text
-
-    async def communicate(self):
-        payload = {"result": self._result, "session_id": "sid-cc-1"}
-        return (json.dumps(payload).encode("utf-8"), b"")
-
-
 class _FakeStreamProc:
-    """--output-format stream-json path (code mode): NDJSON via stdout.readline()."""
+    """--output-format stream-json path: NDJSON via stdout.readline(). The only
+    spawn shape left — every mode streams now, so there is no json fake."""
 
     def __init__(self, result_text: str):
         self._lines = [
@@ -100,9 +88,7 @@ def _run(result_text: str, mode: str = "voice") -> tuple[dict, dict]:
 
     async def fake_exec(*cmd, **kw):
         captured["cmd"] = list(cmd)
-        if "stream-json" in cmd:
-            return _FakeStreamProc(result_text)
-        return _FakeJsonProc(result_text)
+        return _FakeStreamProc(result_text)
 
     real_exec = asyncio.create_subprocess_exec
     real_audit = permissions.record_audit_event

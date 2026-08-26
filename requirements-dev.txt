@@ -1,3 +1,9 @@
 # Developer / CI dependencies (not needed to run Adam).
 -r requirements.txt
 pytest==9.1.1
+
+# CVE scanning for the pinned runtime deps. Pinning protects against a
+# dependency CHANGING under us; it does nothing about a pinned version turning
+# out to be vulnerable, which is the case nobody notices without a scanner.
+# Run: scripts\audit-deps.ps1
+pip-audit==2.10.1

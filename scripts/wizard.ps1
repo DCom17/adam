@@ -31,10 +31,39 @@ function Warn($m) { Write-Host "    $m" -ForegroundColor Yellow }
 function Bad($m)  { Write-Host "    $m" -ForegroundColor Red }
 function Ask($m)  { return (Read-Host ("    " + $m)).Trim() }
 function YesNo($m, $defaultYes = $true) {
-    $hint = if ($defaultYes) { "[Y/n]" } else { "[y/N]" }
-    $a = (Read-Host ("    " + $m + " " + $hint)).Trim().ToLower()
-    if (-not $a) { return $defaultYes }
-    return $a -in @("y", "yes")
+    # One shape for every yes/no question in setup.
+    #
+    # The old prompt encoded the default in CAPITALISATION - [Y/n] when Enter
+    # meant yes, [y/N] when it meant no. That convention is invisible unless you
+    # already know it, so across a 6-step wizard it just reads as the letters
+    # randomly changing case. But the default genuinely matters (Enter says yes
+    # to installing Python and no to a 340 MB voice download), so it can't just
+    # be flattened away - it gets said in words instead.
+    #
+    # Cyan because the answer hint is the one thing on screen the user has to
+    # act on, and plain Blue is near-unreadable on a black console.
+    #
+    # There is deliberately NO "press Enter for yes" shortcut. Showing
+    # "Enter = yes" alongside the question reads as "the Enter key means yes",
+    # which is alarming at exactly the wrong moment: you have just typed n and
+    # now have to press Enter to send it. An explicit y or n is always required,
+    # so no keystroke can mean the opposite of what the user typed.
+    #
+    # Also rejects anything that isn't yes or no. Previously "banana" was
+    # silently treated as "no", identical to a deliberate refusal - a bad way to
+    # decide whether someone wants their API key saved.
+    for ($i = 0; $i -lt 5; $i++) {
+        Write-Host ("    " + $m + " ") -NoNewline
+        Write-Host '(respond "y" or "n"): ' -ForegroundColor Cyan -NoNewline
+        $a = (Read-Host).Trim().ToLower()
+        if ($a -in @("y", "yes")) { return $true }
+        if ($a -in @("n", "no"))  { return $false }
+        if ($a) { Warn "Please answer y or n." }
+        else    { Warn "Type y or n, then press Enter." }
+    }
+    # Bounded so a non-interactive stdin (piped/EOF) can never spin forever. The
+    # caller's default only ever applies here, never to a real keystroke.
+    return $defaultYes
 }
 function Pause-Enter($m = "Press Enter to continue") { Read-Host ("    " + $m) | Out-Null }
 
@@ -223,14 +252,20 @@ Good "Components installed."
 # the just-installed python-dotenv — on a fresh machine, running it before the
 # dependency install crashed and silently dropped the choice (and any pasted key).
 function Set-AiPlan([string]$mode, [string]$model, [string]$key = "") {
+    # SINGLE QUOTES ONLY inside this snippet. PowerShell strips embedded double
+    # quotes when it hands an argument to a native exe, so `section_header="# AI
+    # plan (...)"` reached python as `section_header=#` — the # opened a comment
+    # that swallowed the closing paren, and python failed to COMPILE the module
+    # ("'(' was never closed"). That killed both doors, not just the one with a
+    # key: compilation happens before the `if` below can guard the line.
     $planPy = @'
 import sys
 sys.path.insert(0, sys.argv[1])
 import integration_config as ic
-ic.set_settings_top_level("auth_mode", sys.argv[2])
-ic.set_settings_top_level("voice_model", sys.argv[3])
+ic.set_settings_top_level('auth_mode', sys.argv[2])
+ic.set_settings_top_level('voice_model', sys.argv[3])
 if len(sys.argv) > 4 and sys.argv[4]:
-    ic.set_env_var("ANTHROPIC_API_KEY", sys.argv[4], section_header="# AI plan (pay-as-you-go)")
+    ic.set_env_var('ANTHROPIC_API_KEY', sys.argv[4], section_header='# AI plan (pay-as-you-go)')
 '@
     # A failed native python call doesn't throw in PowerShell — check the exit code.
     $planOk = $false
@@ -247,6 +282,103 @@ if len(sys.argv) > 4 and sys.argv[4]:
     return $planOk
 }
 
+function Test-ClaudeSignedIn {
+    # Run ONE real Claude turn. This is the only thing that proves a sign-in
+    # works — and setup previously just ASKED the user whether they were signed
+    # in and believed the answer. A person can be honestly wrong: the `claude`
+    # REPL opens and looks completely normal while signed out, so "I was already
+    # logged in, I closed the window" is a reasonable read of a broken state.
+    # Setup then declared success and handed over an Adam that failed on its very
+    # first message.
+    #
+    # Note where the CLI speaks: a not-signed-in run exits 1 with an EMPTY stderr
+    # and puts the reason in STDOUT's JSON ("result":"Not logged in · Please run
+    # /login"). Reading stderr alone finds nothing. Returns @{Ok; Why}.
+    $out = ""
+    try {
+        $out = (& claude -p --output-format json "Reply with the single word OK." | Out-String)
+    } catch {
+        return @{ Ok = $false; Why = "CLAUDE_MISSING"; Detail = $_.Exception.Message }
+    }
+    $code = $LASTEXITCODE
+    if ($code -eq 0 -and $out -notmatch '"is_error"\s*:\s*true') {
+        return @{ Ok = $true; Why = ""; Detail = "" }
+    }
+    $detail = ""
+    $m = [regex]::Match($out, '"result"\s*:\s*"((?:[^"\\]|\\.)*)"')
+    if ($m.Success) { $detail = $m.Groups[1].Value }
+    if (-not $detail) { $detail = ($out -replace '\s+', ' ').Trim() }
+    if (-not $detail) { $detail = "Claude exited with code $code and printed nothing." }
+    if ($detail.Length -gt 240) { $detail = $detail.Substring(0, 240) + "..." }
+    $why = "UNKNOWN"
+    if ($detail -match '(?i)not logged in|/login|log in to|not authenticated|unauthorized|credentials') { $why = "AUTH" }
+    elseif ($detail -match '(?i)usage limit|rate limit|quota|limit reached') { $why = "LIMIT" }
+    elseif ($detail -match '(?i)credit balance|billing|insufficient') { $why = "BILLING" }
+    return @{ Ok = $false; Why = $why; Detail = $detail }
+}
+
+function Show-ClaudeFailureHelp($result) {
+    # Whatever went wrong, the user leaves this screen knowing what it was and
+    # what to do next. Never a bare failure.
+    Write-Host ""
+    switch ($result.Why) {
+        "AUTH" {
+            Warn "Claude is not signed in yet."
+            Info "Claude said: $($result.Detail)"
+            Write-Host ""
+            Info "This is the most common one, and it's quick:"
+            Info "  1. In the Claude window that opens, type   /login   and press Enter."
+            Info "     (Type it even if Claude looks like it's already signed in -"
+            Info "      that's exactly how this gets missed.)"
+            Info "  2. Your browser should open on its own. If it does NOT, Claude"
+            Info "     prints a long web address instead - select it, copy it, and"
+            Info "     paste it into your browser yourself."
+            Info "  3. Sign in there, or create a free account."
+            Info "  4. Some sign-ins finish in the browser and you're done. Others end"
+            Info "     by showing you a CODE. If you get a code, copy it, click back on"
+            Info "     the Claude window, paste it in, and press Enter."
+            Info "  5. Claude should now say you're logged in. Type   /exit   , then"
+            Info "     press Enter here."
+        }
+        "LIMIT" {
+            Warn "Claude is signed in, but its usage limit is currently reached."
+            Info "Claude said: $($result.Detail)"
+            Write-Host ""
+            Info "Nothing is broken. Either wait for your plan's limit to reset, or"
+            Info "restart SETUP and choose door [1] (pay as you go) instead."
+        }
+        "BILLING" {
+            Warn "Claude is signed in, but the account has no credit available."
+            Info "Claude said: $($result.Detail)"
+            Write-Host ""
+            Info "Add credit at  https://console.anthropic.com  ->  Billing, or use a"
+            Info "Claude Pro/Max subscription and re-run SETUP choosing door [2]."
+        }
+        "CLAUDE_MISSING" {
+            Warn "Couldn't run Claude at all."
+            Info "Detail: $($result.Detail)"
+            Write-Host ""
+            Info "Claude Code doesn't appear to be installed, or isn't on your PATH."
+            Info "  1. Close this window."
+            Info "  2. Run SETUP again - step 2 installs Claude Code."
+            Info "  3. If it keeps failing, open a terminal and type   claude   ."
+            Info "     If that says 'not recognized', Claude Code isn't installed."
+        }
+        default {
+            Warn "Claude ran but couldn't complete a message."
+            Info "Claude said: $($result.Detail)"
+            Write-Host ""
+            Info "Things worth trying, in order:"
+            Info "  1. Check you're online - Claude needs the internet to answer."
+            Info "  2. In the Claude window, type   /login   and sign in again."
+            Info "  3. If your company network blocks things, try another network."
+            Info "  4. Still stuck? Copy the line above and open an issue at"
+            Info "     https://github.com/DCom17/adam-releases/issues"
+        }
+    }
+    Write-Host ""
+}
+
 Write-Host ""
 Info "How will Adam's AI time be paid for? Two doors - and you can switch"
 Info "anytime later under Settings -> AI plan in the app:"
@@ -259,15 +391,19 @@ Info "      the app adds a hard stop and a live cost meter keeps it honest. This
 Info "      the supported path: a clear per-use cost that never surprises you."
 Write-Host ""
 Info "  [2] Sign in with Claude   (if you already have a Claude plan)"
-Info "      Adam runs through your own Claude Code sign-in. Note: tools like Adam"
-Info "      use your plan's SEPARATE monthly allowance for programmatic use (it"
-Info "      varies by plan) - not the flat interactive quota - and pause once that"
-Info "      allowance is spent (or bill pay-as-you-go if you've enabled it). Fine"
-Info "      for lighter use; for heavy daily use, door [1] is steadier."
+Info "      Adam runs on the Claude subscription you already pay for - nothing"
+Info "      extra to buy, no card on file, no per-use cost. Usage counts against"
+Info "      your plan's normal limits; if you ever reach them, Adam pauses until"
+Info "      they reset."
 Write-Host ""
 $door = ""
 while ($door -ne "1" -and $door -ne "2") {
-    $door = (Read-Host "  Type 1 or 2, then press Enter").Trim()
+    # Same treatment as YesNo: the thing you have to type is cyan, and the
+    # accepted answers are spelled out rather than implied.
+    Write-Host "    Which door? " -NoNewline
+    Write-Host '(respond "1" or "2"): ' -ForegroundColor Cyan -NoNewline
+    $door = (Read-Host).Trim()
+    if ($door -ne "1" -and $door -ne "2") { Warn "Please answer 1 or 2." }
 }
 
 if ($door -eq "1") {
@@ -296,22 +432,63 @@ if ($door -eq "1") {
     $null = Set-AiPlan "subscription" "claude-opus-4-8"
     Write-Host ""
     Info "Now the one step only you can do: signing in to your Claude account."
-    Info "I'll open Claude. A browser window will appear - sign in (or create an"
-    Info "account). When it says you're logged in, type  /exit  to close Claude and"
-    Info "come back here."
+    Info "I'll open Claude. Type  /login  in it - do that even if Claude looks like"
+    Info "it's already signed in, because a signed-out Claude looks completely"
+    Info "normal until something asks it to do work."
+    Write-Host ""
+    Info "Your browser should open by itself. If it doesn't, Claude prints a long"
+    Info "web address - copy that into your browser. And if the website hands you a"
+    Info "CODE at the end, copy the code back into the Claude window and press"
+    Info "Enter. Then type  /exit  and come back here."
     Write-Host ""
     if (YesNo "Open Claude to sign in now?") {
-        try {
-            # New window so the login session is clean and doesn't take over this wizard.
-            Start-Process "cmd.exe" -ArgumentList "/k", "claude"
-            Info "A Claude window opened. Sign in there, then type  /exit  in it."
-        } catch {
-            Warn "Couldn't open it automatically. Open a terminal and type:  claude"
+        # Verify-and-retry. This step used to open Claude, ask "press Enter when
+        # you've signed in", and believe whatever the user said. That is how a
+        # fresh install shipped a broken Adam: the user closed a normal-looking
+        # Claude window, honestly reported success, setup congratulated them, and
+        # the first message died with "connection error". Never self-report —
+        # prove it with a real turn, and if it fails, say exactly why.
+        $signedIn = $false
+        for ($attempt = 1; $attempt -le 3 -and -not $signedIn; $attempt++) {
+            try {
+                # New window so the login session is clean and doesn't take over this wizard.
+                Start-Process "cmd.exe" -ArgumentList "/k", "claude"
+                Info "A Claude window opened. Type  /login  there, sign in, then  /exit  ."
+            } catch {
+                Warn "Couldn't open it automatically. Open a terminal and type:  claude"
+            }
+            Pause-Enter "When you've signed in to Claude, press Enter here to check it"
+            Write-Host ""
+            Info "Checking the sign-in by sending Claude one real message..."
+            $probe = Test-ClaudeSignedIn
+            if ($probe.Ok) {
+                $signedIn = $true
+                Good "Signed in and answering - Adam will work."
+                break
+            }
+            Show-ClaudeFailureHelp $probe
+            if ($attempt -lt 3) {
+                if (-not (YesNo "Open Claude and try the sign-in again?")) { break }
+            } else {
+                Warn "That's three tries - moving on so you're not stuck here."
+            }
         }
-        Pause-Enter "When you've signed in to Claude, press Enter here to continue"
+        if (-not $signedIn) {
+            Write-Host ""
+            Warn "Continuing WITHOUT a verified Claude sign-in."
+            Info "Adam will install fine, but it can't answer until Claude signs in."
+            Info "When you want to finish: open a terminal, type  claude  , then  /login  ."
+            Info "  (No browser? Copy the address Claude prints into one. Given a code"
+            Info "   at the end? Paste it back into the Claude window.)"
+            Info "Then check it worked with:   python scripts\doctor.py --live"
+            Pause-Enter "Press Enter to continue"
+        }
     } else {
         Warn "You can sign in later, but Adam won't answer until you do."
-        Info "To sign in later: open a terminal and type  claude  , then log in."
+        Info "To sign in later: open a terminal, type  claude  , then  /login  ."
+        Info "  (No browser? Copy the address Claude prints into one. Given a code"
+        Info "   at the end? Paste it back into the Claude window.)"
+        Info "Check it worked with:   python scripts\doctor.py --live"
         Pause-Enter "Press Enter to continue"
     }
 }
@@ -363,12 +540,20 @@ Info "Generating your private access token and running a health check..."
 "" | & $pythonExe (Join-Path $root "scripts\setup.py") | Out-Host
 Write-Host ""
 Info "Running the full health check..."
-& $pythonExe (Join-Path $root "scripts\doctor.py") | Out-Host
+# --live sends ONE real message through Claude. Without it the sign-in check is
+# only a heuristic ("is there a credentials file?"), which an expired, revoked or
+# wrong-account credential passes — and the user then discovers the problem on
+# their very first message, as a bare "connection error" with nothing to act on.
+# Spending one tiny turn here moves that discovery into setup, where there is a
+# person watching and a specific instruction to give them.
+& $pythonExe (Join-Path $root "scripts\doctor.py") --live | Out-Host
 $doctorExit = $LASTEXITCODE
 if ($doctorExit -ne 0) {
     Warn "The health check above found something that needs attention (a FAIL line)."
-    Info "Most often this is the Claude sign-in - if you skipped it, open a terminal,"
-    Info "type  claude  , sign in, then run SETUP again."
+    Info "Read the FAIL line - it names the problem and what to do about it."
+    Info "If it's the Claude sign-in: open a terminal, type  claude  and press Enter,"
+    Info "then type  /login  , finish signing in, and run SETUP again."
+    Info "You can re-run this check any time with:  python scripts\doctor.py --live"
     if (-not (YesNo "Try launching anyway?" $false)) {
         Pause-Enter "Press Enter to close"
         exit 1
@@ -377,11 +562,38 @@ if ($doctorExit -ne 0) {
 
 # === STEP 6 — Launch ===============================================================
 Section 6 "Starting Adam"
-Info "Adding an Adam app shortcut, then starting it up..."
+Info "Adding an Adam app shortcut..."
 # Make Adam launchable like an app (Desktop + Start Menu), not just from this folder.
 $shortcutOk = $true
 try { & (Join-Path $root "scripts\add-app-shortcut.ps1") | Out-Host }
 catch { $shortcutOk = $false }
+
+# The voice offer is the LAST question, and it is asked BEFORE the first launch.
+# It used to sit after start-adam.ps1, which meant Adam opened in the browser on
+# top of a console prompt still waiting for an answer — and saying yes then asked
+# the user to restart the app to hear the voice they had just installed. Asking
+# first means the very first run already sounds the way it should.
+# The original reason it sat after the launch was so a 340 MB download could not
+# break the first run; that protection is kept by wrapping the install, so a
+# failed or abandoned download still falls through to a normal start.
+Write-Host ""
+Line
+Info "Last question. Right now Adam uses your browser's built-in (robotic) voice."
+Info "You can upgrade to the real Adam voice - a one-time ~340 MB download that"
+Info "runs entirely on your PC."
+if (YesNo "Install the real Adam voice now?" $false) {
+    try {
+        & (Join-Path $root "scripts\install-voice.ps1")
+        Info "Installed - Adam will start with the real voice."
+    } catch {
+        Warn "The voice download didn't finish: $($_.Exception.Message)"
+        Info "Adam will still start now, using the built-in voice. Double-click"
+        Info "INSTALL-VOICE in this folder to try again whenever you like."
+    }
+} else {
+    Info "No problem. Double-click INSTALL-VOICE in this folder whenever you want it."
+}
+
 Write-Host ""
 Good "Setup complete!"
 if ($shortcutOk) {
@@ -393,23 +605,11 @@ if ($shortcutOk) {
     Info "No problem: open Adam any time by double-clicking START in this folder."
 }
 Write-Host ""
+Info "Starting Adam..."
 try {
     & (Join-Path $root "scripts\start-adam.ps1")
 } catch {
     Warn "Couldn't auto-launch: $($_.Exception.Message)"
     Info "Double-click START (or run scripts\start-adam.ps1) to open Adam."
-}
-
-# Offer the real Adam voice now that the app is up - kept OUT of core setup so a big
-# download can't break the first run. Default is no; INSTALL-VOICE adds it any time.
-Write-Host ""
-Line
-Info "Right now Adam uses your browser's built-in (robotic) voice. You can upgrade"
-Info "to the real Adam voice - a one-time ~340 MB download that runs on your PC."
-if (YesNo "Install the real Adam voice now?" $false) {
-    & (Join-Path $root "scripts\install-voice.ps1")
-    Info "Done - restart Adam (close its window, then open it again) to hear the new voice."
-} else {
-    Info "No problem. Double-click INSTALL-VOICE in this folder whenever you want it."
 }
 Pause-Enter "Press Enter to close"

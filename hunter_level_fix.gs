@@ -1,12 +1,13 @@
 /****************************************************
  * HUNTER LEVEL FIX — run once on your Hunter Dashboard Sheet.
  *
- * WHY: Your stats show Level 1 because the Level_Curve tab the level
- * formulas depend on is empty, AND the shipped curve differs from your
- * real system. This installs YOUR canonical curve  xp_to_next(L)=50*(L+1)
- * (cumulative L2=100, L3=250, L4=450, L5=700, L6=1000, ...) and points the
- * Stats + State level cells at it.  Your XP is never touched — only the
- * level lookups are repaired, so 886 XP reads as Level 5 again.
+ * WHY: The board's level cells disagree with the level Adam reports. This
+ * installs the canonical curve  xp_to_next(L)=50*(L+1)  (cumulative L2=100,
+ * L3=250, L4=450, L5=700, L6=1000, L8=1750, ...) and points the Stats + State
+ * level cells at it, including the State xp_to_next cell that was left as a
+ * hard-coded blank at setup (the "Unknown XP needed to reach Level N" line).
+ * Your XP is never touched — only the level lookups are repaired, so e.g.
+ * 2,135 XP reads as Level 8 with 65 XP to go.
  *
  * HOW TO RUN:
  *   1. Open your Hunter Dashboard Sheet -> Extensions -> Apps Script.
@@ -72,11 +73,24 @@ function fixHunterLevels() {
     var txCol = findCol(sth, ["total_xp", "xp_total", "total"]);
     if (clCol >= 0 && txCol >= 0) {
       var txl = colLetter(txCol + 1);
+      var cll = colLetter(clCol + 1);
       st2.getRange(2, clCol + 1).setFormula(
         '=IF(' + txl + '2="","",LOOKUP(' + txl + '2' +
         ',Level_Curve!$C$2:$C$' + lastCurveRow + ',Level_Curve!$A$2:$A$' + lastCurveRow + '))'
       );
-      log.push("State character_level re-pointed at total_xp (886 -> Level 5).");
+      log.push("State character_level re-pointed at total_xp.");
+
+      // xp_to_next was set to a literal "" at setup and never given a formula,
+      // which is why the board reported "Unknown XP needed to reach Level N".
+      // XP REMAINING to the next level, matching dashboard_state.json.
+      var xnCol = findCol(sth, ["xp_to_next", "xp_next", "to_next"]);
+      if (xnCol >= 0) {
+        st2.getRange(2, xnCol + 1).setFormula(
+          '=IF(OR(' + cll + '2="",' + txl + '2=""),"",INDEX(Level_Curve!$C$2:$C$' + lastCurveRow +
+          ',MATCH(' + cll + '2+1,Level_Curve!$A$2:$A$' + lastCurveRow + ',0))-' + txl + '2)'
+        );
+        log.push("State xp_to_next given a real formula (was a hard-coded blank).");
+      } else { log.push("State: xp_to_next column not found — skipped."); }
     } else { log.push("State: character_level/total_xp column not found — skipped."); }
   } else { log.push("State tab missing — skipped."); }
 

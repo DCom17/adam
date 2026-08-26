@@ -65,23 +65,25 @@ Claude may flag when gates are met, but never promotes rank automatically.
 
 ## Character Level Formula
 
+[[Character Level|Character level]] is derived from `total_xp` against the single
+curve in `xp_rules.md` — the same curve the stats use. There is no second formula:
+
 ```
-BaseStats = 0.60 × AVERAGE(all 8 stat levels)
-          + 0.40 × AVERAGE(lowest 4 stat levels)
-
-BossBonus = MIN(10, SUM(cleared_boss_difficulty) × 0.8)
-
-CandidateLevel = FLOOR(BaseStats + BossBonus + ConsistencyBonus)
-
-CharacterLevel = MIN(
-  CandidateLevel,
-  FLOOR(AVERAGE(all 8 stats) + 12),
-  MIN(all 8 stats) + 20
-)
+total_xp      = SUM(cumulative XP across all 8 stats)
+CharacterLevel = the largest L where Cumulative(L) ≤ total_xp
+                 Cumulative(1) = 0,  Cumulative(L) = 50 × (L(L+1)/2 − 1)
+xp_to_next     = Cumulative(CharacterLevel + 1) − total_xp
 ```
 
-The third cap — `MIN(all 8 stats) + 20` — prevents a single neglected stat from hiding behind others.
-A stat at level 1 with all others at 50 caps [[Character Level|character level]] at 21.
+Recompute both on every update, straight from `total_xp`. A single large award —
+a boss clear, a milestone — can cross several levels at once; resolve all of them.
+Never carry the previous level forward and never advance it by one per award.
+
+**Balance is enforced by the rank gates above, not by the level.** Level says how
+much confirmed evidence has accumulated; the "no stat below N" gate is what stops a
+neglected stat from riding along. (An older revision computed character level as a
+capped composite of stat levels. That produced a level the board and the assistant
+disagreed about — the composite on the Sheet, the curve in the vault. The curve wins.)
 
 ---
 

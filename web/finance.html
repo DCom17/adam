@@ -543,7 +543,15 @@ var LS = {
   get token() { return localStorage.getItem("jarvis_token") || ""; },
   get url() { return (localStorage.getItem("jarvis_url") || location.origin).replace(/\/$/, ""); }
 };
-function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+// Correct for a double-quoted HTML attribute or for text, which is now the only
+// way this output is used. The row buttons below used to interpolate values into
+// a single-quoted JS string inside onclick — a two-decoder context (HTML entities
+// resolve first, then JS parses), where NO html escaping is sufficient: &#39;
+// simply decodes back to a quote before the JS is read. Those sites now pass the
+// value through a data- attribute and read it via this.dataset, so there is one
+// decoder and esc() is the right tool. Don't reintroduce the inline-argument form;
+// imported statement data (account, batch_id, txn_key) reaches these rows.
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
 function $(id){ return document.getElementById(id); }
 // Transient bottom toast — feedback so an action (save / dismiss) is never silent.
 function toast(msg){
@@ -827,7 +835,7 @@ async function loadBatches(){
       return '<div class="lcard"><div class="lav">' + icon("layers") + '</div>' +
         '<div class="lmain"><div class="ltitle">' + esc(x.id) + '</div><div class="lmeta">' + (x.staged_count || 0) + " rows" +
         (x.needs_review ? ' · <span style="color:var(--amber)">' + x.needs_review + " to review</span>" : "") + '</div></div>' +
-        '<button class="btn ghost" style="margin:0;padding:8px 13px" onclick="showReview(\'' + esc(x.id).replace(/'/g, "") + "')\">Open</button></div>";
+        '<button class="btn ghost" style="margin:0;padding:8px 13px" data-batch="' + esc(x.id) + '" onclick="showReview(this.dataset.batch)">Open</button></div>";
     }).join("");
   } catch (e){}
 }
@@ -847,9 +855,9 @@ function renderReview(rev){
   $("reviewFrame").hidden = false;
   var c = rev.counts || {};
   $("reviewTitle").textContent = "Review · " + rev.batch_id;
-  var bid = esc(rev.batch_id).replace(/'/g, "");
+  var bid = esc(rev.batch_id);
   var readyN = c.ready || 0;
-  var approveBtn = '<button class="btn wide" onclick="approveBatch(\'' + bid + "')\">APPROVE &amp; ADD" +
+  var approveBtn = '<button class="btn wide" data-batch="' + bid + '" onclick="approveBatch(this.dataset.batch)">APPROVE &amp; ADD' +
     (readyN ? " (" + readyN + ")" : "") + "</button>";
 
   var html = '<div class="rev-counts">' +
@@ -862,11 +870,11 @@ function renderReview(rev){
   var opts = CATEGORIES.map(function(n){ return '<option value="' + esc(n) + '">' + esc(n) + "</option>"; }).join("");
 
   function rowHtml(r, kind){
-    var h = '<div class="scard ' + kind + '" data-id="' + r.id + '">';
+    var h = '<div class="scard ' + kind + '" data-id="' + Number(r.id) + '">';
     h += '<div class="stop"><span class="sdesc">' + esc(r.merchant || r.raw_desc) + '</span><span class="samt">' + money(r.amount) + "</span></div>";
     h += '<div class="smeta">' + esc(r.date) + " · " + esc(r.account) + " · " + esc(r.category) + "</div>";
     if (r.review_reason) h += '<div class="sreason">' + icon("alert") + esc(r.review_reason) + "</div>";
-    if (kind === "rev") h += '<div class="editrow"><select>' + opts + '</select><button class="btn save" onclick="saveRow(' + r.id + ', this)">Save</button></div>';
+    if (kind === "rev") h += '<div class="editrow"><select>' + opts + '</select><button class="btn save" onclick="saveRow(' + Number(r.id) + ', this)">Save</button></div>';
     h += "</div>";
     return h;
   }
@@ -876,7 +884,7 @@ function renderReview(rev){
   if ((rev.duplicates || []).length){ html += '<div class="subh">Duplicates — won\'t be added</div>'; rev.duplicates.forEach(function(r){ html += rowHtml(r, "dup"); }); }
 
   html += '<div class="btnrow">' + approveBtn +
-    '<button class="btn ghost danger" onclick="discardBatch(\'' + bid + "')\">Discard</button></div>";
+    '<button class="btn ghost danger" data-batch="' + bid + '" onclick="discardBatch(this.dataset.batch)">Discard</button></div>';
   $("reviewBody").innerHTML = html;
 
   Array.prototype.forEach.call($("reviewBody").querySelectorAll(".scard"), function(el){
@@ -1026,7 +1034,7 @@ async function renderAccounts(){
       return '<div class="lcard"><div class="lav">' + icon(TYPEIC[a.type] || "wallet") + '</div>' +
         '<div class="lmain"><div class="ltitle">' + esc(a.name) + '</div><div class="lmeta"><span class="badge ' + esc(a.type) + '">' + esc(a.type) + "</span>" +
         (a.institution ? " " + esc(a.institution) : "") + '</div></div>' +
-        '<button class="xbtn" onclick="delAccount(this,\'' + esc(a.name).replace(/'/g, "\\'") + '\')">Remove</button></div>';
+        '<button class="xbtn" data-name="' + esc(a.name) + '" onclick="delAccount(this,this.dataset.name)">Remove</button></div>';
     }).join("") : '<div class="muted" style="font-size:12.5px">No accounts yet — add one below.</div>';
   } catch (e){}
 }
@@ -1079,7 +1087,7 @@ async function loadImports(){
     $("mgImports").innerHTML = imp.length ? imp.map(function(x){
       return '<div class="lcard"><div class="lav">' + icon("layers") + '</div>' +
         '<div class="lmain"><div class="ltitle">' + esc(x.batch_id) + '</div><div class="lmeta">' + x.transactions + " transaction(s)</div></div>" +
-        '<button class="xbtn" onclick="delImport(this,\'' + esc(x.batch_id).replace(/'/g, "\\'") + '\')">Remove</button></div>';
+        '<button class="xbtn" data-batch="' + esc(x.batch_id) + '" onclick="delImport(this,this.dataset.batch)">Remove</button></div>';
     }).join("") : '<div class="muted" style="font-size:12.5px">No imports yet.</div>';
   } catch (e){ $("mgImports").innerHTML = '<div class="err">' + esc(e.message) + "</div>"; }
 }
@@ -1116,7 +1124,7 @@ async function loadManageTxns(){
       var nm = (t.merchant || t.raw_desc || "?").trim();
       return '<div class="lcard"><div class="lav">' + esc(nm.charAt(0).toUpperCase()) + '</div>' +
         '<div class="lmain"><div class="ltitle">' + esc(nm) + '</div><div class="lmeta">' + esc(t.date) + " · " + esc(t.category) + " · " + money(t.amount) + '</div></div>' +
-        '<button class="xbtn" onclick="delTxn(this,\'' + esc(t.txn_key).replace(/'/g, "\\'") + '\')">Delete</button></div>';
+        '<button class="xbtn" data-key="' + esc(t.txn_key) + '" onclick="delTxn(this,this.dataset.key)">Delete</button></div>';
     }).join("") : '<div class="muted" style="font-size:12.5px">No transactions in this month.</div>';
   } catch (e){ $("mgTxns").innerHTML = '<div class="err">' + esc(e.message) + "</div>"; }
 }
@@ -1135,7 +1143,7 @@ async function loadSnapshots(){
     $("mgSnaps").innerHTML = snaps.length ? snaps.map(function(s){
       return '<div class="lcard"><div class="lav">' + icon("calendar") + '</div>' +
         '<div class="lmain"><div class="ltitle">' + esc(s.date) + '</div><div class="lmeta">net worth ' + money(s.net_worth) + '</div></div>' +
-        '<button class="xbtn" onclick="delSnap(this,\'' + esc(s.date) + '\')">Delete</button></div>';
+        '<button class="xbtn" data-date="' + esc(s.date) + '" onclick="delSnap(this,this.dataset.date)">Delete</button></div>';
     }).join("") : '<div class="muted" style="font-size:12.5px">No snapshots yet.</div>';
   } catch (e){ $("mgSnaps").innerHTML = '<div class="err">' + esc(e.message) + "</div>"; }
 }

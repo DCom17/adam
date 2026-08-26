@@ -76,6 +76,31 @@ Adam itself is free and this section does not apply to you unless you buy.
 Full policy, including your rights and how long records are kept, ships with the
 app as `legal/privacy.md` (also linked from the website's Privacy page).
 
+## Your data on your own disk
+
+Adam stores your notes, trackers and history as ordinary files and SQLite
+databases in its data folder. **Adam does not separately encrypt them.** Anyone
+with access to your Windows account, or to the drive itself, can read them — the
+same as they could read your documents. That is the honest trade for a tool that
+keeps everything local and never holds your data behind a service.
+
+If the machine holds sensitive material, turn on **BitLocker** (Windows Settings
+→ Privacy & security → Device encryption). It is the right layer for this and it
+protects everything else on the disk at the same time.
+
+**Back up what you cannot rebuild.** Settings → *Back up your data* packages your
+trackers, sessions and settings into a single file. It deliberately leaves out
+`.env` — your API keys and access token — so the backup is safe to keep in cloud
+storage. Re-enter those from Setup after a restore.
+
+## Support requests are public
+
+Issues you open on the public issue tracker can be read by anyone, including
+search engines. Do not paste your access token, your licence key, or personal
+details into one. The in-app diagnostics bundle is redacted before it leaves your
+machine, but read what you are pasting anyway. Contact details for private
+requests are in `legal/privacy.md`.
+
 ## Your responsibilities
 
 Because everything is yours, privacy choices are yours too: what lives in your

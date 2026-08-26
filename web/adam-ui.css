@@ -185,6 +185,12 @@ body {
   .appbar nav { gap: 2px; }
   .appbar nav a, .appbar nav button { padding: 6px 8px; font-size: 12.5px; }
   .appbar nav a span.label, .appbar nav button span.label { display: none; }
+  /* ...except the FIRST nav link, which is the way back. A bare 15px chevron
+     does not read as "back" to anyone who didn't write it, and on a setup page
+     reached straight from a dashboard link it is the only exit that isn't
+     browser-back — the exact dead end the app bar was introduced to remove.
+     Keep its label at every width; it is two words. */
+  .appbar nav a:first-child span.label { display: inline; }
 }
 
 /* ============================================================================

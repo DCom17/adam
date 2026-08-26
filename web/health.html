@@ -488,7 +488,11 @@
 <script>
 var LS = { get token(){ return localStorage.getItem("jarvis_token") || ""; },
   get url(){ return (localStorage.getItem("jarvis_url") || location.origin).replace(/\/$/, ""); } };
-function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+// Correct for text and for a double-quoted attribute — the only two ways this
+// output is used. Never interpolate the result into a single-quoted JS string
+// inside an onclick: entities decode before the JS is parsed, so escaping cannot
+// protect that context. Pass values through data- attributes instead.
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
 function $(id){ return document.getElementById(id); }
 // LOCAL calendar date (not UTC). toISOString() is UTC, so after ~5pm in a
 // negative-offset zone it rolls to tomorrow — which made "today" query an empty
@@ -591,7 +595,12 @@ function waterCard(w, rows){
   var pct = (w.target_amount != null) ? Math.round(frac * 100) + "%"
           : ((w.logs || 0) + ((w.logs === 1) ? " drink" : " drinks"));
   var quick = (WATER_QUICK[unit] || WATER_QUICK.oz).map(function(q){
-    return '<button onclick="addWater(' + q[0] + ",'" + unit + '\',this)">+' + q[0] +
+    // unit reaches here from GET /health/targets, where the water_unit VALUE is
+    // stored unvalidated (only the key is allow-listed), so it is not safe to
+    // drop into a JS string inside an attribute. data- + dataset keeps it to a
+    // single HTML decode, which esc() covers.
+    return '<button data-amt="' + esc(q[0]) + '" data-unit="' + esc(unit) +
+      '" onclick="addWater(Number(this.dataset.amt),this.dataset.unit,this)">+' + q[0] +
       '<span class="wqs">' + esc(q[1]) + "</span></button>";
   }).join("");
   var foot = (w.target_amount == null) ? "Set a daily target in Setup"
@@ -602,7 +611,7 @@ function waterCard(w, rows){
     '<small>' + esc(ul) + '</small></div><div class="gl">' + esc(pct) + "</div></div></div>" +
     '<div class="wq">' + quick + "</div></div>" +
     '<div class="wfoot"><span>' + esc(foot) + "</span>" +
-    (rows.length ? '<button class="linkbtn" onclick="undoWater(' + rows[0].id + ',this)">Undo last</button>' : "<span></span>") +
+    (rows.length ? '<button class="linkbtn" onclick="undoWater(' + Number(rows[0].id) + ',this)">Undo last</button>' : "<span></span>") +
     "</div></div>";
 }
 async function addWater(amount, unit, btn){
@@ -690,7 +699,7 @@ async function loadMeals(){
     var meals = d.meals || [];
     $("mealList").innerHTML = meals.length ? meals.map(function(m){
       var av = esc(m.name), aq = esc(m.qty || "");
-      return '<div class="meal" data-id="' + m.id + '">' +
+      return '<div class="meal" data-id="' + Number(m.id) + '">' +
         '<div class="lcard meal-head" onclick="toggleMeal(this)"><div class="lav">' + icon("flame") + '</div>' +
         '<div class="lmain"><div class="ltitle">' + esc(m.name) + '</div><div class="lmeta">' +
         '<span class="mtag">' + g(m.kcal) + ' kcal</span><span class="mtag p">' + g1(m.protein_g) + 'P</span>' +
@@ -703,8 +712,8 @@ async function loadMeals(){
           '<div class="grid4"><div><label class="fld prot">Protein g</label><input class="e-prot" type="number" inputmode="decimal" value="' + g1(m.protein_g) + '"></div>' +
           '<div><label class="fld carb">Carbs g</label><input class="e-carb" type="number" inputmode="decimal" value="' + g1(m.carbs_g) + '"></div>' +
           '<div><label class="fld fat">Fat g</label><input class="e-fat" type="number" inputmode="decimal" value="' + g1(m.fat_g) + '"></div></div>' +
-          '<div class="btnrow"><button class="btn" onclick="saveMeal(' + m.id + ',this)">SAVE CHANGES</button>' +
-          '<button class="xbtn" onclick="delMeal(' + m.id + ',this)">Delete</button></div>' +
+          '<div class="btnrow"><button class="btn" onclick="saveMeal(' + Number(m.id) + ',this)">SAVE CHANGES</button>' +
+          '<button class="xbtn" onclick="delMeal(' + Number(m.id) + ',this)">Delete</button></div>' +
         '</div></div>';
     }).join("") : '<div class="muted" style="font-size:12.5px">None yet — add a meal above.</div>';
   } catch (e){}
@@ -786,7 +795,7 @@ async function loadWater(){
       return '<div class="lcard"><div class="lav">' + icon("drop") + "</div>" +
         '<div class="lmain"><div class="ltitle">' + g1(r.amount) + " " + esc(unitLabel(r.unit)) + "</div>" +
         '<div class="lmeta">' + esc(r.note || "logged today") + "</div></div>" +
-        '<button class="xbtn" onclick="undoWater(' + r.id + ',this)">Remove</button></div>';
+        '<button class="xbtn" onclick="undoWater(' + Number(r.id) + ',this)">Remove</button></div>';
     }).join("") : '<div class="muted" style="font-size:12.5px">Nothing yet today.</div>';
   } catch (e){}
 }

@@ -3,6 +3,239 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.72 - The quest board shows your whole day
+
+- **Every planned item is now a quest.** Daily planning used to filter your day
+  down to the few items that advanced a stat or a boss — a work shift, an
+  errand, or laundry never made the board, so the board rarely looked like your
+  actual day. Now the whole plan lands on the board. Items that build a stat or
+  advance a boss are achievement quests with real bounties; obligatory items —
+  shifts, chores, errands, admin — become small "ops" quests worth 1–3 XP,
+  capped so routine obligation can never out-earn real effort. Completing the
+  day you planned counts for something; the growth work still counts for more.
+- **"Board synced" now means it.** Adam can no longer report the dashboard as
+  synced unless today's quests were actually written to the dashboard state the
+  sync is built from — the failure where a planned day existed only in the
+  calendar packet while the board sat stale is now called out by the product's
+  own instructions.
+
+## 0.9.71 - Turns you can watch, a security sweep, and a real backup
+
+Two lanes landed together. The visible half: a turn now tells you the truth
+about what it is doing, on every conversation rather than only in code chats.
+The quiet half: a sweep against a 50-item application-security checklist and a
+20-item launch checklist. Most of the checklist was already handled or did not
+apply to a single-owner local app; the items below are the ones that were real.
+
+- **Switching apps or tabs while Adam is thinking no longer strands you.** Coming
+  back used to show "Listening" while the turn was still running: the microphone
+  was not actually on, typing and SEND were refused with "One moment — still on
+  the last one", the STOP button vanished and the thinking timer froze. Adam now
+  keeps showing "Thinking…" — with the elapsed time, the live activity and the
+  STOP button — until the turn it is actually running finishes.
+- **You can watch Adam work in every conversation, not just code chats.** The
+  small activity notes that rise past the orb — "Reading a file", "Searching the
+  web" — used to appear only in Claude Code mode. They now appear on every turn,
+  so a long piece of work like a weekly review or your daily planning shows what
+  it is doing instead of sitting silent. Nothing is ever invented to fill a
+  pause: each note is a real step Adam just took.
+
+- **Your data can finally be backed up.** `Settings -> Back up your data`
+  downloads one ZIP holding everything Adam cannot rebuild: the finance and
+  health trackers, sessions, job history, saved state and `settings.json`.
+  Databases are snapshotted through SQLite's backup API, so the archive is
+  consistent even mid-turn. Your API keys, private keys, logs and old pre-write
+  backups are deliberately left out, which keeps the file safe to store in cloud
+  storage. Per-file backups were only ever an undo; this covers a dead machine.
+- **Dependency vulnerabilities are now watched, and 21 were fixed.** Pinning
+  guards against a dependency changing underneath us and says nothing about a
+  pinned version turning out to be vulnerable. `scripts\audit-deps.ps1` closes
+  that gap and immediately found 20 CVEs in Pillow (which decodes every image
+  you upload) and one in cryptography. Both bumped.
+- **Cross-site scripting in the Finance and Health pages.** Row buttons put
+  values into a JS string inside an HTML attribute — a context escaping cannot
+  protect — and the values included an account name, a batch id and a
+  transaction key built from an imported statement's own fields. A crafted bank
+  statement could run script in the page. Values now travel through data
+  attributes, and every escaper covers all five characters.
+- **The interactive API schema is gone.** `/docs`, `/redoc` and `/openapi.json`
+  were served without auth, publishing a map of every route to anyone who could
+  reach the port.
+- **Subprocess output is scrubbed.** The Claude CLI echoes a rejected API key
+  back on stderr, and that text reached both the log file and the client. It is
+  now redacted where it is produced, so no future call site can reopen it.
+- **Inbound SMS runs clamped.** A text message is content this machine did not
+  author, handed to the agent with an instruction to act on it. Those turns are
+  now forced into the restricted posture and never auto-apply a change, whatever
+  capability tier is configured.
+- **Uploads are checked properly.** The size cap is enforced while reading
+  rather than after the whole file is in memory, and a file's contents must
+  match the extension it claims.
+- **The audit log rotates.** It had no size ceiling and grew forever.
+- **Website:** a real 404 page, `robots.txt`, `sitemap.xml`, a thank-you page, an
+  8-question FAQ, a sticky download button on phones, social and structured-data
+  tags, a content security policy, and a privacy page that now covers the site
+  itself, your rights, retention, and the fact that Adam does not encrypt data at
+  rest (use BitLocker).
+
+## 0.9.70 - The Connect phone restyle actually ships
+
+0.9.69 described a restyled Connect phone page, and the Adam Plus entry in the
+gear menu did arrive — but the page itself did not. The rewritten file was lost
+before the release was built, so 0.9.69 shipped the old unstyled layout with a
+changelog promising otherwise. This is that page, for real.
+
+- **Connect phone is laid out like every other add-on** — sections, numbered
+  steps and callouts matching Calendar, Email and the rest.
+- **The Adam Plus status sits at the foot of that page**, showing how many days
+  of phone access are left, what the upgrade includes, and the one-time price.
+
+## 0.9.69 - Connect phone looks like an add-on, and Adam Plus is findable
+
+**The Connect phone page was unstyled.** Moving it out of the Operator Console
+left its layout behind: the styling it relied on was defined inside the console's
+own page, so on its new home the panels rendered as bare boxes. It is now built
+from the same design language as every other add-on — sections, numbered steps
+and callouts that match Calendar, Email and the rest.
+
+**There was also no way to find Adam Plus from inside Adam.** The only mention
+lived on a hidden line inside the AI-plan settings, which you would only find if
+you already knew it was there.
+
+- **Adam Plus has a proper home**, in the gear menu. It says where you actually
+  stand — how many days of phone access are left, or that the trial has ended —
+  what the upgrade includes, and the one-time price. It never interrupts you: it
+  waits in the menu until you open it, and it disappears entirely once a licence
+  is active.
+- **Connect phone shows the same thing at the bottom of the page**, which is
+  where the question naturally comes up.
+
+## 0.9.68 - The Connect phone button actually goes there
+
+0.9.67 gave Connect phone its own page but left one thread attached: inside the
+in-app settings overlay, a leftover click handler still sent you to the Operator
+Console, quietly overriding the link. Found by checking the published build
+rather than the source.
+
+- **The Connect phone button opens the Connect phone page**, from the settings
+  overlay as well as a normal browser tab.
+- **Everything that told you to find it in the console now says Settings →
+  Add-ons.** That includes Adam's own answer when you ask how to use it on your
+  phone, and the sign-in help on all six other add-on pages.
+
+## 0.9.67 - Connecting your phone is its own page now
+
+**Getting Adam onto your phone was buried in the Operator Console** — a
+diagnostics screen full of jobs, approvals and audit logs. That is a strange
+place to send someone whose only goal is scanning a code with their phone.
+
+- **Connect phone is a proper add-on page.** Open it from **Settings → Add-ons**
+  like everything else: the sign-in QR, the add-to-home-screen steps, the
+  Tailscale check and the cautious two-code mode all moved across intact, on a
+  clean page with a way back at the top. Nothing about how it works changed —
+  the code is still drawn on your own machine, and your token still never
+  leaves it.
+- **The console still points you there**, so an old link or bookmark lands
+  somewhere sensible instead of nowhere.
+- **Setup's questions no longer offer an Enter shortcut.** Showing "Enter = yes"
+  next to a question reads as "the Enter key means yes" — unnerving right after
+  you have typed **n** and still have to press Enter to send it. Every question
+  now wants an explicit **y** or **n**, so no keystroke can mean the opposite of
+  what you typed.
+
+## 0.9.66 - "Bootstrap Adam" now runs the interview it was always supposed to
+
+**Tapping "Bootstrap Adam" on a fresh install got you a pile of empty files to
+approve and a vague "tell me a bit about yourself".** It reads like Adam doesn't
+recognise its own button — and in a sense it didn't. Bootstrap is a written
+procedure, a short warm interview, but the file describing it was never actually
+being read, so Adam improvised something that looked like setup paperwork.
+
+- **The starter buttons are understood properly now.** "Bootstrap Adam", "Start
+  my day", "Good morning" and the rest are recognised as defined procedures. Adam
+  reads the procedure before doing anything, then walks you through it a step at
+  a time — a conversation, not a form, and never a batch of empty files to
+  approve before you've been asked a single question.
+- **Setup's yes/no questions look the same every time.** They used to switch
+  between `[Y/n]` and `[y/N]` depending on which answer Enter picked, which just
+  reads as the letters randomly changing case. Every question now spells out
+  `(respond "y" or "n")` in colour, says plainly what Enter does, and asks again
+  instead of quietly treating anything it doesn't recognise as "no".
+- **LinkedIn is marked "Available soon".** It isn't working yet, so its card is
+  greyed out rather than letting you start a setup that can't finish. Nothing was
+  removed; it switches back on when it's ready.
+
+## 0.9.65 - The sign-in instructions now cover the way it actually goes
+
+**Signing in to Claude doesn't always open your browser for you.** Sometimes it
+prints a web address and expects you to copy it across yourself, and sometimes
+the website ends by handing you a code that has to go back into the Claude
+window. Our instructions only described the easy path, so anyone who got the
+other one was left staring at a screen we hadn't told them about.
+
+- Every place Adam explains signing in — the setup wizard, the failure guidance,
+  the health check, and the in-app message — now says the same complete thing:
+  your browser should open on its own; if it doesn't, copy the address Claude
+  prints; and if you're given a code at the end, paste it back into the Claude
+  window and press Enter.
+
+## 0.9.64 - Setup proves Claude works before it hands you Adam
+
+**Setup used to ask whether you'd signed in to Claude, and believe you.** That
+sounds harmless until you realise a signed-out Claude looks completely normal —
+it opens, it greets you, it waits. Someone can open that window, see nothing
+wrong, close it, honestly report success, and receive a congratulations screen
+and an Adam that fails on its very first message with nothing but "connection
+error". That happened on a real install, and this release closes every layer of
+it.
+
+- **The sign-in step now proves itself.** Instead of taking your word, setup
+  sends one real message through Claude. If it comes back, you're told so. If it
+  doesn't, you get the reason and up to three tries — and it now tells you to
+  type `/login` even when Claude looks signed in, because that is exactly how
+  this gets missed.
+- **Every failure explains itself.** Not signed in, usage limit reached, no
+  credit, Claude not installed, or something unrecognised — each one gets its own
+  plain-language guidance and next step, and every one of them shows you Claude's
+  own words rather than hiding them.
+- **"Connection error" now tells you what went wrong.** Claude reports some
+  failures on a channel Adam wasn't reading, so the app discarded the real reason
+  and showed a generic error. It reads both channels now: a not-signed-in Adam
+  says it isn't signed in and tells you how to fix it. Where the cause genuinely
+  isn't known, the message carries the underlying error plus the steps to
+  diagnose it, instead of dead-ending.
+- **The health check can test for real.** `python scripts\doctor.py --live` sends
+  an actual message through Claude. The ordinary check only looked for a
+  credentials file on disk — which an expired or wrong-account sign-in passes
+  while still being broken.
+- **The voice question comes before Adam opens.** It used to be asked after the
+  app had already launched over the top of it, and saying yes then meant
+  restarting to hear the voice you'd just installed.
+- **Setup pages keep their way back on a phone.** The "back" link collapsed to an
+  unlabelled arrow on narrow screens, which on a setup page reached from a
+  dashboard was the only way out.
+
+## 0.9.63 - Setup no longer stumbles on the plan question
+
+**Setup crashed on the step where you choose how to pay for Adam's AI time**, and
+it did it whichever door you picked. The message was an unhelpful wall of Python
+(`SyntaxError: '(' was never closed`) followed by "Couldn't record the plan choice
+automatically." Setup carried on, so nothing was lost — but your answer wasn't
+saved, and you had to finish the job in Settings afterwards.
+
+- **The plan choice is recorded again.** The setup script builds a small snippet
+  of Python to save your answer, and the quotes inside it were being stripped
+  before Python ever saw it, which broke the snippet. Both doors now save
+  correctly the first time.
+- **If you chose pay-as-you-go, your API key is saved.** This is the half of the
+  bug that actually cost you something: a pasted key silently never made it to
+  disk. It does now.
+- **Plainer wording on the "Sign in with Claude" option.** It previously made
+  confident claims about how Claude subscriptions meter usage that were more
+  detail than we can stand behind. It now says the honest version: Adam runs on
+  the subscription you already pay for, usage counts against that plan's normal
+  limits, and Adam pauses if you reach them.
+
 ## 0.9.62 - Adam Plus is on sale, and there's now somewhere to put your key
 
 **Adam Plus — phone and remote access — is available to buy.** A one-time $24.99,

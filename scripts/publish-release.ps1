@@ -5,7 +5,11 @@
 # from the repo's permanent "latest release" endpoint - no file IDs, no file-swapping.
 #
 # Usage:   powershell -ExecutionPolicy Bypass -File scripts\publish-release.ps1
-#          (optional)  -Repo owner/name   -Notes "what changed"
+#          (optional)  -Repo owner/name   -NotesFile notes.txt   -Notes 'what changed'
+#
+# NOTE ON NOTES: if the text contains a price, use -NotesFile (read verbatim) or
+# SINGLE quotes. Double-quoted "$24.99" makes PowerShell expand $24 to nothing —
+# that is how v0.9.62 shipped with notes reading "a one-time \.99". Guarded below.
 #
 # Needs the GitHub CLI (`gh`) installed + signed in (`gh auth login`) ONLY for the
 # automated path. Without it, this still builds the zip and prints the 3 web steps.
@@ -13,6 +17,9 @@
 param(
     [string]$Repo = "",
     [string]$Notes = "",
+    # Prefer this over -Notes for anything containing a price. A file is read verbatim,
+    # so PowerShell can never eat a "$24" the way a double-quoted -Notes string does.
+    [string]$NotesFile = "",
     # Escape hatches (fail-closed by default — see the installer stage below):
     #   -ZipOnly       publish WITHOUT an installer (old behavior; must be explicit now)
     #   -AllowUnsigned build/ship an UNSIGNED installer when signing isn't configured
@@ -75,6 +82,16 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# Gate 3 (advisory): known CVEs in the pinned dependencies. Deliberately does
+# NOT block — a vulnerability in a transitive dep must not stop a hotfix going
+# out — but the operator sees it before publishing rather than months later.
+Say "Auditing dependencies for known vulnerabilities ..." "Cyan"
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $here "audit-deps.ps1")
+if ($LASTEXITCODE -ne 0) {
+    Say "WARNING: dependency audit reported findings (see above). Publishing anyway." "Yellow"
+    Say "         Fix with a version bump in requirements.txt when you can." "Yellow"
+}
+
 Say "Building release zip for $tag ..." "Cyan"
 & $py (Join-Path $here "make_release.py") | Write-Host
 $zip = Join-Path $root ("dist\adam-local-$tag.zip")
@@ -132,16 +149,45 @@ if ($exeStable) { $assets += $exeStable }
 
 $gh = (Get-Command gh -ErrorAction SilentlyContinue).Source
 if ($gh) {
+    if ($NotesFile) {
+        if (-not (Test-Path $NotesFile)) { Say "NotesFile not found: $NotesFile" "Red"; exit 1 }
+        $Notes = Get-Content -Raw -Encoding UTF8 $NotesFile
+    }
     if (-not $Notes) { $Notes = "Adam $tag" }
+
+    # Guard: v0.9.62 shipped with release notes reading "a one-time \.99" because the
+    # caller passed -Notes "...$24.99..." in a DOUBLE-quoted PowerShell string — $24
+    # expanded to nothing and left the backslash behind. That sat live on the page where
+    # buyers decide. Refuse to publish notes that show the same signature.
+    $priceBug = ($Notes -match '\\\s*\.\d') -or ($Notes -match '(?<![\d$])\.\d{2}\b(?!\d)' -and $Notes -notmatch '\$\d')
+    if ($priceBug) {
+        Say "REFUSING TO PUBLISH - the release notes look like a variable was eaten:" "Red"
+        Say "  $($Notes.Trim())" "Yellow"
+        Say "A price lost its digits. In PowerShell, `"...`$24.99...`" expands `$24 to nothing." "Red"
+        Say "Fix: use -NotesFile <path>, or single-quote the string: -Notes '...`$24.99...'" "Cyan"
+        exit 1
+    }
+
     Say "Publishing $tag to $Repo via gh ..." "Cyan"
+    # gh receives the notes as a FILE, never as an argument. PowerShell re-parses a
+    # multi-line string when handing it to a native exe, so `--notes $Notes` arrived
+    # at gh word-split across many argv entries: v0.9.63's publish died with
+    # "no matches found for `record`" after the tests, zip, and SIGNED installer had
+    # all succeeded. A file is read verbatim and cannot be re-parsed. (Same class of
+    # bug as the wizard's `python -c` snippet — see wizard.ps1's plan step.)
+    # UTF8 without BOM: Set-Content -Encoding utf8 writes a BOM in PS 5.1, which
+    # would show up as stray characters at the top of the published notes.
+    $notesTmp = Join-Path ([System.IO.Path]::GetTempPath()) "adam-relnotes-$tag.md"
+    [System.IO.File]::WriteAllText($notesTmp, $Notes, (New-Object System.Text.UTF8Encoding($false)))
     # Create the release (or, if the tag already exists, upload/replace the assets).
     $exists = $false
     try { & $gh release view $tag --repo $Repo *> $null; if ($LASTEXITCODE -eq 0) { $exists = $true } } catch {}
     if ($exists) {
         & $gh release upload $tag @assets --repo $Repo --clobber
     } else {
-        & $gh release create $tag @assets --repo $Repo --title $tag --notes $Notes
+        & $gh release create $tag @assets --repo $Repo --title $tag --notes-file $notesTmp
     }
+    Remove-Item -LiteralPath $notesTmp -Force -ErrorAction SilentlyContinue
     if ($LASTEXITCODE -ne 0) {
         Say "gh failed (exit $LASTEXITCODE). Make sure the repo exists and you're signed in (gh auth login)." "Red"
         exit 1

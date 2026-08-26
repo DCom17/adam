@@ -6,21 +6,24 @@ Progression requires real evidence — not intentions or plans.
 
 ---
 
-## Quest Eligibility Rule
+## Quest Classification Rule (Full-Day Board)
 
-An action qualifies as a daily quest only if it passes at least one of these two gates:
+**Every item on the day's plan becomes a quest — the board mirrors the whole day.** The two gates decide each quest's class, not whether it appears:
 
 **Stat gate:** The action meets the qualifying evidence criteria for at least one of the 8 stats below.
 **Boss gate:** The action directly advances a confirmed milestone for an active boss.
 
-Actions that fail both gates are tasks only — they do not earn XP and should not receive quest IDs.
+**Passes either gate → achievement quest** — normal bounty (routine / boss_step / milestone), linked stat/boss. Real XP.
 
-Always fails (examples):
+**Fails both gates → ops quest** — obligatory day items (work shifts, chores, errands, admin, appointments). Type `micro`, bounty 1–3 XP, linked to Discipline (showing up and executing the day), `linked_boss: none`. Deliberately trivial: the user has to do these anyway, so they earn board presence and a token reward, capped by the 6 micro XP/day limit in `xp_rules.md`.
+
+Always ops-class (examples):
+- Work shifts and routine work tasks
 - One-off errands (ordering supplies, picking something up)
-- Passive scheduled time with no intentional investment
-- Planning or intention without execution
+- Chores running in parallel (laundry, dishes)
 - Admin tasks with no stat or boss linkage
-- Passive entertainment, scrolling, routine co-presence
+
+Never a quest at all: planning or intention without execution, passive entertainment, scrolling, routine co-presence — these aren't things the user *does* on the plan.
 
 Use the "Evidence examples" and "Does NOT count" sections below to apply the [[XP System|stat gate]].
 

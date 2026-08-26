@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Auth bootstrap: if opened with #token=... (desktop launcher or phone Connect-QR),
+     store the token to localStorage and strip it from the URL/history. The fragment
+     never reaches the server. No-op on normal navigation. -->
+<script>
+(function(){try{var h=(location.hash||"").replace(/^#/,"");if(h){var t=new URLSearchParams(h).get("token");if(t&&t.trim()){localStorage.setItem("jarvis_token",t.trim());localStorage.setItem("jarvis_url",location.origin);}}}catch(e){}try{if(location.hash){history.replaceState(null,document.title,location.pathname+location.search);}}catch(e){try{location.hash="";}catch(e2){}}})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04060b">
+<meta name="robots" content="noindex, nofollow">
+<title>Adam — Connect Phone</title>
+<link rel="icon" href="/icon.png" type="image/png" />
+<!-- Shared design language for every operator page. See web/adam-ui.css. -->
+<link rel="stylesheet" href="/adam-ui.css">
+</head>
+<body>
+
+<header class="appbar">
+  <h1><img src="/logo.png" alt="" class="brand-logo"><span class="wordmark">ADAM</span><span class="pagename">Connect Phone</span></h1>
+  <span class="spacer"></span>
+  <nav aria-label="Adam sections">
+    <a href="/settings" title="Back to all add-ons"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7"/></svg><span class="label">All add-ons</span></a>
+    <a href="/console" title="Operator Console"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="2.5" y="4" width="19" height="16" rx="2.5"/><path d="m7 10 2.6 2.4L7 15M12.5 15.2h4.5"/></svg><span class="label">Console</span></a>
+    <button id="signOut" class="hidden" type="button">Sign out</button>
+  </nav>
+</header>
+
+<!-- Token gate (carries no secret; token is pasted client-side, stored on this device only) -->
+<main id="gateView">
+  <section class="gate">
+    <div class="head">Sign in</div>
+    <div class="body">
+      <p class="muted">This page talks to your local server with your bearer token (the same
+        ADAM_TOKEN the Operator Console uses). It is stored on this device only.</p>
+      <p class="muted">Easiest way in: on your computer, start Adam with the <b>Start Adam</b>
+        launcher (<code>scripts\start-adam.ps1</code>) — it opens you already signed in, so you
+        won't see this box. To copy the token by hand, run <code>scripts\copy-token.ps1</code>
+        and paste it above.</p>
+      <div class="row">
+        <input id="tokenInput" type="password" placeholder="Paste ADAM_TOKEN" style="flex:1;min-width:240px;" autocomplete="off">
+        <button class="primary" id="signIn">Sign in</button>
+      </div>
+      <div class="row"><label>Server</label><input id="urlInput" type="text" style="flex:1;min-width:240px;" autocomplete="off"></div>
+      <div class="errbox hidden" id="gateErr"></div>
+    </div>
+  </section>
+</main>
+
+<!-- Wizard -->
+<main id="wizardView" class="hidden">
+<!-- Everything phone-related stays inside #connectPhoneSec so the headless test's
+     "the token never appears in the section text" assertion keeps covering the
+     whole page, not just an intro paragraph. -->
+<div id="connectPhoneSec">
+
+  <section>
+    <div class="body">
+      <div class="infobox">Adam runs on your PC. This puts the <b>whole assistant</b> — voice
+        included — on your phone, talking to that same PC. On the same Wi-Fi it works right
+        away; with Tailscale it works anywhere you go. Nothing is published to the internet, and
+        the sign-in code below is drawn on your own machine.</div>
+      <div class="errbox hidden" id="qrMsg"></div>
+    </div>
+  </section>
+
+  <!-- Shown only when there is no HTTPS address a phone can reach. Guided and
+       read-only: it inspects Tailscale and shows the exact command to run. -->
+  <section class="hidden" id="phoneSetupWiz">
+    <div class="head">Set up phone access (Tailscale)</div>
+    <div class="body">
+      <div id="phoneSetupBody" class="muted">Checking…</div>
+      <div class="row" style="margin-top:8px;">
+        <button id="phoneSetupRecheck">Re-check</button>
+        <span class="muted" id="phoneSetupMsg"></span>
+      </div>
+    </div>
+  </section>
+
+  <section id="qrEasy">
+    <div class="head">Sign in your phone — scan one code
+      <button id="qrHide" class="hidden" style="margin-left:auto;">Hide</button>
+    </div>
+    <div class="body">
+      <div class="warnbox">This code contains your access token. Scan it only with your own phone,
+off your own screen. Don't screenshot, photograph, or share it. Hide it when done.</div>
+      <div class="row" style="margin-top:10px;">
+        <button class="primary" id="qrComboShow">Show sign-in QR</button>
+        <span class="muted">Open your phone Camera, scan, and tap the link — you'll land signed in.</span>
+      </div>
+      <div id="qrComboPanel" class="hidden">
+        <canvas id="qrComboCanvas" width="340" height="340" style="background:#fff;border-radius:10px;padding:10px;display:block;margin-top:10px;"></canvas>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button id="qrSplitToggle">Cautious mode — keep the token out of the QR</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="qrHomeScreen">
+    <div class="head">Make it an app (add to home screen)</div>
+    <div class="body">
+      <p class="muted">Once Adam is open on your phone, add it to the home screen so it gets its own
+        icon and opens full-screen like a normal app.</p>
+      <ol class="steps">
+        <li>
+          <h3>iPhone (Safari)</h3>
+          <p class="muted">Tap <b>Share</b> (the square with an up-arrow) → <b>Add to Home Screen</b> → <b>Add</b>.</p>
+        </li>
+        <li>
+          <h3>Android (Chrome)</h3>
+          <p class="muted">Tap the <b>&#8942;</b> menu → <b>Add to Home screen</b> / <b>Install app</b>.</p>
+        </li>
+      </ol>
+      <div class="infobox">The first time you open it from the home-screen icon it may ask for your
+        access token again — an installed app gets its own private storage. Turn on
+        <b>Cautious mode</b> above, tap <b>Show token QR</b>, and scan that code with your Camera;
+        it will offer to <b>Copy</b> the token. Paste it into the app's token box and you're in
+        for good.</div>
+    </div>
+  </section>
+
+  <section id="qrSplitWrap" class="hidden">
+    <div class="head">Cautious mode — two codes, token never inside a link</div>
+    <div class="body">
+      <ol class="steps">
+        <li id="qrStep1">
+          <h3>Step 1 — Open Adam on phone</h3>
+          <div class="row">
+            <label style="min-width:80px;">Adam URL</label>
+            <span class="v" id="qrUrlText" style="word-break:break-all;">—</span>
+            <button id="qrCopyUrl">Copy URL</button>
+            <span class="muted" id="qrCopyMsg"></span>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <button id="qrUrlShow">Show URL QR</button>
+            <span class="muted">Not sensitive — it is only an address.</span>
+          </div>
+          <div id="qrUrlPanel" class="hidden">
+            <div class="muted" style="margin:10px 0 4px;">Scan with your phone Camera to open Adam.</div>
+            <canvas id="qrUrlCanvas" width="320" height="320" style="background:#fff;border-radius:10px;padding:10px;display:block;"></canvas>
+          </div>
+        </li>
+        <li id="qrStep2">
+          <h3>Step 2 — Copy access token</h3>
+          <div class="warnbox">Sensitive — this token controls access. Show it only to your own phone. Do not screenshot, photograph, or share it. Hide it when done.</div>
+          <div class="row" style="margin-top:8px;">
+            <button id="qrTokShow">Show token QR</button>
+            <button id="qrReveal">Reveal token</button>
+            <code id="qrTokenText" class="hidden" style="word-break:break-all;color:var(--amber);"></code>
+          </div>
+          <div id="qrTokPanel" class="hidden">
+            <div class="muted" style="margin:10px 0 4px;">Scan with Camera, then tap Copy and paste it into the app.</div>
+            <canvas id="qrTokCanvas" width="320" height="320" style="background:#fff;border-radius:10px;padding:10px;display:block;"></canvas>
+          </div>
+        </li>
+        <li id="qrStep3">
+          <h3>Step 3 — Finish on the phone</h3>
+          <p class="muted">Paste the token into the phone app's settings, tap Activate, and test voice.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Adam Plus. Rendered from /license, so it states the real trial position
+       instead of a generic advert, and disappears entirely once a licence is
+       active or when the build isn't selling. -->
+  <section id="plusSec" class="hidden">
+    <div class="head">Adam Plus</div>
+    <div class="body" id="plusBody"></div>
+  </section>
+
+</div>
+</main>
+
+<!-- ============================================================================
+     VENDORED QR ENCODER - shared with the Operator Console, one copy only.
+     Library : qrcode-generator  -  Author: Kazuhiko Arase  -  License: MIT
+     Source  : https://github.com/kazuhikoarase/qrcode-generator
+               js/dist/qrcode.js @ commit 64f5976e5f9256348d0f5417ceff934bb43cf279
+     Local file, served by its own route. No network, no CDN, no remote asset.
+============================================================================ -->
+<script src="/qr-encoder.js"></script>
+
+<script>
+"use strict";
+// Connect phone — the add-on page. This code MOVED here from the Operator
+// Console verbatim; the console now links to this page instead of carrying a
+// buried section. The token is never written into served HTML, never sent to
+// the server for QR, never logged, never put in a URL, and never exported as an
+// image (canvas draw only, no toDataURL).
+
+// Bearer token read from localStorage; sent only in the Authorization header.
+// Same keys as the Operator Console so one sign-in covers both.
+var LS = {
+  get token() { return localStorage.getItem("jarvis_token") || ""; },
+  set token(v) { localStorage.setItem("jarvis_token", v); },
+  clearToken() { localStorage.removeItem("jarvis_token"); },
+  get url() { return (localStorage.getItem("jarvis_url") || location.origin).replace(/\/$/, ""); },
+  set url(v) { localStorage.setItem("jarvis_url", v.replace(/\/$/, "")); }
+};
+
+function $(id) { return document.getElementById(id); }
+function show(el) { el.classList.remove("hidden"); }
+function hide(el) { el.classList.add("hidden"); }
+function hdr() { return { "Authorization": "Bearer " + LS.token }; }
+
+// Same contract as the Operator Console's api(): { ok, status, data }, never throws.
+async function api(path, withAuth) {
+  try {
+    var opts = withAuth === false ? {} : { headers: hdr() };
+    var r = await fetch(LS.url + path, opts);
+    var data = null;
+    try { data = await r.json(); } catch (_) {}
+    return { ok: r.ok, status: r.status, data: data };
+  } catch (e) {
+    return { ok: false, status: 0, data: null, netErr: String(e && e.message || e) };
+  }
+}
+
+// --- Connect phone: local SPLIT-QR handoff (client-only) --------------------
+// Two SEPARATE QRs, both built in the browser from localStorage at runtime:
+//   * URL QR   = the Adam HTTPS URL ONLY (iOS Camera opens it as a link).
+//   * token QR = the BARE token ONLY — no url, no "https", no "URL:", no title —
+//                so iOS Camera treats it as plain text and offers Copy.
+// The token is never written into served HTML, never sent to the server, never
+// logged, never placed in a URL, and never exported as an image (canvas draw
+// only, no toDataURL). Splitting fixes the iOS-Camera URL-extraction that hid the
+// token in the old single-QR design.
+// The browser is usually on localhost (no use to a phone), so the QR must encode a
+// PHONE-reachable URL. The server reports one (Tailscale HTTPS, or a LAN IP) via
+// /connect-info; we prefer the signed-in URL only when it's already non-local.
+var _phoneInfo = null;                               // { best, candidates } cache
+function qrIsLocal(u) { u = (u || "").toLowerCase(); return u.indexOf("localhost") >= 0 || u.indexOf("127.0.0.1") >= 0 || u.indexOf("0.0.0.0") >= 0; }
+async function qrLoadPhoneInfo() {
+  if (_phoneInfo) return _phoneInfo;
+  var r = await api("/connect-info");
+  if (r && r.ok && r.data) _phoneInfo = r.data;
+  return _phoneInfo;
+}
+function qrPhoneUrl() { return (_phoneInfo && _phoneInfo.best && _phoneInfo.best.url) || null; }
+function qrUrl() {
+  var u = LS.url;
+  if (u && !qrIsLocal(u)) return u;                  // already a phone-reachable sign-in URL
+  return qrPhoneUrl() || u;                          // else the server-detected phone URL
+}
+function qrToken() { return LS.token; }             // localStorage at runtime only
+function qrUrlPayload() { var u = qrUrl(); return u ? u : null; }       // URL string only
+function qrTokenPayload() { var t = qrToken(); return t ? t : null; }   // bare token only
+// Runtime-only hooks for verification (devtools / headless). Return the exact
+// strings that WOULD be encoded, or null when absent. Never persisted.
+window.__jvlQrUrlPayload = function () { return qrUrlPayload(); };
+window.__jvlQrTokenPayload = function () { return qrTokenPayload(); };
+
+// Draw a QR for `text` onto the canvas using the vendored, local encoder. Byte
+// mode, ECC level M, auto-version. No network, no image export.
+function qrRender(canvas, text) {
+  var qr = qrcode(0, "M");        // 0 = auto-pick smallest fitting version
+  qr.addData(text);               // default 8-bit byte mode (ASCII-safe)
+  qr.make();
+  var n = qr.getModuleCount();
+  var ctx = canvas.getContext("2d");
+  var size = canvas.width;
+  var quiet = 4;                                    // standard 4-module quiet zone
+  var cell = Math.floor(size / (n + quiet * 2));
+  var off = Math.floor((size - cell * n) / 2);
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#000000";
+  for (var r = 0; r < n; r++) {
+    for (var c = 0; c < n; c++) {
+      if (qr.isDark(r, c)) ctx.fillRect(off + c * cell, off + r * cell, cell, cell);
+    }
+  }
+}
+function qrSetUrlText() { $("qrUrlText").textContent = qrUrl() || "—"; }
+function qrClearOneCanvas(id) {
+  var cv = $(id);
+  var ctx = cv.getContext("2d");
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, cv.width, cv.height);
+}
+function qrMaskToken() {
+  var t = $("qrTokenText");
+  t.textContent = "";                               // drop the token from the DOM
+  t.classList.add("hidden");
+  $("qrReveal").textContent = "Reveal token";
+}
+
+// Step 1 — URL QR (not sensitive). Renders only after an explicit click.
+async function qrUrlShow() {
+  $("qrMsg").classList.add("hidden");
+  if (qrIsLocal(LS.url)) await qrLoadPhoneInfo();   // only fetch a substitute when needed
+  var url = qrUrlPayload();
+  if (!url || qrIsLocal(url)) {                     // no phone-reachable address found
+    $("qrMsg").textContent = "Couldn't find an address your phone can reach. Set up Tailscale so your phone can connect to this PC (see the Connect-your-phone guide), then try again.";
+    $("qrMsg").classList.remove("hidden");
+    return;
+  }
+  qrSetUrlText();
+  qrRender($("qrUrlCanvas"), url);                  // URL-only payload (phone-reachable)
+  $("qrUrlPanel").classList.remove("hidden");
+  $("qrHide").classList.remove("hidden");
+  qrInsecureNote();
+}
+// If the only phone-reachable address is http (LAN), warn that iPhone voice needs HTTPS
+// and point at the setup wizard above (which is shown in the same case).
+function qrInsecureNote() {
+  var best = _phoneInfo && _phoneInfo.best;
+  if (best && best.secure === false) {
+    $("qrMsg").textContent = "Note: this is a same-Wi-Fi address (http) — fine for basic use, but iPhone voice/mic need an HTTPS address. Use 'Set up phone access (Tailscale)' above to get one.";
+    $("qrMsg").classList.remove("hidden");
+  }
+}
+
+// --- Phone-access setup wizard (Tailscale) -------------------------------------
+// Read-only: it inspects Tailscale state (server runs the print-only connect-phone
+// helper) and shows the exact command to run. It never runs tailscale for you.
+// Built with DOM nodes only (no innerHTML) to honor the console's XSS guard.
+function _mk(tag, text, css) {
+  var e = document.createElement(tag);
+  if (text != null) e.textContent = text;
+  if (css) e.style.cssText = css;
+  return e;
+}
+function renderPhoneSetup(d) {
+  var box = $("phoneSetupBody");
+  box.textContent = "";
+  var dl = "https://tailscale.com/download/windows";
+  if (!d || d.tailscale_found === false) {
+    box.appendChild(_mk("div", "Your phone needs a private, secure link to this PC — that's what Tailscale gives you (free, a few minutes):"));
+    var ol = _mk("ol", null, "margin:6px 0 0 18px;padding:0;");
+    var li1 = _mk("li");
+    li1.appendChild(document.createTextNode("Install Tailscale on this PC: "));
+    var a = _mk("a", "tailscale.com/download/windows"); a.setAttribute("href", dl); a.setAttribute("target", "_blank"); a.setAttribute("rel", "noopener");
+    li1.appendChild(a);
+    li1.appendChild(document.createTextNode(" — then sign in (free)."));
+    ol.appendChild(li1);
+    ol.appendChild(_mk("li", "Install the Tailscale app on your phone and sign in with the SAME account."));
+    box.appendChild(ol);
+    box.appendChild(_mk("div", "Then click Re-check.", "margin-top:6px;"));
+    return;
+  }
+  if (!d.tailscale_logged_in) {
+    box.appendChild(_mk("div", "Tailscale is installed but not signed in on this PC. Open the Tailscale app and sign in (or run: tailscale up) — it's free. Sign in the Tailscale app on your phone with the SAME account too. Then click Re-check."));
+    return;
+  }
+  box.appendChild(_mk("div", "Almost there — one command turns on the secure phone link. On this PC, open a terminal (PowerShell) and run:"));
+  var row = _mk("div", null, "margin:6px 0;");
+  row.appendChild(_mk("code", d.serve_command || "", "word-break:break-all;"));
+  var copy = _mk("button", "Copy", "margin-left:6px;"); copy.setAttribute("type", "button");
+  row.appendChild(copy);
+  box.appendChild(row);
+  box.appendChild(_mk("div", "This serves Adam to your phone over HTTPS at:"));
+  box.appendChild(_mk("div", d.phone_url || "", "font-weight:bold;word-break:break-all;"));
+  if (d.serve_443_in_use && d.warnings && d.warnings.length) {
+    var w = _mk("div", d.warnings[0], "margin-top:6px;"); w.className = "muted"; box.appendChild(w);
+  }
+  box.appendChild(_mk("div", "Make sure the Tailscale app on your phone is signed in, then click Re-check.", "margin-top:6px;"));
+  copy.addEventListener("click", function () {
+    if (navigator.clipboard) navigator.clipboard.writeText(d.serve_command || "").then(function () {
+      $("phoneSetupMsg").textContent = "Copied."; setTimeout(function () { $("phoneSetupMsg").textContent = ""; }, 1500);
+    });
+  });
+}
+async function loadPhoneSetup(force) {
+  var wiz = $("phoneSetupWiz"); if (!wiz) return;
+  if (force) _phoneInfo = null;                        // re-detect after the user acts
+  await qrLoadPhoneInfo();
+  qrSetUrlText();                                      // refresh the Step-1 "Adam URL" display
+  wiz.classList.remove("hidden");
+  var best = _phoneInfo && _phoneInfo.best;
+  if (best && best.secure) {
+    // Ready — confirm it instead of silently disappearing.
+    var box = $("phoneSetupBody"); box.textContent = "";
+    box.appendChild(_mk("div", "✓ Phone access is ready — your phone can reach Adam at:", "color:#3ddc97;"));
+    box.appendChild(_mk("div", best.url, "font-weight:bold;word-break:break-all;"));
+    box.appendChild(_mk("div", "Scan the sign-in QR below with your phone to connect.", "margin-top:4px;"));
+    return;
+  }
+  $("phoneSetupBody").textContent = "Checking your Tailscale setup…";
+  var r = await api("/phone-setup");
+  if (r && r.status === 402) { renderPhoneLocked(r.data && r.data.detail); return; }
+  renderPhoneSetup((r && r.ok && r.data) ? r.data : { tailscale_found: false });
+}
+
+// Post-trial, unlicensed: phone access is the paid tier. Show a friendly gate
+// (DOM nodes only, per the console's XSS guard) rather than the Tailscale steps.
+function renderPhoneLocked(lock) {
+  var box = $("phoneSetupBody"); box.textContent = "";
+  box.appendChild(_mk("div", (lock && lock.message) || "Phone access is a licensed feature after your free trial.", "color:#e0a341;font-weight:bold;"));
+  box.appendChild(_mk("div", "Your PC assistant stays free — a license adds Adam on your phone, in Adam's voice, from anywhere.", "margin-top:6px;"));
+  var buy = _mk("a", "Get a license →");
+  buy.setAttribute("href", (lock && lock.buy_url) || "#"); buy.setAttribute("target", "_blank"); buy.setAttribute("rel", "noopener");
+  buy.style.cssText = "display:inline-block;margin-top:8px;color:#21e6ff;font-weight:bold;";
+  box.appendChild(buy);
+  box.appendChild(_mk("div", "Already bought? Enter your key under gear → AI plan → License, then click Re-check.", "margin-top:8px;font-size:12px;"));
+}
+
+// Step 2 — token QR (SENSITIVE). Renders only after an explicit click; the raw
+// token text stays masked behind Reveal regardless.
+function qrTokShow() {
+  $("qrMsg").classList.add("hidden");
+  var tok = qrTokenPayload();
+  if (!tok) {                                       // token missing -> guide, no render
+    $("qrMsg").textContent = "No token on this device yet. Sign in / paste your token first.";
+    $("qrMsg").classList.remove("hidden");
+    return;
+  }
+  qrRender($("qrTokCanvas"), tok);                  // BARE-token payload (no url/label)
+  $("qrTokPanel").classList.remove("hidden");
+  qrMaskToken();                                    // token text stays hidden by default
+  $("qrHide").classList.remove("hidden");
+}
+
+// Easy path — ONE QR encoding <adam-url>/#token=<token>. The token rides in the
+// fragment (never sent to the server); the phone app's bootstrap stores it and strips
+// it from the URL on load. Built fresh from localStorage at click time, never persisted.
+function qrComboPayload() {
+  var u = qrUrl(), t = qrToken();
+  if (!u || !t) return null;
+  return u.replace(/\/+$/, "") + "/#token=" + encodeURIComponent(t);
+}
+window.__jvlQrComboPayload = function () { return qrComboPayload(); };
+
+async function qrComboShow() {
+  $("qrMsg").classList.add("hidden");
+  if (qrIsLocal(LS.url)) await qrLoadPhoneInfo();   // only fetch a substitute when needed
+  var payload = qrComboPayload();
+  if (!payload || qrIsLocal(qrUrl())) {
+    $("qrMsg").textContent = !qrToken()
+      ? "No token on this device yet. Sign in / paste your token first."
+      : "Couldn't find an address your phone can reach. Set up Tailscale so your phone can connect to this PC (see the Connect-your-phone guide), then try again.";
+    $("qrMsg").classList.remove("hidden");
+    return;
+  }
+  qrRender($("qrComboCanvas"), payload);            // URL + #token fragment (phone-reachable URL)
+  $("qrComboPanel").classList.remove("hidden");
+  $("qrHide").classList.remove("hidden");
+  qrInsecureNote();
+}
+
+// Toggle the cautious two-step (split-QR) block. Leaving it clears its canvases/token.
+function qrSplitToggle() {
+  var hidden = $("qrSplitWrap").classList.toggle("hidden");
+  $("qrSplitToggle").textContent = hidden
+    ? "Cautious mode — keep the token out of the QR"
+    : "Hide two-step mode";
+  if (hidden) {
+    qrClearOneCanvas("qrUrlCanvas");
+    qrClearOneCanvas("qrTokCanvas");
+    $("qrUrlPanel").classList.add("hidden");
+    $("qrTokPanel").classList.add("hidden");
+    qrMaskToken();
+  }
+}
+
+// Single Hide — clears ALL canvases, hides every panel, re-masks the token,
+// and returns the controls to their safe default state.
+function qrHide() {
+  qrClearOneCanvas("qrUrlCanvas");
+  qrClearOneCanvas("qrTokCanvas");
+  qrClearOneCanvas("qrComboCanvas");
+  $("qrUrlPanel").classList.add("hidden");
+  $("qrTokPanel").classList.add("hidden");
+  $("qrComboPanel").classList.add("hidden");
+  qrMaskToken();                                    // re-mask + clear revealed token
+  $("qrHide").classList.add("hidden");
+  $("qrMsg").classList.add("hidden");
+}
+function qrReveal() {                               // token shown ONLY on explicit click
+  var t = $("qrTokenText");
+  if (t.classList.contains("hidden")) {
+    t.textContent = qrToken() || "";
+    t.classList.remove("hidden");
+    $("qrReveal").textContent = "Hide token";
+  } else {
+    qrMaskToken();
+  }
+}
+async function qrCopyUrl() {
+  var msg = $("qrCopyMsg");
+  try {
+    await navigator.clipboard.writeText(qrUrl());
+    msg.textContent = "copied";
+  } catch (e) {
+    msg.textContent = "copy not available — select the URL above";
+  }
+  setTimeout(function () { msg.textContent = ""; }, 2500);
+}
+// Optional dependency-free runtime self-test (run __jvlQrSelfTest() in devtools).
+// Exercises both payloads, both canvas draws, reveal, and hide-clears-both.
+window.__jvlQrSelfTest = function () {
+  var out = { pass: 0, fail: 0, details: [] };
+  function ok(name, cond) { cond ? out.pass++ : out.fail++; out.details.push((cond ? "PASS " : "FAIL ") + name); }
+  function darkCount(id) {
+    var cv = $(id), d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data, n = 0;
+    for (var i = 0; i < d.length; i += 4) { if (d[i] < 128) n++; }
+    return n;
+  }
+  var hadToken = !!qrToken();
+  ok("token payload null without token", hadToken || qrTokenPayload() === null);
+  if (!hadToken) { out.details.push("(set localStorage jarvis_token to test the drawn paths)"); return out; }
+  var up = qrUrlPayload(), tp = qrTokenPayload();
+  ok("url payload is the URL only", up === qrUrl());
+  ok("token payload is the bare token", tp === qrToken());
+  ok("token payload has no url/https/label",
+     tp.indexOf("http") < 0 && tp.indexOf("URL:") < 0 && tp.indexOf("Adam") < 0);
+  ok("url payload has no token", up.indexOf(qrToken()) < 0 && up.indexOf("?" + "token=") < 0);
+  qrUrlShow();
+  ok("url QR canvas drawn", darkCount("qrUrlCanvas") > 50);
+  qrTokShow();
+  ok("token QR canvas drawn", darkCount("qrTokCanvas") > 50);
+  ok("token hidden before reveal", $("qrTokenText").classList.contains("hidden"));
+  qrReveal();
+  ok("reveal shows the token", $("qrTokenText").textContent === qrToken());
+  qrHide();
+  ok("hide clears the url canvas", darkCount("qrUrlCanvas") === 0);
+  ok("hide clears the token canvas", darkCount("qrTokCanvas") === 0);
+  ok("hide re-masks the token", $("qrTokenText").classList.contains("hidden") && $("qrTokenText").textContent === "");
+  return out;
+};
+
+// --- Adam Plus ---------------------------------------------------------------
+// Rendered from /license, so this states the user's ACTUAL position — days left,
+// or a licence already active — instead of being a generic advert. It renders
+// nothing at all when the build isn't selling (d.configured false), so a dormant
+// build shows no upsell, and nothing once a licence is active. Built with
+// createElement/textContent like the rest of the operator pages; no innerHTML.
+function plusEl(tag, cls, text) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+async function loadPlus() {
+  var r = await api("/license");
+  var d = r && r.data;
+  if (!d || !d.configured) return;          // not selling — no upsell, ever
+  var box = $("plusBody");
+  while (box.firstChild) box.removeChild(box.firstChild);
+
+  if (d.valid) {
+    box.appendChild(plusEl("div", "okbox",
+      "Adam Plus is active on this machine. Phone and remote access are yours for good — "
+      + "no subscription, and it keeps working offline."));
+    show($("plusSec"));
+    return;
+  }
+
+  var trial = d.trial || {};
+  var left = Number(trial.days_left || 0);
+  var inTrial = !!trial.in_trial && left > 0;
+
+  box.appendChild(plusEl("div", inTrial ? "infobox" : "warnbox",
+    inTrial
+      ? ("You're on the free trial — phone and remote access work for "
+         + left + " more " + (left === 1 ? "day" : "days") + ". Nothing stops at the end "
+         + "except this page: Adam on your desktop carries on exactly as it is.")
+      : ("Your free trial has ended, so setting up phone access needs Adam Plus. "
+         + "Adam on your desktop is unaffected — every feature, no nagging.")));
+
+  var ul = plusEl("ul", "muted");
+  ul.style.margin = "10px 0 0 18px";
+  ul.style.padding = "0";
+  ["Adam on your phone's home screen, voice and all",
+   "Private remote access over your own Tailscale network",
+   "Reach your PC from anywhere, encrypted, with no relay in between",
+   "One payment of $24.99 — not a subscription, and yours forever",
+   "The desktop app stays free, in full, always"].forEach(function (t) {
+    ul.appendChild(plusEl("li", null, t));
+  });
+  box.appendChild(ul);
+
+  var ftr = plusEl("div", "cardftr");
+  ftr.style.marginTop = "14px";
+  var buy = plusEl("a", "btn primary", "Get Adam Plus — $24.99");
+  buy.setAttribute("href", d.buy_url || "https://adamlocal.gumroad.com/l/adam-plus");
+  buy.setAttribute("target", "_blank");
+  buy.setAttribute("rel", "noopener");
+  ftr.appendChild(buy);
+  ftr.appendChild(plusEl("span", "spacer-h"));
+  ftr.appendChild(plusEl("span", "tag", "14-day money-back guarantee"));
+  box.appendChild(ftr);
+
+  box.appendChild(plusEl("p", "muted",
+    "Your key is emailed to you after purchase, usually within a few hours. Paste it into "
+    + "Settings → AI plan → License to switch this on."));
+
+  show($("plusSec"));
+}
+
+// --- gate -------------------------------------------------------------------
+function enterWizard() {
+  hide($("gateView")); show($("wizardView")); show($("signOut"));
+  wirePhone();
+  try { loadPlus(); } catch (_) {}   // an upsell must never break the page
+}
+function enterGate() { show($("gateView")); hide($("wizardView")); hide($("signOut")); }
+
+async function signIn() {
+  var t = $("tokenInput").value.trim();
+  var u = $("urlInput").value.trim();
+  if (!t) { $("gateErr").textContent = "Paste your ADAM_TOKEN."; show($("gateErr")); return; }
+  LS.token = t;
+  if (u) LS.url = u;
+  var r = await api("/jobs?limit=1");
+  if (r.status === 403) { $("gateErr").textContent = "That token was rejected."; show($("gateErr")); LS.clearToken(); return; }
+  if (r.status === 0) { $("gateErr").textContent = "Could not reach the server at " + LS.url + "."; show($("gateErr")); return; }
+  hide($("gateErr"));
+  enterWizard();
+}
+function signOut() { LS.clearToken(); $("tokenInput").value = ""; enterGate(); }
+
+// --- wire up ----------------------------------------------------------------
+var _phoneWired = false;
+function wirePhone() {
+  if (_phoneWired) return;
+  _phoneWired = true;
+  // Connect phone (local QR handoff) — client-only, no network.
+  $("qrComboShow").addEventListener("click", qrComboShow);
+  $("qrSplitToggle").addEventListener("click", qrSplitToggle);
+  $("qrUrlShow").addEventListener("click", qrUrlShow);
+  $("qrTokShow").addEventListener("click", qrTokShow);
+  $("qrHide").addEventListener("click", qrHide);
+  $("qrReveal").addEventListener("click", qrReveal);
+  $("qrCopyUrl").addEventListener("click", qrCopyUrl);
+  var psr = $("phoneSetupRecheck");
+  if (psr) psr.addEventListener("click", function () { loadPhoneSetup(true); });
+  qrSetUrlText();
+  if (LS.token) { try { loadPhoneSetup(); } catch (_) {} }   // surface phone-setup guidance if needed
+}
+
+$("signIn").addEventListener("click", signIn);
+$("tokenInput").addEventListener("keydown", function (e) { if (e.key === "Enter") signIn(); });
+$("signOut").addEventListener("click", signOut);
+
+$("urlInput").value = LS.url;
+if (LS.token) enterWizard(); else enterGate();
+</script>
+</body>
+</html>
