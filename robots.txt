@@ -1,0 +1,8 @@
+# Adam — https://adam.camposenterprises.org/
+# Everything here is public marketing and legal copy; nothing is private and
+# nothing is generated per-visitor, so the whole site is open to crawlers.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://adam.camposenterprises.org/sitemap.xml
