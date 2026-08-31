@@ -542,6 +542,11 @@
       <div class="archive-section" id="archiveSection" hidden></div>
     </aside>
 
+    <!-- #stage / #voicePane / #chatPane are desktop-layout wrappers ONLY. Below the
+         desktop breakpoint they are display:contents, so the phone layout still sees
+         the original flat column (header / orb / hint / transcript / dock) unchanged. -->
+    <div id="stage">
+    <section id="voicePane" aria-label="Voice controls">
     <div class="orb-wrap">
       <button type="button" class="orb" id="orb" title="Tap to talk" aria-label="Talk to Adam"><canvas id="orbCanvas" width="200" height="200" aria-hidden="true"></canvas><div class="orb-activity" id="orbActivity" aria-hidden="true"></div></button>
       <div class="label" id="label" role="status">Standby</div>
@@ -564,6 +569,13 @@
       <button type="button" class="sh-more" id="starterHintMore">Tap <b>?</b> up top to see everything Adam can do →</button>
     </div>
 
+    <!-- Desktop home for the MUTE + ACTIVATE buttons (they are MOVED here from the
+         composer dock by the layout script when the desktop breakpoint applies, and
+         moved back below it). Empty + display:none on mobile, so it has no effect. -->
+    <div id="voiceControls"></div>
+    </section>
+
+    <section id="chatPane" aria-label="Conversation">
     <!-- role="log" + additions-only so a screen reader speaks each new turn as it
          lands, not the whole history. Session switching replaces innerHTML wholesale,
          so loadActiveSession() mutes this region for that one paint. -->
@@ -594,6 +606,8 @@
       </div>
       <button class="mute" id="mute">MUTE MIC</button>
       <button class="activate" id="activate">ACTIVATE ADAM</button>
+    </div>
+    </section>
     </div>
   </div>
 
@@ -822,6 +836,140 @@
       <div id="autoApplyHint" style="display:none;font-size:11px;color:var(--amber);margin:6px 0 0;">On — Adam's file changes apply automatically. Backup + audit still run and protected paths are still refused; you just won't be asked to approve. Turn off to review each change first.</div>
     </div>
   </div>
+
+<style>
+  /* ==================== DESKTOP LAYOUT (≥1100px) ====================
+     Three-pane cockpit: pinned sessions rail | conversation panel | orb stage.
+     Below the breakpoint every rule here is inert and the wrappers collapse
+     (display:contents), so phones and tablets keep the existing layout exactly.
+     This block sits AFTER all earlier <style> blocks on purpose — equal-specificity
+     overrides (transcript, drawer, btnrow) must win by source order. */
+  #stage, #voicePane, #chatPane { display: contents; }
+  #voiceControls { display: none; }
+
+  @media (min-width: 1100px) {
+    #app {
+      display: grid;
+      grid-template-columns: clamp(224px, 18vw, 264px) minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-areas: "rail header" "rail stage";
+      gap: 18px 24px;
+      padding: 18px 26px 24px;
+      align-items: stretch; justify-content: normal;
+      text-align: left;
+    }
+    header { grid-area: header; }
+    /* Center the brand on the VIEWPORT, not the header grid area (which starts
+       right of the rail): shift it left by half the rail + gap. The #viewMenu
+       keeps its default 50%-of-viewport anchor, so it lines up automatically. */
+    .brand { left: calc(50% - (clamp(224px, 18vw, 264px) + 24px) / 2); }
+    /* The rail is always visible on desktop, so the ☰ opener goes away. */
+    #menuBtn { display: none; }
+    .drawer-scrim { display: none !important; }
+    /* Sessions drawer → pinned rail card. Static position beats the fixed
+       slide-over; .open/.close toggles from JS become harmless no-ops. */
+    .drawer {
+      grid-area: rail;
+      position: static; transform: none; transition: none;
+      width: auto; max-width: none; height: auto; min-height: 0;
+      border: 1px solid var(--edge); border-radius: 18px;
+      background: rgba(7,16,25,.42);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      padding-bottom: 14px;
+    }
+    #stage {
+      grid-area: stage;
+      display: grid; min-height: 0;
+      grid-template-columns: minmax(0, 1fr) clamp(330px, 30vw, 400px);
+      gap: 24px;
+    }
+    /* DOM order is voicePane→chatPane (mobile stacking order), so place them
+       explicitly: conversation takes the wide left column, orb the right. */
+    #chatPane  { grid-column: 1; grid-row: 1; }
+    #voicePane { grid-column: 2; grid-row: 1; }
+    /* --- Conversation panel (left of the orb) --- */
+    #chatPane {
+      display: flex; flex-direction: column; min-height: 0; min-width: 0;
+      gap: 14px; padding: 20px 22px 18px;
+      border: 1px solid var(--edge); border-radius: 18px;
+      background: rgba(7,16,25,.42);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      text-align: left;
+    }
+    .transcript {
+      flex: 1 1 auto; min-height: 0; max-height: none; max-width: none;
+      padding-right: 8px;
+    }
+    .transcript:empty::before {
+      content: "Nothing here yet — activate Adam and just talk, or pick a chat on the left.";
+      display: block; color: var(--faint); font-size: 13px; letter-spacing: .4px;
+    }
+    /* Chat shapes: your turns become quiet right-aligned bubbles; Adam's replies
+       stay open cyan text at a readable measure. Markup is untouched (transcript
+       innerHTML is persisted per session) — this is presentation only. */
+    .transcript .you {
+      width: fit-content; max-width: min(72%, 56ch);
+      margin: 0 0 16px auto; padding: 10px 14px;
+      background: rgba(33,230,255,.07);
+      border: 1px solid rgba(33,230,255,.16);
+      border-radius: 14px 14px 4px 14px;
+      color: var(--text);
+    }
+    .transcript .you:not(:first-child) {
+      margin-top: 26px; padding-top: 10px;
+      border-top: 1px solid rgba(33,230,255,.16);
+    }
+    .transcript .adam { max-width: 74ch; line-height: 1.55; }
+    .transcript .interim { max-width: 74ch; }
+    /* Composer stretches across the panel; mode/replay shrink to content pills. */
+    #composerDock { max-width: none !important; }
+    .chips { max-width: none; }
+    .btnrow { max-width: none; width: auto; align-self: flex-start; }
+    .btnrow .half { flex: 0 0 auto; padding: 9px 22px; }
+    /* --- Orb stage (right column) --- */
+    #voicePane {
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 0; min-width: 0; gap: 22px; padding: 6px 2px 2px;
+      text-align: center;
+    }
+    .orb-wrap { flex: 1 1 auto; min-height: 0; justify-content: center; }
+    .orb { width: 260px; height: 260px; }
+    #starterHint { flex: none; }
+    #voiceControls {
+      display: flex; flex-direction: column; gap: 10px;
+      width: min(340px, 100%); flex: none;
+    }
+    #voiceControls .mute, #voiceControls .activate { max-width: none; }
+    /* Slim, theme-matched scrollbars for the desktop panes. */
+    .transcript::-webkit-scrollbar, .session-list::-webkit-scrollbar,
+    .archive-list::-webkit-scrollbar { width: 8px; }
+    .transcript::-webkit-scrollbar-thumb, .session-list::-webkit-scrollbar-thumb,
+    .archive-list::-webkit-scrollbar-thumb { background: rgba(33,230,255,.16); border-radius: 8px; }
+    .transcript::-webkit-scrollbar-track, .session-list::-webkit-scrollbar-track,
+    .archive-list::-webkit-scrollbar-track { background: transparent; }
+  }
+</style>
+<script>
+(function () {
+  // Desktop layout: the engine controls (MUTE / ACTIVATE) live beside the orb;
+  // below the breakpoint they stay at the bottom of the composer dock. Moving the
+  // nodes preserves their listeners; the restore path re-appends them last, which
+  // is their original position/order inside the dock. Must match the CSS breakpoint.
+  var mq = window.matchMedia("(min-width: 1100px)");
+  function place() {
+    var dock = document.getElementById("composerDock");
+    var voice = document.getElementById("voiceControls");
+    var mute = document.getElementById("mute");
+    var act = document.getElementById("activate");
+    if (!dock || !voice || !mute || !act) return;
+    var home = mq.matches ? voice : dock;
+    if (mute.parentElement !== home) { home.appendChild(mute); home.appendChild(act); }
+  }
+  place();
+  if (mq.addEventListener) mq.addEventListener("change", place);
+  else if (mq.addListener) mq.addListener(place);
+})();
+</script>
 
 <script>
 // --- Pending approvals / proposed-changes panel (Phase 3) -------------------
@@ -3476,8 +3624,18 @@
   const octx = orbCanvas.getContext("2d");
   const ORB_S = 200, ORB_C = ORB_S / 2;
   const ORB_DPR = Math.min(window.devicePixelRatio || 1, 2);
-  orbCanvas.width = ORB_S * ORB_DPR; orbCanvas.height = ORB_S * ORB_DPR;
-  octx.scale(ORB_DPR, ORB_DPR);
+  // All draw math stays in the fixed 200px logical space; the backing store is
+  // re-derived from the .orb button's CSS size (200px mobile, 260px on the desktop
+  // layout) so the orb renders crisp at any displayed size. setTransform (not
+  // scale) so repeated calls on resize never compound.
+  function orbFit() {
+    const css = (orbCanvas.parentElement && orbCanvas.parentElement.clientWidth) || ORB_S;
+    const k = ORB_DPR * (css / ORB_S);
+    orbCanvas.width = Math.max(1, Math.round(ORB_S * k));
+    orbCanvas.height = Math.max(1, Math.round(ORB_S * k));
+    octx.setTransform(k, 0, 0, k, 0, 0);
+  }
+  orbFit();
 
   const mixN = (a, b, k) => a + (b - a) * k;
   const mix3 = (a, b, k) => [mixN(a[0], b[0], k), mixN(a[1], b[1], k), mixN(a[2], b[2], k)];
@@ -3718,7 +3876,7 @@
 
     bResize(); bBuild();
     let brz;
-    window.addEventListener("resize", () => { clearTimeout(brz); brz = setTimeout(() => { bResize(); bBuild(); }, 150); });
+    window.addEventListener("resize", () => { clearTimeout(brz); brz = setTimeout(() => { bResize(); bBuild(); orbFit(); }, 150); });
     requestAnimationFrame(bFrame);
   })();
 

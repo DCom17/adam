@@ -3,6 +3,21 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.73 - Adam finally looks like a desktop app on a desktop
+
+- **A real desktop layout.** On screens 1100px and wider, Adam stops being a
+  stretched phone column and becomes a three-pane cockpit: your chats live in
+  an always-visible sessions rail on the left (no more hamburger), the
+  conversation fills a large panel in the middle — your turns as right-aligned
+  bubbles, Adam's replies as open text at a readable width, with the composer
+  and Operator/Replay controls docked at the bottom — and the orb gets its own
+  stage on the right, grown to 260px with Mute and Activate beneath it. The
+  orb re-renders at its displayed size, so it stays crisp rather than scaled.
+- **Phones and tablets are untouched.** Below the desktop breakpoint the app
+  is the exact same layout as before — the desktop panes collapse away
+  entirely, and the voice buttons return to their usual spot under the
+  composer. Nothing about the phone experience changed.
+
 ## 0.9.72 - The quest board shows your whole day
 
 - **Every planned item is now a quest.** Daily planning used to filter your day
