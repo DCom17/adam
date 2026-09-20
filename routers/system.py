@@ -602,6 +602,16 @@ async def health_tracker_page():
     return _static_page("health.html")
 
 
+@router.get("/checklists-view")
+async def checklists_page():
+    """Serve the in-app Checklists view (web/checklists.html) — user-written and
+    Adam-built step lists, plus the archive. Data comes from the token-gated
+    /checklists API. Opened in an overlay iframe from the main app's view
+    switcher. (The bare /checklists path is the JSON index, so the page lives at
+    /checklists-view — same split as /health vs /health-tracker.)"""
+    return _static_page("checklists.html")
+
+
 @router.get("/license-agreement")
 async def license_agreement_page():
     """Serve the first-run EULA clickwrap screen (web/license-agreement.html). The

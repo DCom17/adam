@@ -232,8 +232,13 @@ def main() -> int:
             note_off = server._action_proposal_note(auto_run_calendar=False)
             check("action note advertises calendar.create", "calendar.create" in note_on)
             check("auto-run note says it runs immediately", "IMMEDIATELY" in note_on)
-            check("non-auto note waits for approval (no immediate-run claim)",
-                  "approve" in note_off.lower() and "IMMEDIATELY" not in note_off)
+            # Scoped to CALENDAR on purpose. Checklists always auto-run (they are
+            # local-only and their delete is a recoverable archive), so the note
+            # legitimately carries an unconditional "RUN IMMEDIATELY" for those —
+            # a bare "IMMEDIATELY" not in note_off would fail on that unrelated
+            # sentence. What must not appear is the CALENDAR immediate-run claim.
+            check("non-auto note waits for approval (no calendar immediate-run claim)",
+                  "approve" in note_off.lower() and "CALENDAR AUTO-RUN IS ON" not in note_off)
 
             # The self-edit OFFER points at raising the capability tier to Unrestricted
             # (via the gear menu), not a phantom prompt or a removed standalone toggle.

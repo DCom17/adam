@@ -29,6 +29,7 @@ Design rules:
 
 from __future__ import annotations
 
+import checklist_store
 import config
 import google_calendar
 import gmail
@@ -73,6 +74,61 @@ def _hunter_sync(p: dict) -> dict:
     return hunter.sync(payload)
 
 
+def _checklist_create(p: dict) -> dict:
+    title = (p.get("title") or "").strip()
+    if not title:
+        raise ActionError("checklist.create requires a 'title'.")
+    raw = p.get("items")
+    if raw is not None and not isinstance(raw, list):
+        raise ActionError("checklist.create 'items' must be a list.")
+    items: list[dict] = []
+    for it in (raw or []):
+        if isinstance(it, dict):
+            text = (it.get("text") or "").strip()
+            if text:
+                items.append({"text": text, "note": it.get("note", ""), "done": bool(it.get("done"))})
+        elif isinstance(it, str) and it.strip():
+            items.append({"text": it.strip(), "note": "", "done": False})
+    cid = checklist_store.create_checklist(
+        title=title, description=p.get("description", ""),
+        source=checklist_store.SOURCE_ADAM, items=items,
+    )
+    return {"checklist_id": cid, "title": title, "items": len(items)}
+
+
+def _checklist_add_items(p: dict) -> dict:
+    cid = p.get("checklist_id")
+    if not isinstance(cid, int):
+        raise ActionError("checklist.add_items requires an integer 'checklist_id'.")
+    raw = p.get("items")
+    if not isinstance(raw, list) or not raw:
+        raise ActionError("checklist.add_items requires a non-empty 'items' list.")
+    if checklist_store.get_checklist(cid) is None:
+        raise ActionError(f"No checklist with id {cid}.")
+    added = 0
+    for it in raw:
+        text = (it.get("text") if isinstance(it, dict) else it) or ""
+        text = str(text).strip()
+        if not text:
+            continue
+        note = it.get("note", "") if isinstance(it, dict) else ""
+        if checklist_store.add_item(cid, text, note=note) is not None:
+            added += 1
+    return {"checklist_id": cid, "added": added}
+
+
+def _checklist_archive(p: dict) -> dict:
+    """Adam's only delete path, and it is reversible by construction: the list
+    moves to the Archive tab, where the user can restore it. Permanent removal
+    (purge) is deliberately absent from this registry."""
+    cid = p.get("checklist_id")
+    if not isinstance(cid, int):
+        raise ActionError("checklist.archive requires an integer 'checklist_id'.")
+    if not checklist_store.archive_checklist(cid):
+        raise ActionError(f"No active checklist with id {cid}.")
+    return {"checklist_id": cid, "archived": True, "recoverable": True}
+
+
 def _email_draft(p: dict) -> dict:
     for k in ("to", "subject", "body"):
         if not p.get(k):
@@ -115,6 +171,25 @@ ACTIONS: dict[str, dict] = {
         "executor": _hunter_sync,
         "available": lambda: hunter.is_configured(),
         "risk": "low", "brain_proposable": True, "label": "Sync the Hunter dashboard",
+    },
+    # Checklists are purely local — no third-party service, no secret, no network.
+    # `available` is unconditional because there is nothing to configure, and the
+    # only delete path here is an archive the user can undo. Purge is absent on
+    # purpose: the assistant can never permanently destroy a list.
+    "checklist.create": {
+        "executor": _checklist_create,
+        "available": lambda: True,
+        "risk": "low", "brain_proposable": True, "label": "Create a checklist",
+    },
+    "checklist.add_items": {
+        "executor": _checklist_add_items,
+        "available": lambda: True,
+        "risk": "low", "brain_proposable": True, "label": "Add steps to a checklist",
+    },
+    "checklist.archive": {
+        "executor": _checklist_archive,
+        "available": lambda: True,
+        "risk": "low", "brain_proposable": True, "label": "Archive a checklist (recoverable)",
     },
     "email.draft": {
         "executor": _email_draft,

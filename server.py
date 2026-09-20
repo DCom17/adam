@@ -650,6 +650,21 @@ def _action_proposal_note(auto_run_calendar: bool = False, auto_run_hunter: bool
             "awarding XP; the award is decided at shutdown review against evidence, so the "
             "no-XP-for-intentions rule does not apply to the displayed value)."
         )
+    if "checklist.create" in avail:
+        lines.append(
+            "CHECKLISTS (the Checklists view, under the ADAM menu): when the user asks you to turn "
+            "something into a checklist — a plan, a set of steps, a packing or errand list — build it "
+            'with a checklist.create block: <<ACTION type="checklist.create" summary="Mortgage call '
+            'list">>{ "title": "Lender calls", "description": "optional one-liner", "items": [ '
+            '{ "text": "Call 1st Tribal", "note": "optional detail" }, { "text": "Get insurance quote" } ] }'
+            "<<END_ACTION>>. Items may also be plain strings. Add steps to an existing list with "
+            'checklist.add_items ({"checklist_id": 3, "items": [...]}), and remove a list with '
+            'checklist.archive ({"checklist_id": 3}) — that ARCHIVES it, so the user can restore it '
+            "from the Archive tab; you have no permanent-delete path and should not claim one. "
+            "CHECKLIST ACTIONS RUN IMMEDIATELY — there is no approval tap for these — so confirm in "
+            "past tense ('Made you a checklist — it's under Checklists in the Adam menu.'). Write "
+            "steps as short imperatives, one action each, in the order they should be done."
+        )
     if auto_run_calendar:
         lines.append(
             "CALENDAR AUTO-RUN IS ON: any calendar.create / calendar.update block you emit takes "
@@ -667,11 +682,12 @@ def _action_proposal_note(auto_run_calendar: bool = False, auto_run_hunter: bool
         )
     if not auto_run_calendar and not auto_run_hunter:
         lines.append(
-            "These actions wait for the user to approve them in an on-screen panel "
-            "you cannot see or operate. Never say a staged action already happened — it is only "
-            "PROPOSED until the user approves; you'll be told the outcome on a later turn."
+            "Apart from checklist.* above, these actions wait for the user to approve them in an "
+            "on-screen panel you cannot see or operate. Never say such a staged action already "
+            "happened — it is only PROPOSED until the user approves; you'll be told the outcome "
+            "on a later turn."
         )
-    elif not auto_run_calendar or not auto_run_hunter:
+    else:
         lines.append(
             "Any action NOT covered by an auto-run above waits for the user to approve it in an "
             "on-screen panel you cannot operate — for those, never claim it already happened; it is "
@@ -942,6 +958,16 @@ async def _auto_run_hunter_actions(actions: list[dict]) -> None:
     """Auto-run only hunter.sync (opt-in). Hunter has no delete path by construction,
     so an auto-synced board update is non-destructive and fully audited."""
     await _auto_run_actions_matching(actions, lambda t: t == "hunter.sync")
+
+
+async def _auto_run_checklist_actions(actions: list[dict]) -> None:
+    """Auto-run checklist.* — always on, with no user toggle, unlike calendar and
+    hunter. Justification: checklists are local-only (no connector, no secret,
+    nothing leaves the device) and the assistant's only removal path is
+    checklist.archive, which the Archive tab restores. Purge is not in the action
+    registry at all, so nothing here can be destroyed irreversibly. Still
+    SERVER-executed and still fully audited, exactly like every other action."""
+    await _auto_run_actions_matching(actions, lambda t: t.startswith("checklist."))
 
 
 def _brain_write_note(vault_path: str, auto_apply: bool = False) -> str:
@@ -2327,6 +2353,12 @@ async def run_claude(
                 await _auto_run_calendar_actions(actions)
             if _get_auto_run_hunter():
                 await _auto_run_hunter_actions(actions)
+            # Checklists always auto-run — deliberately no toggle. They are
+            # purely local (no third-party service, no secret, no network), and
+            # the only delete the assistant can propose is an archive the user
+            # restores in one tap. Parking "make me a checklist" behind an
+            # approval tap would add friction without adding safety.
+            await _auto_run_checklist_actions(actions)
 
     # Chat management (EVERY mode, incl. code): rename the current chat, or open a
     # fresh one on the user's spoken yes. Not gated on restrict — it's a UI relay to
@@ -2620,7 +2652,9 @@ def _voice_pkg_installed() -> bool:
 # the `server` module (run_claude, the live-turn registry, push helpers, ...)
 # is already defined. Each router reads server.<name> at request time, so a
 # test that monkeypatches an attribute on this module patches every route.
-from routers import chat, finance, health, integrations, reviews, system, voice_push  # noqa: E402
+from routers import (  # noqa: E402
+    chat, checklists, finance, health, integrations, reviews, system, voice_push,
+)
 
 app.include_router(system.router)
 app.include_router(chat.router)
@@ -2629,6 +2663,7 @@ app.include_router(voice_push.router)
 app.include_router(integrations.router)
 app.include_router(finance.router)
 app.include_router(health.router)
+app.include_router(checklists.router)
 
 
 if __name__ == "__main__":

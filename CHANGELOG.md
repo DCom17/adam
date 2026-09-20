@@ -3,6 +3,22 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.74 - Checklists, and Adam can build them for you
+
+- **A new Checklists view**, in the ADAM menu alongside Finance and Health.
+  Make lists of steps, tick them off, rename a step by tapping it, check or
+  clear a whole list at once. Progress shows on every card, so you can see
+  what is half-finished without opening anything.
+- **Adam builds them too.** Ask it to turn a plan into a checklist and it
+  appears in the view immediately — no approval tap, because checklists never
+  leave your machine and nothing here can be permanently destroyed by the
+  assistant. Lists Adam made carry an "Adam" badge so you always know which
+  are yours.
+- **Deleting is archiving.** Removing a list moves it to an Archive tab with
+  every step intact, and restoring puts it back exactly as it was. Permanent
+  deletion exists, but only from the archive, only after a confirmation, and
+  Adam cannot reach it at all.
+
 ## 0.9.73 - Adam finally looks like a desktop app on a desktop
 
 - **A real desktop layout.** On screens 1100px and wider, Adam stops being a

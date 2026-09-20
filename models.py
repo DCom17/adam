@@ -526,3 +526,53 @@ class HunterEnableRequest(StrictModel):
     only to the local .env and is NEVER logged or echoed back."""
     bridge_url: str
     token: str
+
+
+# --- Checklists --------------------------------------------------------------
+
+class ChecklistItemSeed(StrictModel):
+    """One step supplied inline when a checklist is created in a single call —
+    the shape Adam uses when it turns a conversation into a list."""
+    text: str
+    note: str = ""
+    done: bool = False
+
+
+class ChecklistCreateBody(StrictModel):
+    """Create a checklist, optionally with its steps in the same request.
+    `source` records provenance so the UI can badge Adam-made lists; anything
+    other than 'adam' is stored as 'user'."""
+    title: str
+    description: str = ""
+    source: str = "user"
+    items: list[ChecklistItemSeed] = []
+
+
+class ChecklistEditBody(StrictModel):
+    """Rename a checklist or change its description. Omitted fields are unchanged."""
+    title: str | None = None
+    description: str | None = None
+
+
+class ChecklistItemBody(StrictModel):
+    """Append one step to an existing checklist."""
+    text: str
+    note: str = ""
+    done: bool = False
+
+
+class ChecklistItemEdit(StrictModel):
+    """Patch one step. Omitted fields are unchanged; `done` also stamps done_at."""
+    text: str | None = None
+    note: str | None = None
+    done: bool | None = None
+
+
+class ChecklistReorderBody(StrictModel):
+    """Persist a drag-reorder. `order` is the full list of ids in their new order."""
+    order: list[int] = []
+
+
+class ChecklistBulkDoneBody(StrictModel):
+    """Check or clear every step in a checklist at once."""
+    done: bool

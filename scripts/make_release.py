@@ -33,6 +33,7 @@ _ROOT_FILES = [
     "usage_store.py", "tts_supervisor.py",
     "finance_store.py", "finance_metrics.py", "finance_import.py",  # Finance Tracker (F1/F2)
     "health_store.py", "health_metrics.py", "health_import.py",  # Health Tracker (H1/H2)
+    "checklist_store.py",  # Checklists view (user-written + Adam-built step lists)
     "garmin.py",  # Garmin health-sync add-on (Phase H3; garminconnect is optional/lazy)
     "approvals.py", "diffs.py", "job_store.py", "session_store.py", "onboarding.py", "agent_write_probe.py",
     "google_calendar.py", "integration_registry.py", "twilio_sms.py",
@@ -54,7 +55,7 @@ _ROOT_FILES = [
     "calendar_bridge.gs",
     "hunter_dashboard.gs", "hunter_verify.gs",
 ]
-_WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.html", "setup-email.html", "setup-linkedin.html", "setup-sms.html", "setup-voicemail.html", "setup-hunter.html", "setup-garmin.html", "setup-phone.html", "hunter-dashboard.html", "finance.html", "health.html",
+_WEB_FILES = ["index.html", "console.html", "settings.html", "setup-calendar.html", "setup-email.html", "setup-linkedin.html", "setup-sms.html", "setup-voicemail.html", "setup-hunter.html", "setup-garmin.html", "setup-phone.html", "hunter-dashboard.html", "finance.html", "health.html", "checklists.html",
     # First-run EULA clickwrap + bundled legal docs (served via /license-agreement, /legal,
     # and /legal/<name>.md). The clickwrap records assent locally — see licensing.py.
     "license-agreement.html", "legal.html",
@@ -93,8 +94,8 @@ _DOC_FILES = [
     "RELEASE.md", "CONSUMER_TEST_CHECKLIST.md", "PRIVACY.md",
 ]
 _ROUTERS_FILES = [  # the routers/ package server.py imports at boot
-    "__init__.py", "chat.py", "finance.py", "health.py", "integrations.py",
-    "reviews.py", "system.py", "voice_push.py",
+    "__init__.py", "chat.py", "checklists.py", "finance.py", "health.py",
+    "integrations.py", "reviews.py", "system.py", "voice_push.py",
 ]
 _TEST_GLOB = "test_*.py"   # F&F beta ships the test suites for self-verification
 _DATA_KEEP = "data/.gitkeep"

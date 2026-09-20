@@ -466,23 +466,24 @@
         filter: drop-shadow(0 0 4px rgba(33,230,255,.35)); }
       #viewMenu button:hover, #viewMenu button:focus, #gearMenu button:hover, #gearMenu button:focus { background: rgba(33,230,255,.1); color: var(--cyan); outline: none; }
       #viewMenu button[aria-current="true"] { color: var(--cyan); }
-      #dashOverlay, #addonsOverlay, #consoleOverlay, #financeOverlay, #healthOverlay { position: fixed; inset: 0; z-index: 55; background: #030712; display: none;
+      #dashOverlay, #addonsOverlay, #consoleOverlay, #financeOverlay, #healthOverlay, #checklistsOverlay { position: fixed; inset: 0; z-index: 55; background: #030712; display: none;
         flex-direction: column; }
-      #dashOverlay.show, #addonsOverlay.show, #consoleOverlay.show, #financeOverlay.show, #healthOverlay.show { display: flex; }
-      #dashOverlay .dash-bar, #addonsOverlay .dash-bar, #consoleOverlay .dash-bar, #financeOverlay .dash-bar, #healthOverlay .dash-bar { flex: none; display: flex; align-items: center; gap: 10px;
+      #dashOverlay.show, #addonsOverlay.show, #consoleOverlay.show, #financeOverlay.show, #healthOverlay.show, #checklistsOverlay.show { display: flex; }
+      #dashOverlay .dash-bar, #addonsOverlay .dash-bar, #consoleOverlay .dash-bar, #financeOverlay .dash-bar, #healthOverlay .dash-bar, #checklistsOverlay .dash-bar { flex: none; display: flex; align-items: center; gap: 10px;
         padding: 8px 12px; background: rgba(4,6,11,.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
         border-bottom: 1px solid rgba(33,230,255,.14); }
-      #dashOverlay .dash-bar button, #addonsOverlay .dash-bar button, #consoleOverlay .dash-bar button, #financeOverlay .dash-bar button, #healthOverlay .dash-bar button { background: none; border: 1px solid rgba(33,230,255,.3);
+      #dashOverlay .dash-bar button, #addonsOverlay .dash-bar button, #consoleOverlay .dash-bar button, #financeOverlay .dash-bar button, #healthOverlay .dash-bar button, #checklistsOverlay .dash-bar button { background: none; border: 1px solid rgba(33,230,255,.3);
         color: var(--cyan); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px;
         letter-spacing: 1px; cursor: pointer; }
-      #dashOverlay .dash-bar .dash-title, #addonsOverlay .dash-bar .dash-title, #consoleOverlay .dash-bar .dash-title, #financeOverlay .dash-bar .dash-title, #healthOverlay .dash-bar .dash-title { color: var(--dim); font-size: 11px; letter-spacing: 3px; font-weight: 600; }
-      #dashFrame, #addonsFrame, #consoleFrame, #financeFrame, #healthFrame { flex: 1; width: 100%; border: 0; }
+      #dashOverlay .dash-bar .dash-title, #addonsOverlay .dash-bar .dash-title, #consoleOverlay .dash-bar .dash-title, #financeOverlay .dash-bar .dash-title, #healthOverlay .dash-bar .dash-title, #checklistsOverlay .dash-bar .dash-title { color: var(--dim); font-size: 11px; letter-spacing: 3px; font-weight: 600; }
+      #dashFrame, #addonsFrame, #consoleFrame, #financeFrame, #healthFrame, #checklistsFrame { flex: 1; width: 100%; border: 0; }
     </style>
     <div id="viewMenu" role="menu" aria-label="Switch view">
       <button id="viewAssistant" role="menuitem" aria-current="true"><span class="mi">◇</span>Assistant</button>
       <button id="viewDashboard" role="menuitem"><span class="mi">◆</span>Operating System</button>
       <button id="viewFinance" role="menuitem"><span class="mi">$</span>Finance Tracker</button>
       <button id="viewHealth" role="menuitem"><span class="mi">+</span>Health Tracker</button>
+      <button id="viewChecklists" role="menuitem"><span class="mi">☑</span>Checklists</button>
     </div>
     <div id="gearMenu" role="menu" aria-label="Settings menu">
       <button id="gearSettings" role="menuitem"><img class="mi" src="data:image/png;base64,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" alt="">Sign in</button>
@@ -533,6 +534,13 @@
         <span class="dash-title">HEALTH TRACKER</span>
       </div>
       <iframe id="healthFrame" title="Health Tracker" referrerpolicy="no-referrer"></iframe>
+    </div>
+    <div id="checklistsOverlay" aria-hidden="true">
+      <div class="dash-bar">
+        <button id="checklistsBack">‹ Back</button>
+        <span class="dash-title">CHECKLISTS</span>
+      </div>
+      <iframe id="checklistsFrame" title="Checklists" referrerpolicy="no-referrer"></iframe>
     </div>
 
     <div class="drawer-scrim" id="drawerScrim"></div>
@@ -4782,6 +4790,7 @@ window.JVLVoice = (function () {
   var consoleOverlay = $("consoleOverlay"), consoleFrame = $("consoleFrame");
   var financeOverlay = $("financeOverlay"), financeFrame = $("financeFrame");
   var healthOverlay = $("healthOverlay"), healthFrame = $("healthFrame");
+  var checklistsOverlay = $("checklistsOverlay"), checklistsFrame = $("checklistsFrame");
   if (!brand || !menu || !overlay) return;
 
   function openMenu() { menu.classList.add("show"); brand.setAttribute("aria-expanded", "true"); }
@@ -4880,6 +4889,26 @@ window.JVLVoice = (function () {
     if (wasOpen) { try { if (window.JVLSound) window.JVLSound.play("back"); } catch (_) {} }
   }
 
+  // Checklists view — same overlay pattern; a same-origin /checklists-view page in
+  // an iframe, sharing the token and reading everything from the /checklists API.
+  // (The bare /checklists path is the JSON index, hence the -view suffix here.)
+  function showChecklists() {
+    if (!checklistsOverlay) return;
+    checklistsFrame.src = base() + "/checklists-view";   // (re)load fresh each open
+    checklistsOverlay.classList.add("show");
+    checklistsOverlay.setAttribute("aria-hidden", "false");
+    closeMenu();
+    try { if (window.JVLSound) window.JVLSound.play("dashboard"); } catch (_) {}
+  }
+  function hideChecklists() {
+    if (!checklistsOverlay) return;
+    var wasOpen = checklistsOverlay.classList.contains("show");
+    checklistsOverlay.classList.remove("show");
+    checklistsOverlay.setAttribute("aria-hidden", "true");
+    checklistsFrame.src = "about:blank";   // stop the page when hidden
+    if (wasOpen) { try { if (window.JVLSound) window.JVLSound.play("back"); } catch (_) {} }
+  }
+
   // Let in-app sub-pages (settings add-ons "Connect phone") ask us to open the console.
   window.addEventListener("message", function (e) {
     if (e && e.data && e.data.jvl === "open-console") { hideAddons(); showConsole(e.data.hash || ""); }
@@ -4887,27 +4916,29 @@ window.JVLVoice = (function () {
   });
 
   // Expose the view openers so the ⚙ gear menu (wired in the main app script) can reach them.
-  window.JVLViews = { console: function (h) { showConsole(h); }, addons: showAddons, dashboard: showDashboard, finance: showFinance, health: showHealth };
+  window.JVLViews = { console: function (h) { showConsole(h); }, addons: showAddons, dashboard: showDashboard, finance: showFinance, health: showHealth, checklists: showChecklists };
 
   brand.addEventListener("click", function (e) { e.stopPropagation(); toggleMenu(); });
   brand.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleMenu(); } });
   $("viewDashboard").addEventListener("click", showDashboard);
   if ($("viewFinance")) $("viewFinance").addEventListener("click", showFinance);
   if ($("viewHealth")) $("viewHealth").addEventListener("click", showHealth);
+  if ($("viewChecklists")) $("viewChecklists").addEventListener("click", showChecklists);
   if ($("viewAddons")) $("viewAddons").addEventListener("click", showAddons);
   if ($("viewConsole")) $("viewConsole").addEventListener("click", function () { showConsole(); });
-  $("viewAssistant").addEventListener("click", function () { hideDashboard(); hideAddons(); hideConsole(); hideFinance(); hideHealth(); closeMenu(); });
+  $("viewAssistant").addEventListener("click", function () { hideDashboard(); hideAddons(); hideConsole(); hideFinance(); hideHealth(); hideChecklists(); closeMenu(); });
   $("dashBack").addEventListener("click", hideDashboard);
   if ($("addonsBack")) $("addonsBack").addEventListener("click", hideAddons);
   if ($("consoleBack")) $("consoleBack").addEventListener("click", hideConsole);
   if ($("financeBack")) $("financeBack").addEventListener("click", hideFinance);
   if ($("healthBack")) $("healthBack").addEventListener("click", hideHealth);
+  if ($("checklistsBack")) $("checklistsBack").addEventListener("click", hideChecklists);
 
   document.addEventListener("click", function (e) {
     if (menu.classList.contains("show") && !menu.contains(e.target) && e.target !== brand) closeMenu();
   });
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") { closeMenu(); if (overlay.classList.contains("show")) hideDashboard(); if (addonsOverlay && addonsOverlay.classList.contains("show")) hideAddons(); if (consoleOverlay && consoleOverlay.classList.contains("show")) hideConsole(); if (financeOverlay && financeOverlay.classList.contains("show")) hideFinance(); if (healthOverlay && healthOverlay.classList.contains("show")) hideHealth(); }
+    if (e.key === "Escape") { closeMenu(); if (overlay.classList.contains("show")) hideDashboard(); if (addonsOverlay && addonsOverlay.classList.contains("show")) hideAddons(); if (consoleOverlay && consoleOverlay.classList.contains("show")) hideConsole(); if (financeOverlay && financeOverlay.classList.contains("show")) hideFinance(); if (healthOverlay && healthOverlay.classList.contains("show")) hideHealth(); if (checklistsOverlay && checklistsOverlay.classList.contains("show")) hideChecklists(); }
   });
 })();
 </script>

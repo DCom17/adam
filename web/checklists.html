@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<base target="_top">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#04060b">
+<meta name="robots" content="noindex, nofollow">
+<title>Checklists — Adam</title>
+<link rel="icon" href="/icon.png" type="image/png" />
+<!-- In-app Checklists view. Named lists of ordered, checkable steps — written by
+     the user here, or built by Adam through checklist.* ACTION blocks. Everything
+     is read from the token-gated /checklists API; nothing leaves the machine.
+     Deleting archives (recoverable from the Archive tab); permanent removal is
+     offered only there. Token from localStorage, sent only in the Authorization
+     header. All rendered values are escaped, and every handler is bound by
+     delegation off data- attributes — never an inline onclick carrying user text. -->
+<style>
+  :root {
+    --bg:#04060b; --bg2:#071019;
+    --panel:rgba(12,20,32,.72); --panel-hi:rgba(16,28,42,.9);
+    --edge:rgba(33,230,255,.16); --edge-hi:rgba(33,230,255,.42);
+    --cyan:#21e6ff; --cyan-soft:#8df2ff; --violet:#a78bfa;
+    --ink:#eefafd; --text:#c9e4ec; --dim:#8fb9c6; --faint:#5d8894;
+    --green:#3ee6b0; --amber:#f7b955; --red:#ff6a8a; --blue:#4aa8ff;
+    --font:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; }
+  ::selection { background:rgba(33,230,255,.26); color:#fff; }
+  html { width:100%; min-height:100%; background:var(--bg); font-size:15.5px; -webkit-text-size-adjust:100%; }
+  body {
+    width:100%; min-height:100svh;
+    padding:16px 13px calc(30px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(ellipse 90% 44% at 50% -8%, rgba(167,139,250,.11), transparent 70%),
+      radial-gradient(ellipse 70% 42% at 92% 12%, rgba(33,230,255,.11), transparent 70%),
+      radial-gradient(ellipse 60% 46% at 6% 58%, rgba(62,230,176,.06), transparent 70%),
+      linear-gradient(180deg,#03050a 0%, var(--bg) 45%, #060d16 100%);
+    background-attachment:fixed;
+    color:var(--text); font-family:var(--font);
+    font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased;
+    overflow-x:hidden; line-height:1.5; letter-spacing:.1px;
+  }
+  .app { width:100%; max-width:640px; margin:0 auto; }
+
+  .title { text-align:center; padding:20px 12px 8px; margin-bottom:16px; }
+  .title .eyebrow { font-size:11px; font-weight:800; letter-spacing:6px; text-transform:uppercase;
+    color:var(--cyan); text-shadow:0 0 22px rgba(33,230,255,.5); }
+  .title h1 { margin:9px 0 0; font-size:36px; font-weight:750; letter-spacing:-.02em; line-height:1;
+    background:linear-gradient(105deg,#fff 12%, var(--cyan-soft) 58%, var(--cyan));
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .title .sub { margin-top:10px; font-size:11.5px; color:var(--faint); letter-spacing:.5px; }
+
+  .tabs { display:flex; gap:5px; margin-bottom:16px; padding:5px; border-radius:15px;
+    background:rgba(6,12,20,.55); border:1px solid var(--edge); }
+  .tabs button { flex:1; background:none; border:0; color:var(--dim); border-radius:11px;
+    padding:10px 5px; font:inherit; font-size:11px; font-weight:700; letter-spacing:1px;
+    text-transform:uppercase; cursor:pointer; transition:.2s; }
+  .tabs button.on { color:#04121a; background:linear-gradient(105deg,#eafcff,#8df2ff 55%,#21e6ff);
+    box-shadow:0 0 18px rgba(33,230,255,.28); }
+
+  .frame { position:relative; border:1px solid var(--edge); background:var(--panel); border-radius:18px;
+    padding:17px 16px; margin-bottom:13px; overflow:hidden;
+    box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 12px 34px rgba(0,0,0,.38); }
+  .frame::after { content:""; position:absolute; top:0; left:12%; right:12%; height:1px;
+    background:linear-gradient(90deg,transparent,rgba(33,230,255,.45),transparent); }
+  .frame > h2 { display:flex; align-items:center; gap:10px; margin:0 0 14px;
+    font-size:11px; font-weight:800; letter-spacing:3px; text-transform:uppercase; color:var(--cyan); }
+  .frame > h2::before { content:""; width:22px; height:1px; background:var(--cyan); opacity:.7; flex:none; }
+
+  .hero { display:grid; grid-template-columns:repeat(3,1fr); gap:11px; margin-bottom:13px; }
+  .stat { position:relative; border:1px solid var(--edge); background:var(--panel); border-radius:18px;
+    padding:14px 12px; text-align:center; overflow:hidden;
+    box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 12px 34px rgba(0,0,0,.38); }
+  .stat .k { font-size:9.5px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--faint); }
+  .stat .v { margin-top:6px; font-size:27px; font-weight:750; color:var(--ink); line-height:1; }
+  .stat .v small { font-size:13px; color:var(--faint); font-weight:600; }
+
+  /* --- list of checklists --- */
+  .card { position:relative; border:1px solid var(--edge); background:var(--panel); border-radius:16px;
+    padding:14px 15px; margin-bottom:10px; cursor:pointer; transition:.18s;
+    box-shadow:0 8px 22px rgba(0,0,0,.3); }
+  .card:hover, .card:focus-visible { border-color:var(--edge-hi); background:var(--panel-hi); outline:none; }
+  .card .row1 { display:flex; align-items:baseline; gap:9px; }
+  .card .nm { font-size:16px; font-weight:700; color:var(--ink); flex:1; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .card .ct { font-size:11.5px; color:var(--faint); font-weight:700; flex:none; letter-spacing:.5px; }
+  .card .ds { margin-top:3px; font-size:12.5px; color:var(--dim); overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; }
+  .bar { margin-top:10px; height:5px; border-radius:3px; background:rgba(33,230,255,.1); overflow:hidden; }
+  .bar i { display:block; height:100%; border-radius:3px;
+    background:linear-gradient(90deg,var(--cyan),var(--green)); transition:width .3s; }
+  .card.full .bar i { background:linear-gradient(90deg,var(--green),#7df7cd); }
+
+  .tag { display:inline-block; font-size:9px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase;
+    padding:2px 7px; border-radius:5px; vertical-align:1px; flex:none; }
+  .tag.adam { color:#150a26; background:linear-gradient(105deg,#d9c9ff,var(--violet)); }
+  .tag.done { color:#04121a; background:linear-gradient(105deg,#bcf7e4,var(--green)); }
+
+  /* --- detail --- */
+  .backlink { display:inline-flex; align-items:center; gap:7px; background:none; border:0; cursor:pointer;
+    color:var(--cyan); font:inherit; font-size:11px; font-weight:800; letter-spacing:2px;
+    text-transform:uppercase; padding:6px 2px; margin-bottom:12px; }
+  .backlink:hover { color:var(--cyan-soft); }
+
+  .item { display:flex; align-items:flex-start; gap:11px; padding:11px 2px;
+    border-bottom:1px solid rgba(33,230,255,.09); }
+  .item:last-child { border-bottom:0; }
+  .box { flex:none; width:21px; height:21px; margin-top:1px; border-radius:6px; cursor:pointer;
+    border:1.5px solid var(--edge-hi); background:rgba(6,12,20,.5); position:relative; transition:.16s; }
+  .box:hover { border-color:var(--cyan); }
+  .item.on .box { background:linear-gradient(105deg,var(--green),#7df7cd); border-color:transparent; }
+  .item.on .box::after { content:"✓"; position:absolute; inset:0; display:flex; align-items:center;
+    justify-content:center; color:#04121a; font-size:13px; font-weight:900; }
+  .item .txt { flex:1; min-width:0; font-size:14.5px; color:var(--ink); word-wrap:break-word; cursor:text; }
+  .item.on .txt { color:var(--faint); text-decoration:line-through; }
+  .item .nt { margin-top:3px; font-size:12px; color:var(--dim); line-height:1.45; word-wrap:break-word; }
+  .item.on .nt { color:var(--faint); }
+  .item .x { flex:none; background:none; border:0; color:var(--faint); font-size:16px; cursor:pointer;
+    padding:0 2px; line-height:1; opacity:.5; transition:.15s; }
+  .item .x:hover { color:var(--red); opacity:1; }
+
+  /* --- controls --- */
+  .btn { border:0; border-radius:12px; padding:12px 15px; font:inherit; font-size:11.5px; font-weight:800;
+    letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; transition:.18s;
+    color:#04121a; background:linear-gradient(105deg,#eafcff,#8df2ff 55%,#21e6ff);
+    box-shadow:0 0 18px rgba(33,230,255,.22); }
+  .btn:hover { filter:brightness(1.08); }
+  .btn:disabled { opacity:.45; cursor:default; filter:none; }
+  .btn.wide { display:block; width:100%; }
+  .btn.ghost { color:var(--cyan); background:rgba(33,230,255,.08); border:1px solid var(--edge-hi);
+    box-shadow:none; }
+  .btn.ghost:hover { background:rgba(33,230,255,.15); }
+  .btn.danger { color:var(--red); background:rgba(255,106,138,.09); border:1px solid rgba(255,106,138,.4);
+    box-shadow:none; }
+  .btn.danger:hover { background:rgba(255,106,138,.18); }
+  .btn.sm { padding:9px 12px; font-size:10px; letter-spacing:1.2px; }
+  .btnrow { display:flex; gap:8px; margin-top:13px; flex-wrap:wrap; }
+  .btnrow .btn { flex:1; min-width:118px; }
+
+  label { display:block; font-size:9.5px; font-weight:800; letter-spacing:2px; text-transform:uppercase;
+    color:var(--faint); margin:0 0 6px 2px; }
+  input[type=text], textarea {
+    width:100%; background:rgba(6,12,20,.62); border:1px solid var(--edge); border-radius:12px;
+    padding:12px 13px; color:var(--ink); font:inherit; font-size:14.5px; outline:none; transition:.18s;
+    resize:vertical; }
+  input[type=text]:focus, textarea:focus { border-color:var(--edge-hi); background:rgba(6,12,20,.85);
+    box-shadow:0 0 0 3px rgba(33,230,255,.09); }
+  input::placeholder, textarea::placeholder { color:var(--faint); opacity:.75; }
+  .field { margin-bottom:12px; }
+
+  .addrow { display:flex; gap:8px; margin-top:14px; }
+  .addrow input { flex:1; }
+  .addrow .btn { flex:none; padding-left:17px; padding-right:17px; }
+
+  .empty { text-align:center; padding:26px 14px; color:var(--faint); font-size:13.5px; line-height:1.65; }
+  .empty b { display:block; color:var(--dim); font-size:15px; font-weight:700; margin-bottom:7px; }
+
+  .hint { margin-top:11px; font-size:11.5px; color:var(--faint); line-height:1.6; }
+  .hint code { color:var(--cyan); background:rgba(33,230,255,.08); padding:1px 5px; border-radius:4px;
+    font-size:11px; }
+
+  .meta { font-size:10.5px; color:var(--faint); letter-spacing:.4px; margin-top:9px; }
+
+  #toast { position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(80px);
+    background:rgba(8,16,26,.96); border:1px solid var(--edge-hi); color:var(--ink);
+    padding:11px 18px; border-radius:12px; font-size:13px; z-index:80; opacity:0;
+    transition:.25s; pointer-events:none; max-width:90vw; text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,.5); }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  #toast.bad { border-color:rgba(255,106,138,.6); color:#ffd7df; }
+
+  .hidden { display:none !important; }
+  @media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="title">
+    <div class="eyebrow">Adam</div>
+    <h1>Checklists</h1>
+    <div class="sub" id="sub">Steps you keep, and steps Adam builds for you</div>
+  </div>
+
+  <div class="tabs">
+    <button id="tabLists" class="on" type="button">Lists</button>
+    <button id="tabArchive" type="button">Archive</button>
+  </div>
+
+  <!-- ============ LISTS ============ -->
+  <section id="viewLists">
+    <div class="hero">
+      <div class="stat"><div class="k">Lists</div><div class="v" id="sActive">—</div></div>
+      <div class="stat"><div class="k">Steps done</div><div class="v" id="sDone">—</div></div>
+      <div class="stat"><div class="k">Archived</div><div class="v" id="sArch">—</div></div>
+    </div>
+
+    <div class="frame">
+      <h2>Your lists</h2>
+      <div id="listWrap"></div>
+    </div>
+
+    <div class="frame">
+      <h2>New checklist</h2>
+      <div class="field">
+        <label for="nTitle">Title</label>
+        <input type="text" id="nTitle" placeholder="e.g. Lender calls" maxlength="200" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="nDesc">Description <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+        <input type="text" id="nDesc" placeholder="One line about what this list is for" maxlength="300" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="nItems">Steps <span style="text-transform:none;letter-spacing:0">(one per line, optional)</span></label>
+        <textarea id="nItems" rows="4" placeholder="Call 1st Tribal Lending&#10;Get an insurance quote&#10;Check my debt payment"></textarea>
+      </div>
+      <button class="btn wide" id="createBtn" type="button">Create checklist</button>
+      <div class="hint">You can also just ask Adam — “turn that into a checklist” — and it appears here.</div>
+    </div>
+  </section>
+
+  <!-- ============ DETAIL ============ -->
+  <section id="viewDetail" class="hidden">
+    <button class="backlink" id="backBtn" type="button">‹ All lists</button>
+
+    <div class="frame">
+      <h2 id="dEyebrow">Checklist</h2>
+      <div class="field">
+        <label for="dTitle">Title</label>
+        <input type="text" id="dTitle" maxlength="200" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="dDesc">Description</label>
+        <input type="text" id="dDesc" maxlength="300" placeholder="Optional" autocomplete="off">
+      </div>
+      <button class="btn ghost sm" id="saveMetaBtn" type="button">Save details</button>
+      <div class="meta" id="dMeta"></div>
+    </div>
+
+    <div class="frame">
+      <h2>Steps</h2>
+      <div class="bar" style="margin:0 0 14px"><i id="dBar" style="width:0%"></i></div>
+      <div id="itemWrap"></div>
+      <div class="addrow">
+        <input type="text" id="newItem" placeholder="Add a step…" maxlength="2000" autocomplete="off">
+        <button class="btn" id="addItemBtn" type="button">Add</button>
+      </div>
+      <div class="btnrow">
+        <button class="btn ghost sm" id="allOnBtn" type="button">Check all</button>
+        <button class="btn ghost sm" id="allOffBtn" type="button">Clear all</button>
+        <button class="btn danger sm" id="archiveBtn" type="button">Archive list</button>
+      </div>
+      <div class="hint">Archiving keeps everything — the list moves to the Archive tab and you can restore it any time.</div>
+    </div>
+  </section>
+
+  <!-- ============ ARCHIVE ============ -->
+  <section id="viewArchive" class="hidden">
+    <div class="frame">
+      <h2>Archived lists</h2>
+      <div id="archWrap"></div>
+      <div class="hint">Restoring puts a list back at the top of your lists, with every step exactly as you left it.</div>
+    </div>
+  </section>
+
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+var LS = { get token(){ return localStorage.getItem("jarvis_token") || ""; },
+  get url(){ return (localStorage.getItem("jarvis_url") || location.origin).replace(/\/$/, ""); } };
+// Correct for text and for a double-quoted attribute — the only two ways this
+// output is used. Handlers are bound by delegation off data- attributes, never
+// by interpolating user text into an inline onclick.
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+function $(id){ return document.getElementById(id); }
+
+async function api(path, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({ "Authorization": "Bearer " + LS.token }, opts.headers || {});
+  if (opts.body && typeof opts.body !== "string"){ opts.body = JSON.stringify(opts.body); opts.headers["Content-Type"] = "application/json"; }
+  var r = await fetch(LS.url + path, opts);
+  var d = null; try { d = await r.json(); } catch(e){}
+  if (!r.ok) throw new Error((d && (d.detail || d.error)) || ("HTTP " + r.status));
+  return d;
+}
+
+var _tt = null;
+function toast(msg, bad){
+  var t = $("toast");
+  t.textContent = msg;
+  t.className = "show" + (bad ? " bad" : "");
+  if (_tt) clearTimeout(_tt);
+  _tt = setTimeout(function(){ t.className = ""; }, bad ? 3800 : 2200);
+}
+function fail(e){ toast((e && e.message) || "Something went wrong", true); }
+
+// Local, human date from the store's UTC ISO stamp. Best-effort; never throws.
+function when(iso){
+  if (!iso) return "";
+  try {
+    var d = new Date(String(iso).replace(" ", "T").replace(/Z?$/, "Z"));
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
+  } catch(e){ return ""; }
+}
+
+var STATE = { tab:"lists", current:null };
+
+// --- rendering -------------------------------------------------------------
+
+function cardHTML(c, archived){
+  var total = Number(c.total) || 0, done = Number(c.done) || 0;
+  var pct = total ? Math.round(done / total * 100) : 0;
+  var full = total > 0 && done === total;
+  var tags = "";
+  if (String(c.source) === "adam") tags += '<span class="tag adam">Adam</span>';
+  if (full && !archived) tags += ' <span class="tag done">Done</span>';
+  var sub = archived
+    ? ("Archived " + esc(when(c.archived_at)))
+    : (c.description ? esc(c.description) : "");
+  var actions = archived
+    ? ('<div class="btnrow">' +
+         '<button class="btn ghost sm" data-restore="' + Number(c.id) + '" type="button">Restore</button>' +
+         '<button class="btn danger sm" data-purge="' + Number(c.id) + '" type="button">Delete forever</button>' +
+       '</div>')
+    : "";
+  return '<div class="card' + (full ? " full" : "") + '"' +
+      (archived ? "" : ' data-open="' + Number(c.id) + '" tabindex="0" role="button"') + '>' +
+      '<div class="row1"><span class="nm">' + esc(c.title) + '</span>' + tags +
+        '<span class="ct">' + done + "/" + total + '</span></div>' +
+      (sub ? '<div class="ds">' + sub + '</div>' : "") +
+      '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+      actions +
+    '</div>';
+}
+
+async function loadLists(){
+  try {
+    var d = await api("/checklists");
+    var s = d.summary || {};
+    $("sActive").textContent = s.active == null ? "—" : s.active;
+    $("sDone").innerHTML = (s.items_done == null ? "—" : s.items_done) +
+      '<small>/' + (s.items == null ? "—" : s.items) + "</small>";
+    $("sArch").textContent = s.archived == null ? "—" : s.archived;
+    var rows = d.checklists || [];
+    $("listWrap").innerHTML = rows.length
+      ? rows.map(function(c){ return cardHTML(c, false); }).join("")
+      : '<div class="empty"><b>No checklists yet</b>Make one below — or ask Adam to build one for you.</div>';
+  } catch(e){ fail(e); }
+}
+
+async function loadArchive(){
+  try {
+    var d = await api("/checklists?archived=true");
+    var rows = d.checklists || [];
+    $("archWrap").innerHTML = rows.length
+      ? rows.map(function(c){ return cardHTML(c, true); }).join("")
+      : '<div class="empty"><b>Nothing archived</b>Lists you delete land here, and stay restorable.</div>';
+  } catch(e){ fail(e); }
+}
+
+function itemHTML(i){
+  var on = Number(i.done) ? " on" : "";
+  return '<div class="item' + on + '" data-item="' + Number(i.id) + '">' +
+    '<div class="box" data-toggle="' + Number(i.id) + '" role="checkbox" tabindex="0" aria-checked="' +
+      (Number(i.done) ? "true" : "false") + '"></div>' +
+    '<div style="flex:1;min-width:0">' +
+      '<div class="txt" data-edit="' + Number(i.id) + '">' + esc(i.text) + '</div>' +
+      (i.note ? '<div class="nt">' + esc(i.note) + '</div>' : "") +
+    '</div>' +
+    '<button class="x" data-del="' + Number(i.id) + '" type="button" aria-label="Remove step">✕</button>' +
+  '</div>';
+}
+
+function renderDetail(c){
+  STATE.current = c;
+  $("dTitle").value = c.title || "";
+  $("dDesc").value = c.description || "";
+  $("dEyebrow").textContent = String(c.source) === "adam" ? "Built by Adam" : "Checklist";
+  var made = when(c.created_at);
+  $("dMeta").textContent = (made ? "Created " + made : "") +
+    (c.updated_at && when(c.updated_at) !== made ? " · updated " + when(c.updated_at) : "");
+  var items = c.items || [];
+  $("itemWrap").innerHTML = items.length
+    ? items.map(itemHTML).join("")
+    : '<div class="empty"><b>No steps yet</b>Add the first one below.</div>';
+  var total = items.length, done = items.filter(function(i){ return Number(i.done); }).length;
+  $("dBar").style.width = (total ? Math.round(done / total * 100) : 0) + "%";
+}
+
+async function openList(id){
+  try {
+    var c = await api("/checklists/" + Number(id));
+    renderDetail(c);
+    show("detail");
+  } catch(e){ fail(e); }
+}
+async function refreshDetail(){
+  if (!STATE.current) return;
+  try { renderDetail(await api("/checklists/" + Number(STATE.current.id))); } catch(e){ fail(e); }
+}
+
+function show(which){
+  STATE.tab = which;
+  $("viewLists").classList.toggle("hidden", which !== "lists");
+  $("viewDetail").classList.toggle("hidden", which !== "detail");
+  $("viewArchive").classList.toggle("hidden", which !== "archive");
+  $("tabLists").classList.toggle("on", which !== "archive");
+  $("tabArchive").classList.toggle("on", which === "archive");
+  try { window.scrollTo(0, 0); } catch(e){}
+}
+
+// --- actions ---------------------------------------------------------------
+
+$("tabLists").addEventListener("click", function(){ show("lists"); loadLists(); });
+$("tabArchive").addEventListener("click", function(){ show("archive"); loadArchive(); });
+$("backBtn").addEventListener("click", function(){ STATE.current = null; show("lists"); loadLists(); });
+
+$("createBtn").addEventListener("click", async function(){
+  var t = $("nTitle").value.trim();
+  if (!t){ toast("Give the checklist a title", true); $("nTitle").focus(); return; }
+  var items = $("nItems").value.split("\n")
+    .map(function(s){ return s.replace(/^\s*[-*•]\s*/, "").trim(); })
+    .filter(Boolean)
+    .map(function(s){ return { text:s }; });
+  this.disabled = true;
+  try {
+    var d = await api("/checklists", { method:"POST",
+      body:{ title:t, description:$("nDesc").value.trim(), source:"user", items:items } });
+    $("nTitle").value = ""; $("nDesc").value = ""; $("nItems").value = "";
+    toast("Checklist created");
+    await loadLists();
+    if (d && d.checklist) { renderDetail(d.checklist); show("detail"); }
+  } catch(e){ fail(e); }
+  this.disabled = false;
+});
+
+$("saveMetaBtn").addEventListener("click", async function(){
+  if (!STATE.current) return;
+  this.disabled = true;
+  try {
+    await api("/checklists/" + Number(STATE.current.id), { method:"PATCH",
+      body:{ title:$("dTitle").value.trim(), description:$("dDesc").value.trim() } });
+    toast("Saved");
+    await refreshDetail();
+  } catch(e){ fail(e); }
+  this.disabled = false;
+});
+
+async function addItem(){
+  if (!STATE.current) return;
+  var el = $("newItem"), t = el.value.trim();
+  if (!t) return;
+  try {
+    await api("/checklists/" + Number(STATE.current.id) + "/items", { method:"POST", body:{ text:t } });
+    el.value = "";
+    await refreshDetail();
+    el.focus();
+  } catch(e){ fail(e); }
+}
+$("addItemBtn").addEventListener("click", addItem);
+$("newItem").addEventListener("keydown", function(e){ if (e.key === "Enter"){ e.preventDefault(); addItem(); } });
+
+$("allOnBtn").addEventListener("click", function(){ bulk(true); });
+$("allOffBtn").addEventListener("click", function(){ bulk(false); });
+async function bulk(done){
+  if (!STATE.current) return;
+  try {
+    await api("/checklists/" + Number(STATE.current.id) + "/done", { method:"POST", body:{ done:done } });
+    await refreshDetail();
+  } catch(e){ fail(e); }
+}
+
+$("archiveBtn").addEventListener("click", async function(){
+  if (!STATE.current) return;
+  try {
+    await api("/checklists/" + Number(STATE.current.id), { method:"DELETE" });
+    toast("Archived — restore it any time from the Archive tab");
+    STATE.current = null;
+    show("lists"); await loadLists();
+  } catch(e){ fail(e); }
+});
+
+// Delegated handlers — the only place list/item ids turn into actions.
+document.addEventListener("click", async function(ev){
+  var el = ev.target.closest ? ev.target.closest("[data-open],[data-toggle],[data-del],[data-edit],[data-restore],[data-purge]") : null;
+  if (!el) return;
+
+  if (el.hasAttribute("data-restore")){
+    ev.stopPropagation();
+    try { await api("/checklists/" + Number(el.getAttribute("data-restore")) + "/restore", { method:"POST" });
+      toast("Restored"); await loadArchive(); } catch(e){ fail(e); }
+    return;
+  }
+  if (el.hasAttribute("data-purge")){
+    ev.stopPropagation();
+    if (!window.confirm("Delete this checklist permanently? This cannot be undone.")) return;
+    try { await api("/checklists/" + Number(el.getAttribute("data-purge")) + "/purge", { method:"POST" });
+      toast("Deleted permanently"); await loadArchive(); } catch(e){ fail(e); }
+    return;
+  }
+  if (el.hasAttribute("data-open")){ openList(el.getAttribute("data-open")); return; }
+  if (el.hasAttribute("data-toggle")){
+    ev.stopPropagation();
+    try { await api("/checklists/items/" + Number(el.getAttribute("data-toggle")) + "/toggle", { method:"POST" });
+      await refreshDetail(); } catch(e){ fail(e); }
+    return;
+  }
+  if (el.hasAttribute("data-del")){
+    ev.stopPropagation();
+    try { await api("/checklists/items/" + Number(el.getAttribute("data-del")), { method:"DELETE" });
+      await refreshDetail(); } catch(e){ fail(e); }
+    return;
+  }
+  if (el.hasAttribute("data-edit")){
+    ev.stopPropagation();
+    startEdit(el);
+    return;
+  }
+});
+
+// Keyboard parity for the card and the checkbox (both are role-bearing divs).
+document.addEventListener("keydown", function(ev){
+  if (ev.key !== "Enter" && ev.key !== " ") return;
+  var t = ev.target;
+  if (!t || !t.getAttribute) return;
+  if (t.hasAttribute("data-open")){ ev.preventDefault(); openList(t.getAttribute("data-open")); }
+  else if (t.hasAttribute("data-toggle")){ ev.preventDefault(); t.click(); }
+});
+
+// Inline rename of a step: swap the text for an input, commit on Enter/blur.
+function startEdit(node){
+  var id = Number(node.getAttribute("data-edit"));
+  if (node.dataset.editing === "1") return;
+  node.dataset.editing = "1";
+  var original = node.textContent;
+  var inp = document.createElement("input");
+  inp.type = "text"; inp.value = original; inp.maxLength = 2000;
+  inp.style.cssText = "width:100%;font:inherit;font-size:14.5px;color:var(--ink);background:rgba(6,12,20,.85);border:1px solid var(--edge-hi);border-radius:9px;padding:6px 9px;outline:none;";
+  node.textContent = ""; node.appendChild(inp);
+  inp.focus(); inp.select();
+  var done = false;
+  async function commit(save){
+    if (done) return; done = true;
+    var v = inp.value.trim();
+    node.dataset.editing = "";
+    if (!save || !v || v === original){ node.textContent = original; return; }
+    try { await api("/checklists/items/" + id, { method:"PATCH", body:{ text:v } }); await refreshDetail(); }
+    catch(e){ node.textContent = original; fail(e); }
+  }
+  inp.addEventListener("keydown", function(e){
+    if (e.key === "Enter"){ e.preventDefault(); commit(true); }
+    else if (e.key === "Escape"){ e.preventDefault(); commit(false); }
+  });
+  inp.addEventListener("blur", function(){ commit(true); });
+}
+
+// --- boot ------------------------------------------------------------------
+(function boot(){
+  if (!LS.token){
+    $("listWrap").innerHTML = '<div class="empty"><b>Not signed in</b>Open Checklists from inside Adam so it can use your session.</div>';
+    return;
+  }
+  loadLists();
+})();
+</script>
+</body>
+</html>

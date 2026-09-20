@@ -37,7 +37,7 @@ CONFIG_ROOT = Path(os.environ.get("ADAM_CONFIG_ROOT", "").strip()
 load_dotenv(CONFIG_ROOT / ".env")  # secrets + machine values
 
 APP_NAME = "adam-local"
-APP_VERSION = "0.9.73"
+APP_VERSION = "0.9.74"
 
 
 # --- Settings file ----------------------------------------------------------
@@ -531,6 +531,14 @@ FINANCE_DB = FINANCE_DIR / "finance.db"
 HEALTH_DIR = _resolve_path(_get("health_dir", ""), "data/health")
 HEALTH_DB = HEALTH_DIR / "health.db"
 
+# --- Checklists --------------------------------------------------------------
+# Named lists of checkable steps, written by the user or built by Adam during a
+# conversation. Same local-first posture as Finance/Health: its own SQLite DB
+# under the runtime data tree — never synced, shipped, or committed. Deletes are
+# archives (checklist_store.archive_checklist), so the Archive tab can restore.
+CHECKLIST_DIR = _resolve_path(_get("checklist_dir", ""), "data/checklists")
+CHECKLIST_DB = CHECKLIST_DIR / "checklists.db"
+
 # --- Integrations: Google Calendar (opt-in, OFF by default) -----------------
 # A connector to the user's OWN Google Apps Script calendar bridge
 # (calendar_bridge.gs), which runs in the user's Google account. We never hold a
@@ -776,7 +784,8 @@ def ensure_dirs() -> None:
     """Create the runtime directories if missing. Called at startup so a fresh
     clone needs no manual mkdir."""
     for d in (DATA_DIR, UPLOAD_DIR, LOG_DIR, STATE_DIR, BACKUP_DIR,
-              AGENT_WORKSPACE, DRAFTS_DIR, OUTPUTS_DIR, FINANCE_DIR, HEALTH_DIR):
+              AGENT_WORKSPACE, DRAFTS_DIR, OUTPUTS_DIR, FINANCE_DIR, HEALTH_DIR,
+              CHECKLIST_DIR):
         d.mkdir(parents=True, exist_ok=True)
     # Pre-create the configured write directories so a fresh clone can write
     # drafts/outputs immediately without a manual mkdir.
