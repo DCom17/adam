@@ -80,6 +80,7 @@ class AskRequest(StrictModel):
     session_id: str | None = None
     mode: str | None = None  # "voice" (default) | "work" | "code" (needs allow_code_mode)
     attachments: list[str] | None = None  # server-side upload paths from /upload
+    project: str | None = None  # project-folder key; its instructions ride the turn
 
 
 class SpeakRequest(StrictModel):
@@ -106,10 +107,31 @@ class SessionRecord(StrictModel):
     used: int = 0
     updated: int = 0
     seq: int = 0  # server-assigned delivery cursor (set on pull; ignored on push)
+    # Project folder key ("" = loose). None = a pre-projects client that doesn't send
+    # the field; the store then keeps the stored value rather than un-filing the chat.
+    project: str | None = None
 
 
 class SessionSyncPush(StrictModel):
     sessions: list[SessionRecord] = []
+
+
+class ProjectRecord(StrictModel):
+    """One project folder as the client mirrors it for cross-device sync. Same
+    last-write-wins-by-`updated` + tombstone contract as SessionRecord."""
+    key: str
+    name: str = ""
+    color: str = ""
+    icon: str = ""  # name from the PWA's fixed icon set; "" = folder
+    instructions: str = ""
+    deleted: bool = False
+    created: int = 0
+    updated: int = 0
+    seq: int = 0  # server-assigned delivery cursor (set on pull; ignored on push)
+
+
+class ProjectSyncPush(StrictModel):
+    projects: list[ProjectRecord] = []
 
 
 class ApprovalCreate(StrictModel):

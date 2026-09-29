@@ -1140,6 +1140,40 @@ def _brain_bootstrap_note(vault_path: str) -> str:
     )
 
 
+def _project_note(project: str | None, session_id: str | None = None) -> str:
+    """The chat's project folder, if it's filed in one: name, the user's standing
+    instructions for every chat in the folder, and the titles of sibling chats.
+    Project instructions are the user's OWN text (typed in the project editor), so
+    they are trusted like any user preference — but they never widen a capability;
+    they sit inside the same prompt the safety notes already bound."""
+    if not project or session_store is None:
+        return ""
+    try:
+        p = session_store.get_project(project)
+    except Exception:  # noqa: BLE001 — a broken store must never break a turn
+        return ""
+    if not p:
+        return ""
+    lines = [
+        "\n\nPROJECT FOLDER: this chat is filed in the user's project "
+        f"\"{p['name']}\". Treat it as the shared context for the conversation."
+    ]
+    instr = (p.get("instructions") or "").strip()
+    if instr:
+        lines.append(
+            "The user's standing instructions for every chat in this project "
+            "(follow them unless the user says otherwise in this chat):\n"
+            "<project_instructions>\n" + instr + "\n</project_instructions>"
+        )
+    try:
+        sibs = session_store.project_chat_titles(project, exclude_sid=session_id)
+    except Exception:  # noqa: BLE001
+        sibs = []
+    if sibs:
+        lines.append("Other chats in this project: " + "; ".join(sibs) + ".")
+    return "\n".join(lines)
+
+
 def _self_edit_note() -> str:
     """Tell the agent it may change Adam ITSELF when the user has enabled self-edit.
     Same proposal convention as brain writes: propose with the ABSOLUTE path to the app
@@ -1962,7 +1996,7 @@ async def _read_stream_result(proc, job_id: str | None, timeout: int) -> dict:
 async def run_claude(
     message: str, session_id: str | None, timeout: int = CLAUDE_TIMEOUT_SECONDS,
     mode: str = "voice", attachments: list[str] | None = None,
-    job_id: str | None = None, untrusted: bool = False,
+    job_id: str | None = None, untrusted: bool = False, project: str | None = None,
 ) -> dict:
     """Spawn claude.exe in the vault and return parsed JSON output.
 
@@ -2091,6 +2125,9 @@ async def run_claude(
     prompt = prompt + _addon_awareness_note()
     # Hands-free chat management (every mode): rename this chat / open a new one on consent.
     prompt = prompt + _chat_control_note()
+    # Project folder (every mode): the folder's name, standing instructions, and sibling
+    # chats. Empty + cheap for a loose chat or an unknown/deleted project key.
+    prompt = prompt + _project_note(project, session_id)
     # Self-awareness of the capability tiers + how Adam itself works (both modes), so
     # it can answer "what can you do / what mode am I on" and never overclaim its powers.
     # Skipped in a code chat — it describes the restricted posture, which is exactly
@@ -2233,7 +2270,7 @@ async def run_claude(
                          str(session_id)[:12], mode)
                 return await run_claude(message, None, timeout=timeout, mode=mode,
                                         attachments=attachments, job_id=job_id,
-                                        untrusted=untrusted)
+                                        untrusted=untrusted, project=project)
             raise HTTPException(status_code=502, detail="Claude returned no result")
         except (HTTPException, TurnStopped):
             raise
@@ -2285,7 +2322,7 @@ async def run_claude(
                      str(session_id)[:12])
             return await run_claude(message, None, timeout=timeout, mode=mode,
                                     attachments=attachments, job_id=job_id,
-                                    untrusted=untrusted)
+                                    untrusted=untrusted, project=project)
         raise HTTPException(status_code=502, detail=f"Claude failed: {err_text[:300]}")
 
     display, spoken = _extract_spoken(data.get("result", ""), mode)
@@ -2438,7 +2475,7 @@ async def run_claude(
 
 async def _run_job(
     job_id: str, message: str, session_id: str | None, mode: str = "voice",
-    attachments: list[str] | None = None,
+    attachments: list[str] | None = None, project: str | None = None,
 ) -> None:
     """Background runner — writes its outcome into the persistent job store."""
     try:
@@ -2449,7 +2486,7 @@ async def _run_job(
                    else ASYNC_CLAUDE_TIMEOUT_SECONDS)
         out = await run_claude(
             message, session_id, timeout=timeout, mode=mode,
-            attachments=attachments, job_id=job_id,
+            attachments=attachments, job_id=job_id, project=project,
         )
         # One canonical timestamp per finished result, shared by the poll
         # response, the stored last-result, and the push payload — so the phone

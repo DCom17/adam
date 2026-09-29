@@ -90,7 +90,12 @@ def _run(result_text: str = "ok", *, untrusted: bool = False,
         "approve": proposed_changes.approve,
         "get_auto": server._get_auto_apply,
         "restrict": config.AGENT_RESTRICT_TOOLS,
+        "store": config.PROPOSED_CHANGES_FILE,
     }
+    # approve() is stubbed, so anything the turn proposes would sit "pending" forever.
+    # Keep it in a throwaway store: pointed at the real one, every suite run parked two
+    # un-approvable note.md proposals in the owner's live approvals panel.
+    config.PROPOSED_CHANGES_FILE = Path(tempfile.mkdtemp(prefix="jvl_untrusted_pc_")) / "proposed_changes.json"
     asyncio.create_subprocess_exec = fake_exec
     permissions.record_audit_event = lambda ev: captured["audit"].append(ev)
     server._proposal_outcome_note = lambda: ""
@@ -108,6 +113,7 @@ def _run(result_text: str = "ok", *, untrusted: bool = False,
         proposed_changes.approve = real["approve"]
         server._get_auto_apply = real["get_auto"]
         config.AGENT_RESTRICT_TOOLS = real["restrict"]
+        config.PROPOSED_CHANGES_FILE = real["store"]
     return captured
 
 

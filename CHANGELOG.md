@@ -3,6 +3,24 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.76 - Project folders for your sessions
+
+- **Projects, like ChatGPT's.** A PROJECTS section now sits at the top of the
+  sessions list. Make a folder, give it a name and a color, and file chats into
+  it with the ⇄ button (or drag a chat onto a folder on desktop). The + on a
+  folder starts a new chat right inside it.
+- **Instructions per project.** Anything you write in a project's instructions
+  box, Adam follows in every chat in that folder, and it knows which other
+  chats share the folder.
+- **Edit or delete anytime.** ✎ renames, recolors, or rewrites the
+  instructions. Deleting a project never deletes chats. They move back to
+  Sessions. Folders sync across your devices like chats do.
+- **Pick an icon.** Every project gets its own icon, chosen from 16 in the
+  project editor and shown in the project's color. The loose list is now
+  called Sessions.
+- **The Finance page works again.** A typo had kept the whole Finance page's
+  script from loading since 0.9.72. It's fixed.
+
 ## 0.9.75 - Tell Adam what you drank or ate, and it actually logs it
 
 - **Water by voice now lands in the Health Tracker.** "Log 16 ounces of water"

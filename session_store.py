@@ -41,7 +41,7 @@ _TX_MAX = 200_000
 # separately, so it is NOT in this list.
 _COLS = "key,title,mode,sid,last_ts,last_spoken,tx,deleted,created,used,updated"
 # Read projection: the wire columns plus the server-assigned delivery cursor.
-_READ_COLS = _COLS + ",seq"
+_READ_COLS = _COLS + ",seq,project"
 
 _CONN: sqlite3.Connection | None = None
 _DB_PATH: Path | None = None
@@ -97,6 +97,12 @@ def init(db_path: str | Path | None = None) -> dict:
                 "SELECT key FROM sessions ORDER BY updated ASC, key ASC").fetchall()]
             for i, k in enumerate(keys, start=1):
                 conn.execute("UPDATE sessions SET seq=? WHERE key=?", (i, k))
+        # Project folder a chat is filed under ("" = loose chat). Added after the wire
+        # record shipped, so it is NOT in _COLS: an older client that doesn't know the
+        # field pushes without it, and upsert() must keep the stored value instead of
+        # silently un-filing the chat. See _project_for_write.
+        if "project" not in cols:
+            conn.execute("ALTER TABLE sessions ADD COLUMN project TEXT DEFAULT ''")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_updated ON sessions(updated)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_seq ON sessions(seq)")
         # Ground truth: which mode (hence which cwd/workspace) each Claude session was
@@ -115,8 +121,36 @@ def init(db_path: str | Path | None = None) -> dict:
             )
             """
         )
+        # Project folders (ChatGPT-style). Same sync contract as sessions: client-stamped
+        # `updated` decides last-write-wins, a server `seq` drives delivery, deletes are
+        # tombstones. `instructions` is injected into every turn of a chat filed here.
+        # The seq counter is SHARED with sessions (one monotonic clock for the file), so
+        # each table's cursor stays monotonic and nothing can collide.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS projects (
+                key          TEXT PRIMARY KEY,
+                name         TEXT,
+                color        TEXT,
+                instructions TEXT,
+                deleted      INTEGER DEFAULT 0,
+                created      INTEGER DEFAULT 0,
+                updated      INTEGER DEFAULT 0,
+                seq          INTEGER DEFAULT 0
+            )
+            """
+        )
+        # Icon name from the PWA's fixed icon set ("" = folder). Added after the table
+        # shipped in dev, so migrate an existing projects table in place.
+        pcols = {r[1] for r in conn.execute("PRAGMA table_info(projects)").fetchall()}
+        if "icon" not in pcols:
+            conn.execute("ALTER TABLE projects ADD COLUMN icon TEXT DEFAULT ''")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_projects_seq ON projects(seq)")
         conn.commit()
-        _SEQ = conn.execute("SELECT COALESCE(MAX(seq), 0) FROM sessions").fetchone()[0] or 0
+        _SEQ = max(
+            conn.execute("SELECT COALESCE(MAX(seq), 0) FROM sessions").fetchone()[0] or 0,
+            conn.execute("SELECT COALESCE(MAX(seq), 0) FROM projects").fetchone()[0] or 0,
+        )
         _CONN = conn
         _DB_PATH = path
         return {"db": str(path)}
@@ -143,6 +177,7 @@ def _row_to_dict(r) -> dict:
         "used": r[9] or 0,
         "updated": r[10] or 0,
         "seq": r[11] or 0,
+        "project": r[12] or "",
     }
 
 
@@ -175,20 +210,21 @@ def upsert(records: list[dict]) -> dict:
             updated = int(rec.get("updated") or 0)
             if updated > max_updated:
                 max_updated = updated
-            row = conn.execute("SELECT updated FROM sessions WHERE key=?", (key,)).fetchone()
+            row = conn.execute("SELECT updated, project FROM sessions WHERE key=?", (key,)).fetchone()
             if row is not None and (row[0] or 0) >= updated:
                 continue  # stored copy is newer or equal — keep it
+            project = _project_for_write(rec.get("project"), row[1] if row else "")
             tx = rec.get("tx") or ""
             if len(tx) > _TX_MAX:
                 tx = tx[-_TX_MAX:]
             _SEQ += 1  # server-assigned monotonic delivery cursor for this write
             conn.execute(
-                f"INSERT INTO sessions ({_COLS},seq) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) "
+                f"INSERT INTO sessions ({_COLS},seq,project) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) "
                 "ON CONFLICT(key) DO UPDATE SET "
                 "title=excluded.title, mode=excluded.mode, sid=excluded.sid, "
                 "last_ts=excluded.last_ts, last_spoken=excluded.last_spoken, tx=excluded.tx, "
                 "deleted=excluded.deleted, created=excluded.created, used=excluded.used, "
-                "updated=excluded.updated, seq=excluded.seq",
+                "updated=excluded.updated, seq=excluded.seq, project=excluded.project",
                 (
                     key,
                     str(rec.get("title") or ""),
@@ -202,11 +238,125 @@ def upsert(records: list[dict]) -> dict:
                     int(rec.get("used") or 0),
                     updated,
                     _SEQ,
+                    project,
                 ),
             )
             applied += 1
         conn.commit()
     return {"applied": applied, "max_updated": max_updated}
+
+
+_PROJECT_KEY_MAX = 80
+_PROJECT_NAME_MAX = 60
+_PROJECT_INSTR_MAX = 4000
+
+
+def _project_for_write(incoming, stored) -> str:
+    """The project a session write should land with. `None` = the client never sent
+    the field (a pre-projects client) -> keep what's stored, so an old cached PWA
+    editing a chat can't silently un-file it. A string (incl. "") is authoritative."""
+    if incoming is None:
+        return str(stored or "")
+    return str(incoming).strip()[:_PROJECT_KEY_MAX]
+
+
+_PROJECT_COLS = "key,name,color,instructions,deleted,created,updated,seq,icon"
+
+
+def _project_row(r) -> dict:
+    return {
+        "key": r[0],
+        "name": r[1] or "",
+        "color": r[2] or "",
+        "instructions": r[3] or "",
+        "deleted": bool(r[4]),
+        "created": r[5] or 0,
+        "updated": r[6] or 0,
+        "seq": r[7] or 0,
+        "icon": r[8] or "",
+    }
+
+
+def projects_changed_since(since: int) -> list[dict]:
+    """Every project whose server `seq` is > `since`, in seq order (same skew-proof
+    delivery contract as changed_since)."""
+    with _LOCK:
+        cur = _conn().execute(
+            f"SELECT {_PROJECT_COLS} FROM projects WHERE seq > ? ORDER BY seq ASC",
+            (int(since or 0),),
+        )
+        return [_project_row(r) for r in cur.fetchall()]
+
+
+def upsert_projects(records: list[dict]) -> dict:
+    """Merge client project records, last-write-wins on `updated` (a record not
+    strictly newer than the stored copy is ignored). Returns {applied}."""
+    global _SEQ
+    applied = 0
+    with _LOCK:
+        conn = _conn()
+        for rec in records or []:
+            key = str(rec.get("key") or "").strip()[:_PROJECT_KEY_MAX]
+            if not key:
+                continue
+            updated = int(rec.get("updated") or 0)
+            row = conn.execute("SELECT updated FROM projects WHERE key=?", (key,)).fetchone()
+            if row is not None and (row[0] or 0) >= updated:
+                continue
+            _SEQ += 1
+            conn.execute(
+                f"INSERT INTO projects ({_PROJECT_COLS}) VALUES (?,?,?,?,?,?,?,?,?) "
+                "ON CONFLICT(key) DO UPDATE SET name=excluded.name, color=excluded.color, icon=excluded.icon, "
+                "instructions=excluded.instructions, deleted=excluded.deleted, "
+                "created=excluded.created, updated=excluded.updated, seq=excluded.seq",
+                (
+                    key,
+                    str(rec.get("name") or "").strip()[:_PROJECT_NAME_MAX] or "Project",
+                    str(rec.get("color") or "")[:16],
+                    str(rec.get("instructions") or "")[:_PROJECT_INSTR_MAX],
+                    1 if rec.get("deleted") else 0,
+                    int(rec.get("created") or 0),
+                    updated,
+                    _SEQ,
+                    str(rec.get("icon") or "")[:24],
+                ),
+            )
+            applied += 1
+        conn.commit()
+    return {"applied": applied}
+
+
+def get_project(key: str) -> dict | None:
+    """One live (non-deleted) project, or None. Used to inject a project's
+    instructions into a turn."""
+    key = str(key or "").strip()
+    if not key:
+        return None
+    with _LOCK:
+        r = _conn().execute(
+            f"SELECT {_PROJECT_COLS} FROM projects WHERE key=? AND deleted=0", (key,)
+        ).fetchone()
+        return _project_row(r) if r else None
+
+
+def project_chat_titles(key: str, exclude_sid: str | None = None, limit: int = 12) -> list[str]:
+    """Titles of the other live chats filed under a project, most recent first, so a
+    turn knows what sibling conversations share its folder."""
+    key = str(key or "").strip()
+    if not key:
+        return []
+    with _LOCK:
+        cur = _conn().execute(
+            "SELECT title, sid FROM sessions WHERE project=? AND deleted=0 "
+            "ORDER BY used DESC LIMIT ?", (key, int(limit) + 1),
+        )
+        out = []
+        for title, sid in cur.fetchall():
+            if exclude_sid and sid == exclude_sid:
+                continue
+            if title:
+                out.append(title)
+        return out[:limit]
 
 
 def all_sessions() -> list[dict]:
@@ -235,8 +385,11 @@ def purge_expired(ttl_ms: int, now: int | None = None) -> int:
         cur = conn.execute(
             "DELETE FROM sessions WHERE deleted=1 AND updated < ?", (cutoff,)
         )
+        n = cur.rowcount or 0
+        # Project tombstones age out on the same window.
+        conn.execute("DELETE FROM projects WHERE deleted=1 AND updated < ?", (cutoff,))
         conn.commit()
-        return cur.rowcount or 0
+        return n
 
 
 def record_session_mode(sid: str, mode: str) -> None:

@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, 
 import config
 import job_store
 import permissions
-from models import AskRequest, SessionSyncPush
+from models import AskRequest, ProjectSyncPush, SessionSyncPush
 from rate_limit import limiter
 from security import require_token
 
@@ -173,7 +173,7 @@ async def ask(request: Request, response: Response, body: AskRequest):
         raise HTTPException(status_code=400, detail="Empty message")
     return await server.run_claude(
         message, body.session_id, mode=body.mode or "voice",
-        attachments=body.attachments,
+        attachments=body.attachments, project=body.project,
     )
 
 
@@ -203,7 +203,8 @@ async def ask_async(request: Request, response: Response, body: AskRequest):
         input_summary=summary, pid=os.getpid(),
     )
     server.keep_task(asyncio.create_task(
-        server._run_job(job_id, message, body.session_id, mode, body.attachments)
+        server._run_job(job_id, message, body.session_id, mode, body.attachments,
+                        project=body.project)
     ))
     return {"job_id": job_id}
 
@@ -315,4 +316,25 @@ async def sessions_push(body: SessionSyncPush):
     if server.session_store is None or not config.SESSION_SYNC_ENABLED:
         return {"enabled": False, "applied": 0}
     res = server.session_store.upsert([r.model_dump() for r in body.sessions])
+    return {"enabled": True, "applied": res["applied"]}
+
+
+# --- Project folders ---------------------------------------------------------
+# ChatGPT-style folders for chats. Synced exactly like sessions (LWW on the client
+# `updated`, delivery by server `seq`, tombstone deletes); a chat's `project` field
+# on its SessionRecord is what files it. Deleting a project never deletes chats —
+# the client un-files them back to the loose list first.
+
+@router.get("/projects", dependencies=[Depends(require_token)])
+async def projects_pull(since: int = 0):
+    if server.session_store is None or not config.SESSION_SYNC_ENABLED:
+        return {"enabled": False, "projects": []}
+    return {"enabled": True, "projects": server.session_store.projects_changed_since(since)}
+
+
+@router.post("/projects", dependencies=[Depends(require_token)])
+async def projects_push(body: ProjectSyncPush):
+    if server.session_store is None or not config.SESSION_SYNC_ENABLED:
+        return {"enabled": False, "applied": 0}
+    res = server.session_store.upsert_projects([r.model_dump() for r in body.projects])
     return {"enabled": True, "applied": res["applied"]}

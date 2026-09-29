@@ -287,6 +287,64 @@
     border-radius: 6px; padding: 1px 5px; text-transform: uppercase; }
   .udot { flex: 0 0 auto; color: var(--cyan); font-size: 9px; vertical-align: middle; }
   .session-ico { background: none; border: none; color: var(--dim); font-size: 15px; cursor: pointer; padding: 4px 6px; }
+  /* --- Project folders (ChatGPT-style) — sit above the loose chats in the same list. --- */
+  .list-head { display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    color: var(--faint); font-size: 11px; letter-spacing: 2px; padding: 8px 4px 2px;
+    border-radius: 8px; border: 1px dashed transparent; }
+  .list-head.drop-ok { border-color: var(--edge-hi); color: var(--cyan-soft); }
+  .list-head-btn { background: none; border: none; color: var(--cyan-soft); font-size: 11px;
+    letter-spacing: 1px; cursor: pointer; padding: 2px 4px; }
+  .project-row { display: flex; align-items: center; gap: 2px; border-radius: 10px; padding: 2px;
+    border: 1px solid transparent; }
+  .project-row.drop-ok { border-color: var(--edge-hi); background: rgba(33,230,255,.07); }
+  .project-title { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+    text-align: left; background: none; border: none; color: var(--text);
+    font-size: 14px; padding: 8px; cursor: pointer; }
+  .project-title .chev { flex: 0 0 auto; font-size: 9px; color: var(--faint); transition: transform .18s; }
+  .project-row.open .chev { transform: rotate(90deg); }
+  .pdot { flex: 0 0 auto; width: 10px; height: 10px; border-radius: 3px; }
+  /* Row icons: a folder per project (in its color), a chat bubble per session (tinted
+     to its folder's color when filed; a code glyph for code chats). */
+  .row-ico { flex: 0 0 auto; width: 16px; height: 16px; display: block; }
+  /* One icon per SECTION heading (right of the word), not per row. */
+  .list-head-label { display: inline-flex; align-items: center; gap: 7px; }
+  .list-head-label .row-ico { width: 14px; height: 14px; color: var(--faint); }
+  /* Permanent gap + hairline between PROJECTS and SESSIONS, even with no projects. */
+  .list-head.section-gap { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(33,230,255,.12);
+    border-radius: 0; }
+  .list-head.section-gap.drop-ok { border: 1px dashed var(--edge-hi); border-radius: 8px; }
+  .pcount { flex: 0 0 auto; color: var(--faint); font-size: 11px; }
+  .project-chats { display: flex; flex-direction: column; gap: 4px; margin-left: 14px;
+    padding-left: 8px; border-left: 1px solid rgba(33,230,255,.12); }
+  .project-empty { color: var(--faint); font-size: 11px; padding: 4px 8px 6px; }
+  .session-row[draggable="true"] { cursor: grab; }
+  .session-row.dragging { opacity: .45; }
+  /* Move-to-project picker + project editor share the .modal shell; lifted over the drawer. */
+  #projectModal, #moveModal { z-index: 60; }
+  #projectModal textarea { width: 100%; min-height: 110px; padding: 12px; border-radius: 10px;
+    border: 1px solid rgba(33,230,255,.18); background: #060d16; color: var(--text);
+    font: inherit; font-size: 15px; resize: vertical; box-sizing: border-box; }
+  #projectModal textarea:focus { outline: none; border-color: var(--edge-hi); }
+  #projectModal input { box-sizing: border-box; }
+  .pcolors { display: flex; gap: 10px; flex-wrap: wrap; }
+  .pcolor { width: 28px; height: 28px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; padding: 0; }
+  .pcolor.sel { border-color: #fff; box-shadow: 0 0 0 2px rgba(33,230,255,.5); }
+  .picons { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  .picon { height: 34px; border-radius: 8px; border: 1px solid rgba(33,230,255,.14); background: #060d16;
+    cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
+  .picon .row-ico { width: 18px; height: 18px; }
+  .picon.sel { border-color: var(--edge-hi); background: rgba(33,230,255,.12); box-shadow: 0 0 0 1px var(--edge-hi); }
+  .pm-actions { display: flex; gap: 8px; margin-top: 18px; }
+  .pm-btn { flex: 1; height: 40px; border-radius: 8px; border: 1px solid rgba(33,230,255,.3);
+    background: transparent; color: var(--dim); cursor: pointer; letter-spacing: 1px; font-size: 12px; }
+  .pm-btn.primary { background: rgba(33,230,255,.14); border-color: var(--edge-hi); color: var(--cyan-soft); }
+  .pm-btn.danger { flex: 0 0 auto; padding: 0 14px; color: #e2607a; border-color: rgba(226,96,122,.45); }
+  .move-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+  .move-opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    background: rgba(33,230,255,.04); border: 1px solid rgba(33,230,255,.14); border-radius: 10px;
+    color: var(--text); font-size: 14px; padding: 11px 12px; cursor: pointer; }
+  .move-opt.cur { border-color: var(--edge-hi); background: rgba(33,230,255,.1); }
+  .move-opt .here { margin-left: auto; color: var(--faint); font-size: 11px; }
   /* Archived sessions — pinned below the live list; deleted chats recoverable for the retention window. */
   .archive-section { flex: none; border-top: 1px solid rgba(33,230,255,.1); margin-top: 8px; padding-top: 8px; }
   .archive-head { display: flex; align-items: center; gap: 6px; width: 100%; background: none; border: none;
@@ -541,6 +599,34 @@
         <span class="dash-title">CHECKLISTS</span>
       </div>
       <iframe id="checklistsFrame" title="Checklists" referrerpolicy="no-referrer"></iframe>
+    </div>
+
+    <!-- Project folder editor (create + edit). Delete lives here too. -->
+    <div class="modal" id="projectModal" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+      <div class="card" style="max-width:440px; text-align:left;">
+        <h2 id="pmTitle">NEW PROJECT</h2>
+        <label for="pmName">NAME</label>
+        <input id="pmName" type="text" maxlength="60" placeholder="e.g. Home purchase" autocomplete="off">
+        <label>COLOR</label>
+        <div class="pcolors" id="pmColors"></div>
+        <label>ICON</label>
+        <div class="picons" id="pmIcons"></div>
+        <label for="pmInstr">INSTRUCTIONS FOR ADAM <span style="color:var(--faint);letter-spacing:0">(optional)</span></label>
+        <textarea id="pmInstr" maxlength="4000" placeholder="Anything Adam should know or do in every chat in this project."></textarea>
+        <div class="pm-actions">
+          <button type="button" class="pm-btn danger" id="pmDelete" hidden>DELETE</button>
+          <button type="button" class="pm-btn" id="pmCancel">CANCEL</button>
+          <button type="button" class="pm-btn primary" id="pmSave">SAVE</button>
+        </div>
+      </div>
+    </div>
+    <!-- Move a chat into / out of a project. -->
+    <div class="modal" id="moveModal" role="dialog" aria-modal="true" aria-labelledby="mvTitle">
+      <div class="card" style="max-width:380px; text-align:left;">
+        <h2 id="mvTitle">MOVE TO PROJECT</h2>
+        <div class="move-list" id="moveList"></div>
+        <div class="pm-actions"><button type="button" class="pm-btn" id="mvCancel">CANCEL</button></div>
+      </div>
     </div>
 
     <div class="drawer-scrim" id="drawerScrim"></div>
@@ -1298,6 +1384,9 @@
     clearUnseen(key) { const l = this._all(); const s = this._find(l, key); if (s && s.unseen) { s.unseen = false; this._save(l); } },
     setActiveMode(mode) { const l = this._all(); const s = this._find(l, this.activeKey()); if (s && s.mode !== mode) { s.mode = mode; this._bump(s); this._save(l); } },
     setTitle(key, title) { const l = this._all(); const s = this._find(l, key); if (s) { s.title = (title || "Chat").slice(0, 60); this._bump(s); this._save(l); } },
+    // Project folder this chat is filed under ("" = loose). Synced like the title.
+    projectOf(key) { const s = this._find(this._all(), key); return (s && s.project) || ""; },
+    setProject(key, pkey) { const l = this._all(); const s = this._find(l, key); if (s && (s.project || "") !== (pkey || "")) { s.project = pkey || ""; s.everFiled = true; this._bump(s); this._save(l); } },
     maybeTitle(text) { const s = this.active(); if (s && (!s.title || s.title === "New chat") && text) this.setTitle(s.key, text); },
     saveTx(html) { this.saveTxFor(this.activeKey(), html); },
     // Raw transcript write (no dirty flag) — used when APPLYING a remote transcript.
@@ -1325,7 +1414,7 @@
           return ex;
         }
       }
-      const s = { key: opts.key || _newKey(), sid: null, title: opts.title || "New chat", mode: opts.mode || "voice", created: this._now(), used: this._now(), updated: this._now(), deleted: false };
+      const s = { key: opts.key || _newKey(), sid: null, title: opts.title || "New chat", mode: opts.mode || "voice", project: opts.project || "", created: this._now(), used: this._now(), updated: this._now(), deleted: false };
       l.push(s); this._save(l); this._dirty(s.key);
       localStorage.setItem("jarvis_active", s.key);
       this._writeTxRaw(s.key, "");
@@ -1415,6 +1504,7 @@
         // deleteForever() wipes the transcript locally first, so this sends "".
         tx: this.loadTx(s.key) || "",
         deleted: !!s.deleted, created: s.created || 0, used: s.used || 0, updated: s.updated || 0,
+        project: s.project || "",
       };
     },
     // A brand-new, empty, untitled chat shouldn't propagate to every device (each
@@ -1423,7 +1513,9 @@
       const s = this._find(this._all(), key);
       if (!s || s.deleted) return false;
       const titled = s.title && s.title !== "New chat" && !/^Chat \d+$/.test(s.title);
-      return !s.sid && !(this.loadTx(key) || "").trim() && !titled;
+      // A chat that has ever been filed in a project is real: un-filing it (e.g. its
+      // folder was deleted) must still reach the server, or it stays filed there.
+      return !s.sid && !(this.loadTx(key) || "").trim() && !titled && !s.project && !s.everFiled;
     },
     // Pull the dirty records to push; clears the dirty set but re-queues empty
     // placeholders so they sync once they have content. Returns {keys, records}.
@@ -1449,7 +1541,17 @@
       if (!rec || !rec.key) return false;
       const l = this._all();
       let s = this._find(l, rec.key);
-      if (s && (s.updated || 0) >= (rec.updated || 0)) return false;   // local is newer/equal
+      if (s && (s.updated || 0) >= (rec.updated || 0)) {   // local is newer/equal
+        // Filing is sticky: a local copy that was NEVER filed (e.g. a fresh device that
+        // re-created this chat from /push/last before its first pull) adopts the
+        // server's folder instead of wiping it on its next push. Only a deliberate
+        // local move (everFiled) outranks the server's folder.
+        if (!s.project && !s.everFiled && typeof rec.project === "string" && rec.project) {
+          s.project = rec.project; s.everFiled = true; this._save(l); this._dirty(s.key);
+          return true;
+        }
+        return false;
+      }
       if (!s) { s = { key: rec.key }; l.push(s); }
       s.title = rec.title || "";
       s.mode = rec.mode || "voice";
@@ -1461,6 +1563,7 @@
       s.used = rec.used || rec.updated || this._now();
       s.updated = rec.updated || 0;
       s.deleted = !!rec.deleted;
+      if (typeof rec.project === "string") { s.project = rec.project; if (rec.project) s.everFiled = true; }
       if (s.unseen === undefined) s.unseen = false;
       this._save(l);
       // Apply the transcript whether or not the record is a tombstone: a remote
@@ -2759,7 +2862,7 @@
           res = await fetch(LS.url + "/ask_async", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + LS.token },
-            body: JSON.stringify({ message: text, session_id: Sessions.activeSid(), mode: currentMode(), attachments: attachmentPaths }),
+            body: JSON.stringify({ message: text, session_id: Sessions.activeSid(), mode: currentMode(), attachments: attachmentPaths, project: (Projects.get(Sessions.projectOf(turnKey)) ? Sessions.projectOf(turnKey) : null) }),
             signal: ctrl.signal,
           });
         } finally { clearTimeout(killer); }
@@ -2958,7 +3061,8 @@
     }
     if (ctrl.new_chat && isActive) {
       const title = (ctrl.new_chat.title || "").trim();
-      const s = Sessions.create(title ? { title } : {});   // preserves the old chat
+      // A chat opened from inside a project stays in that project (ChatGPT behavior).
+      const s = Sessions.create({ title: title || undefined, project: Projects.get(Sessions.projectOf(key)) ? Sessions.projectOf(key) : "" });   // preserves the old chat
       Sessions.switchTo(s.key);
       loadActiveSession();
       renderSessions();
@@ -3095,6 +3199,78 @@
     } catch (_) {}
   }
 
+  // --- Project folders -----------------------------------------------------
+  // ChatGPT-style folders for chats. Same shape as Sessions: a localStorage list,
+  // a persisted dirty set, last-write-wins on a client `updated` stamp, tombstone
+  // deletes, synced through /projects by SessionSync. A chat is filed by its own
+  // `project` field, so moving a chat is a chat edit, not a project edit.
+  // Deleting a project NEVER deletes chats: they are un-filed back to the loose list.
+  const PROJECT_COLORS = ["#21e6ff", "#7c8cff", "#b57bff", "#ff7ab6", "#ffb45a", "#5fe0a0", "#e2607a", "#9fb4be"];
+  // A synced color lands in a style attribute — accept only a plain hex color.
+  function _pcolor(c) { return /^#[0-9a-f]{3,8}$/i.test(c || "") ? c : PROJECT_COLORS[0]; }
+  const Projects = {
+    _all() { try { return JSON.parse(localStorage.getItem("jarvis_projects") || "[]"); } catch (_) { return []; } },
+    _save(list) { try { localStorage.setItem("jarvis_projects", JSON.stringify(list)); } catch (_) {} },
+    _find(list, key) { return list.find((p) => p.key === key) || null; },
+    _dirtyKeys() { try { return JSON.parse(localStorage.getItem("jarvis_projects_dirty") || "[]"); } catch (_) { return []; } },
+    _setDirtyKeys(a) { try { localStorage.setItem("jarvis_projects_dirty", JSON.stringify(a)); } catch (_) {} },
+    _dirty(key) { const a = this._dirtyKeys(); if (!a.includes(key)) { a.push(key); this._setDirtyKeys(a); } },
+    // Alphabetical, like a file tree — folders don't jump around as chats get used.
+    list() { return this._all().filter((p) => !p.deleted).sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })); },
+    get(key) { if (!key) return null; const p = this._find(this._all(), key); return (p && !p.deleted) ? p : null; },
+    create(fields) {
+      const now = Date.now();
+      const p = { key: "p-" + _newKey(), name: (fields.name || "Project").slice(0, 60), color: fields.color || PROJECT_COLORS[0], icon: fields.icon || "folder",
+                  instructions: (fields.instructions || "").slice(0, 4000), deleted: false, created: now, updated: now };
+      const l = this._all(); l.push(p); this._save(l); this._dirty(p.key);
+      this.setOpen(p.key, true);
+      return p;
+    },
+    update(key, fields) {
+      const l = this._all(); const p = this._find(l, key); if (!p) return;
+      if (fields.name !== undefined) p.name = (fields.name || "Project").slice(0, 60);
+      if (fields.color !== undefined) p.color = fields.color;
+      if (fields.icon !== undefined) p.icon = fields.icon;
+      if (fields.instructions !== undefined) p.instructions = (fields.instructions || "").slice(0, 4000);
+      p.updated = Date.now(); this._save(l); this._dirty(key);
+    },
+    // Tombstone the folder and release its chats to the loose list (each chat edit
+    // syncs on its own, so the other devices see the chats land, not vanish).
+    remove(key) {
+      const l = this._all(); const p = this._find(l, key); if (!p) return;
+      p.deleted = true; p.updated = Date.now(); this._save(l); this._dirty(key);
+      Sessions._all().filter((s) => s.project === key).forEach((s) => Sessions.setProject(s.key, ""));
+    },
+    // Per-device UI state: which folders are expanded. Not synced.
+    _openSet() { try { return JSON.parse(localStorage.getItem("jarvis_projects_open") || "[]"); } catch (_) { return []; } },
+    isOpen(key) { return this._openSet().includes(key); },
+    setOpen(key, open) {
+      const a = this._openSet().filter((k) => k !== key); if (open) a.push(key);
+      try { localStorage.setItem("jarvis_projects_open", JSON.stringify(a)); } catch (_) {}
+    },
+    _takeDirty() {
+      const keys = this._dirtyKeys(); this._setDirtyKeys([]);
+      const l = this._all();
+      const records = keys.map((k) => this._find(l, k)).filter(Boolean).map((p) => ({
+        key: p.key, name: p.name || "", color: p.color || "", icon: p.icon || "", instructions: p.instructions || "",
+        deleted: !!p.deleted, created: p.created || 0, updated: p.updated || 0,
+      }));
+      return { keys, records };
+    },
+    _restoreDirty(keys) { (keys || []).forEach((k) => this._dirty(k)); },
+    _applyRemote(rec) {
+      if (!rec || !rec.key) return false;
+      const l = this._all(); let p = this._find(l, rec.key);
+      if (p && (p.updated || 0) >= (rec.updated || 0)) return false;
+      if (!p) { p = { key: rec.key }; l.push(p); }
+      p.name = rec.name || "Project"; p.color = rec.color || PROJECT_COLORS[0]; p.icon = rec.icon || "folder";
+      p.instructions = rec.instructions || ""; p.deleted = !!rec.deleted;
+      p.created = rec.created || p.created || Date.now(); p.updated = rec.updated || 0;
+      this._save(l);
+      return true;
+    },
+  };
+
   // --- Cross-device chat sync --------------------------------------------
   // Mirrors the chat list + transcripts through the server so every signed-in
   // device shows the same conversations. Pull (apply remote, last-write-wins) then
@@ -3107,9 +3283,45 @@
     _cursor() { return parseInt(localStorage.getItem(this._cursorKey) || "0", 10) || 0; },
     _setCursor(ts) { if (ts > this._cursor()) localStorage.setItem(this._cursorKey, String(ts)); },
     _busy: false, _pending: false, _t: 0, _off: false,
+    // Project folders ride the same sync pass on their own seq cursor.
+    _pCursorKey: "jarvis_projects_cursor_seq",
+    _pCursor() { return parseInt(localStorage.getItem(this._pCursorKey) || "0", 10) || 0; },
+    async _syncProjects() {
+      let changed = false;
+      try {
+        const r = await fetch(LS.url + "/projects?since=" + this._pCursor(), { headers: { Authorization: "Bearer " + LS.token } });
+        if (r.ok) {
+          const d = await r.json();
+          if (d && d.enabled === false) return false;
+          let maxSeq = this._pCursor();
+          for (const rec of ((d && d.projects) || [])) {
+            if (Projects._applyRemote(rec)) changed = true;
+            if ((rec.seq || 0) > maxSeq) maxSeq = rec.seq || 0;
+          }
+          if (maxSeq > this._pCursor()) localStorage.setItem(this._pCursorKey, String(maxSeq));
+        }
+      } catch (_) {}
+      try {
+        const { keys, records } = Projects._takeDirty();
+        if (records.length) {
+          let ok = false;
+          try {
+            const r = await fetch(LS.url + "/projects", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: "Bearer " + LS.token },
+              body: JSON.stringify({ projects: records }),
+            });
+            ok = r.ok;
+          } catch (_) { ok = false; }
+          if (!ok) Projects._restoreDirty(keys);
+        }
+      } catch (_) {}
+      return changed;
+    },
     async _run() {
       if (!LS.url || !LS.token || this._off) return;
       let changedActive = false, listChanged = false;
+      if (await this._syncProjects()) listChanged = true;
       // PULL
       try {
         const r = await fetch(LS.url + "/sessions?since=" + this._cursor(), {
@@ -4212,31 +4424,282 @@
   const menuBtn = $("menuBtn"), drawer = $("drawer"), drawerScrim = $("drawerScrim");
   const sessionList = $("sessionList"), newSessionBtn = $("newSession");
 
+  // One chat row. Handlers are closures (never inline strings), so a chat title is
+  // only ever rendered through escapeHtml.
+  // Inline SVG icons (currentColor), so they theme with the row and need no assets.
+  // The project icon set. Keys are what sync (projects.icon); an unknown or empty
+  // key renders as the folder, so a device on an older icon list degrades cleanly.
+  // Stroke paths on a 16px grid; only the folder carries a soft fill.
+  const PROJECT_ICONS = {
+    folder:   "M1.5 4.2c0-.66.54-1.2 1.2-1.2h3.3l1.5 1.6h5.8c.66 0 1.2.54 1.2 1.2v6.5c0 .66-.54 1.2-1.2 1.2H2.7c-.66 0-1.2-.54-1.2-1.2z",
+    home:     "M2.5 7.5 8 3l5.5 4.5M4 6.5V13h3v-3.5h2V13h3V6.5",
+    work:     "M2 5.5h12v7.5H2zM5.5 5.5v-2h5v2M2 9h12",
+    star:     "M8 2.2l1.75 3.6 3.95.55-2.87 2.78.7 3.92L8 11.2l-3.53 1.85.7-3.92L2.3 6.35l3.95-.55z",
+    heart:    "M8 13.5S2.5 10.2 2.5 6.2A2.7 2.7 0 0 1 8 4.8a2.7 2.7 0 0 1 5.5 1.4C13.5 10.2 8 13.5 8 13.5z",
+    book:     "M2.5 3.5h4A1.5 1.5 0 0 1 8 5v8.5A1.5 1.5 0 0 0 6.5 12h-4zM13.5 3.5h-4A1.5 1.5 0 0 0 8 5v8.5A1.5 1.5 0 0 1 9.5 12h4z",
+    code:     "M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5M9 3 7 13",
+    money:    "M8 1.8a6.2 6.2 0 1 0 0 12.4A6.2 6.2 0 1 0 8 1.8zM10 5.8c-.3-.7-1.1-1-2-1-1.2 0-2 .6-2 1.4 0 1.9 4 1 4 2.9 0 .8-.8 1.4-2 1.4-.9 0-1.7-.4-2-1.1M8 3.9v8.2",
+    health:   "M1.5 8.5h3L6 5l2.5 6L10 7.5h4.5",
+    calendar: "M2.5 3.5h11v10h-11zM2.5 6.5h11M5.5 2v3M10.5 2v3",
+    idea:     "M6 12h4M6.5 14h3M8 2a4 4 0 0 0-2.4 7.2c.5.4.9 1 .9 1.6V11h3v-.2c0-.6.4-1.2.9-1.6A4 4 0 0 0 8 2z",
+    rocket:   "M13.5 2.5s-3.5-.3-6 2.8L4.5 8.5l3 3 3.2-3c3.1-2.5 2.8-6 2.8-6zM4.5 8.5 2.5 8l2-2.5h2.5M7.5 11.5 8 13.5l2.5-2V9M3.5 12.5l1.5-1.5",
+    music:    "M6 12a1.7 1.7 0 1 1-3.4 0A1.7 1.7 0 0 1 6 12zM6 12V3.5L13 2v8.5M13 10.5a1.7 1.7 0 1 1-3.4 0 1.7 1.7 0 0 1 3.4 0z",
+    person:   "M8 2.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 1 0 0-5zM3 13.5c0-2.8 2.2-4.5 5-4.5s5 1.7 5 4.5",
+    globe:    "M8 2a6 6 0 1 0 0 12A6 6 0 1 0 8 2zM2 8h12M8 2c1.8 1.6 2.6 3.8 2.6 6S9.8 12.4 8 14M8 2C6.2 3.6 5.4 5.8 5.4 8S6.2 12.4 8 14",
+    cart:     "M1.5 2.5h2l1.6 7.5h7l1.4-5.5H4.3M6 13.5a.9.9 0 1 0 0-.01zM11.5 13.5a.9.9 0 1 0 0-.01z",
+  };
+  function _icoProject(icon, color) {
+    const key = PROJECT_ICONS[icon] ? icon : "folder";
+    const fill = key === "folder" ? 'fill="currentColor" fill-opacity=".22"' : 'fill="none"';
+    return '<svg class="row-ico" viewBox="0 0 16 16" aria-hidden="true" style="color:' + _pcolor(color) + '">'
+         + '<path d="' + PROJECT_ICONS[key] + '" ' + fill + ' stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  function _icoFolder(color) { return _icoProject("folder", color); }
+  function _icoChat(mode, color) {
+    const st = color ? ' style="color:' + _pcolor(color) + '"' : "";
+    if (mode === "code") {
+      return '<svg class="row-ico" viewBox="0 0 16 16" aria-hidden="true"' + st + '>'
+           + '<path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5M9 3 7 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+    return '<svg class="row-ico" viewBox="0 0 16 16" aria-hidden="true"' + st + '>'
+         + '<path d="M2.5 3.5c0-.55.45-1 1-1h9c.55 0 1 .45 1 1v6.5c0 .55-.45 1-1 1H7l-3 2.5v-2.5h-.5c-.55 0-1-.45-1-1z" '
+         + 'fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+  }
+
+  function _sessionRow(s, act) {
+    const row = document.createElement("div");
+    row.className = "session-row" + (s.key === act ? " active" : "");
+    row.draggable = !!(window.matchMedia && matchMedia("(pointer: fine)").matches);
+    row.addEventListener("dragstart", (e) => {
+      row.classList.add("dragging");
+      try { e.dataTransfer.setData("text/x-adam-chat", s.key); e.dataTransfer.effectAllowed = "move"; } catch (_) {}
+    });
+    row.addEventListener("dragend", () => row.classList.remove("dragging"));
+    const t = document.createElement("button");
+    t.className = "session-title";
+    const _badge = s.mode === "code" ? '<span class="sbadge code">code</span>'
+                 : s.mode === "work" ? '<span class="sbadge">work</span>' : "";
+    t.innerHTML = '<span class="stitle-text">' + escapeHtml(s.title) + '</span>' + _badge
+                + (s.unseen ? '<span class="udot">●</span>' : "");
+    t.onclick = () => switchSession(s.key);
+    const mv = document.createElement("button");
+    mv.className = "session-ico"; mv.textContent = "⇄"; mv.title = "Move to project";
+    mv.setAttribute("aria-label", "Move " + (s.title || "chat") + " to a project");
+    mv.onclick = (e) => { e.stopPropagation(); openMoveModal(s.key); };
+    const rn = document.createElement("button");
+    rn.className = "session-ico"; rn.textContent = "✎"; rn.title = "Rename";
+    rn.onclick = (e) => { e.stopPropagation(); const v = prompt("Rename chat:", s.title); if (v && v.trim()) { Sessions.setTitle(s.key, v.trim()); renderSessions(); SessionSync.schedule(); } };
+    const del = document.createElement("button");
+    del.className = "session-ico"; del.textContent = "×"; del.title = "Delete";
+    del.onclick = (e) => { e.stopPropagation(); if (confirm('Delete "' + s.title + '"?')) { try { if (window.JVLSound) window.JVLSound.play("deleteChat"); } catch (_) {} const wasActive = (s.key === act); Sessions.remove(s.key); wasActive ? loadActiveSession() : renderSessions(); SessionSync.schedule(); } };
+    row.appendChild(t); row.appendChild(mv); row.appendChild(rn); row.appendChild(del);
+    return row;
+  }
+
+  // Desktop drag-and-drop: drop a chat on a folder to file it, on SESSIONS to un-file it.
+  function _dropTarget(el, pkey) {
+    const ok = (e) => { try { return Array.from(e.dataTransfer.types || []).includes("text/x-adam-chat"); } catch (_) { return false; } };
+    el.addEventListener("dragover", (e) => { if (ok(e)) { e.preventDefault(); el.classList.add("drop-ok"); } });
+    el.addEventListener("dragleave", () => el.classList.remove("drop-ok"));
+    el.addEventListener("drop", (e) => {
+      el.classList.remove("drop-ok");
+      let key = ""; try { key = e.dataTransfer.getData("text/x-adam-chat"); } catch (_) {}
+      if (!key) return;
+      e.preventDefault();
+      moveChat(key, pkey);
+    });
+  }
+
+  function moveChat(key, pkey) {
+    Sessions.setProject(key, pkey);
+    if (pkey) Projects.setOpen(pkey, true);   // show where it landed
+    renderSessions();
+    SessionSync.schedule();
+  }
+
   function renderSessions() {
     if (!sessionList) return;
     const act = Sessions.activeKey();
     sessionList.innerHTML = "";
-    Sessions.list().forEach((s) => {
+    const chats = Sessions.list();
+    const projects = Projects.list();
+    const live = new Set(projects.map((p) => p.key));
+
+    // PROJECTS header — always shown, so "+ New project" is always one tap away.
+    const ph = document.createElement("div");
+    ph.className = "list-head";
+    ph.innerHTML = '<span class="list-head-label">PROJECTS' + _icoFolder("#5d8894") + '</span>';
+    const addP = document.createElement("button");
+    addP.className = "list-head-btn"; addP.textContent = "+ New project"; addP.id = "newProjectBtn";
+    addP.onclick = () => openProjectModal(null);
+    ph.appendChild(addP);
+    sessionList.appendChild(ph);
+
+    projects.forEach((p) => {
+      const inP = chats.filter((s) => s.project === p.key);
+      const open = Projects.isOpen(p.key) || inP.some((s) => s.key === act);
       const row = document.createElement("div");
-      row.className = "session-row" + (s.key === act ? " active" : "");
+      row.className = "project-row" + (open ? " open" : "");
+      row.dataset.project = p.key;
       const t = document.createElement("button");
-      t.className = "session-title";
-      const _badge = s.mode === "code" ? '<span class="sbadge code">code</span>'
-                   : s.mode === "work" ? '<span class="sbadge">work</span>' : "";
-      t.innerHTML = '<span class="stitle-text">' + escapeHtml(s.title) + '</span>' + _badge
-                  + (s.unseen ? '<span class="udot">●</span>' : "");
-      t.onclick = () => switchSession(s.key);
-      const rn = document.createElement("button");
-      rn.className = "session-ico"; rn.textContent = "✎"; rn.title = "Rename";
-      rn.onclick = (e) => { e.stopPropagation(); const v = prompt("Rename chat:", s.title); if (v && v.trim()) { Sessions.setTitle(s.key, v.trim()); renderSessions(); SessionSync.schedule(); } };
+      t.className = "project-title";
+      t.setAttribute("aria-expanded", open ? "true" : "false");
+      t.innerHTML = '<span class="chev">▶</span>' + _icoProject(p.icon, p.color)
+                  + '<span class="stitle-text">' + escapeHtml(p.name || "Project") + '</span>'
+                  + '<span class="pcount">' + inP.length + '</span>';
+      t.onclick = () => { Projects.setOpen(p.key, !open); renderSessions(); };
+      const add = document.createElement("button");
+      add.className = "session-ico"; add.textContent = "+"; add.title = "New session in " + (p.name || "project");
+      add.onclick = (e) => { e.stopPropagation(); newChatIn(p.key); };
+      const ed = document.createElement("button");
+      ed.className = "session-ico"; ed.textContent = "✎"; ed.title = "Edit project";
+      ed.onclick = (e) => { e.stopPropagation(); openProjectModal(p.key); };
       const del = document.createElement("button");
-      del.className = "session-ico"; del.textContent = "×"; del.title = "Delete";
-      del.onclick = (e) => { e.stopPropagation(); if (confirm('Delete "' + s.title + '"?')) { try { if (window.JVLSound) window.JVLSound.play("deleteChat"); } catch (_) {} const wasActive = (s.key === act); Sessions.remove(s.key); wasActive ? loadActiveSession() : renderSessions(); SessionSync.schedule(); } };
-      row.appendChild(t); row.appendChild(rn); row.appendChild(del);
+      del.className = "session-ico"; del.textContent = "×"; del.title = "Delete project";
+      del.onclick = (e) => { e.stopPropagation(); deleteProject(p.key); };
+      row.appendChild(t); row.appendChild(add); row.appendChild(ed); row.appendChild(del);
+      _dropTarget(row, p.key);
       sessionList.appendChild(row);
+      if (open) {
+        const box = document.createElement("div");
+        box.className = "project-chats";
+        if (!inP.length) {
+          const empty = document.createElement("div");
+          empty.className = "project-empty";
+          empty.textContent = "No sessions yet — tap + or move one here.";
+          box.appendChild(empty);
+        }
+        inP.forEach((s) => box.appendChild(_sessionRow(s, act)));
+        sessionList.appendChild(box);
+      }
     });
+
+    // Loose chats (no project, or a project that was deleted/never synced here).
+    const ch = document.createElement("div");
+    ch.className = "list-head section-gap";
+    ch.innerHTML = '<span class="list-head-label">SESSIONS' + _icoChat("voice", "") + '</span>';
+    _dropTarget(ch, "");
+    sessionList.appendChild(ch);
+    chats.filter((s) => !s.project || !live.has(s.project)).forEach((s) => sessionList.appendChild(_sessionRow(s, act)));
     renderArchive();
   }
+
+  function newChatIn(pkey) {
+    try { unlockAudio(); if (window.JVLSound) window.JVLSound.play("newChat"); } catch (_) {}
+    Sessions.create({ mode: (workMode || codeMode) ? "work" : "voice", title: "New chat", project: pkey });
+    Projects.setOpen(pkey, true);
+    loadActiveSession();
+    closeDrawer();
+    SessionSync.schedule();
+  }
+
+  function deleteProject(pkey) {
+    const p = Projects.get(pkey); if (!p) return;
+    const n = Sessions.list().filter((s) => s.project === pkey).length;
+    const msg = 'Delete the project "' + (p.name || "Project") + '"?'
+              + (n ? "\n\nIts " + n + " session" + (n === 1 ? "" : "s") + " will move back to Sessions — nothing is lost." : "");
+    if (!confirm(msg)) return;
+    try { if (window.JVLSound) window.JVLSound.play("deleteChat"); } catch (_) {}
+    Projects.remove(pkey);
+    closeProjectModal();
+    renderSessions();
+    SessionSync.schedule();
+  }
+
+  // --- Project editor modal ------------------------------------------------
+  let _pmKey = null, _pmColor = PROJECT_COLORS[0], _pmIcon = "folder";
+  function _paintIcons() {
+    const box = $("pmIcons"); if (!box) return;
+    box.innerHTML = "";
+    Object.keys(PROJECT_ICONS).forEach((k) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "picon" + (k === _pmIcon ? " sel" : "");
+      b.title = k; b.setAttribute("aria-label", "Icon " + k);
+      b.setAttribute("aria-pressed", k === _pmIcon ? "true" : "false");
+      b.innerHTML = _icoProject(k, _pmColor);
+      b.onclick = () => { _pmIcon = k; _paintIcons(); };
+      box.appendChild(b);
+    });
+  }
+  function _paintColors() {
+    const box = $("pmColors"); if (!box) return;
+    box.innerHTML = "";
+    PROJECT_COLORS.forEach((c) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "pcolor" + (c === _pmColor ? " sel" : "");
+      b.style.background = c; b.setAttribute("aria-label", "Color " + c);
+      b.onclick = () => { _pmColor = c; _paintColors(); _paintIcons(); };
+      box.appendChild(b);
+    });
+  }
+  function openProjectModal(pkey) {
+    const p = pkey ? Projects.get(pkey) : null;
+    _pmKey = p ? p.key : null;
+    _pmColor = p ? (p.color || PROJECT_COLORS[0]) : PROJECT_COLORS[Projects.list().length % PROJECT_COLORS.length];
+    $("pmTitle").textContent = p ? "EDIT PROJECT" : "NEW PROJECT";
+    $("pmName").value = p ? (p.name || "") : "";
+    $("pmInstr").value = p ? (p.instructions || "") : "";
+    $("pmDelete").hidden = !p;
+    _pmIcon = (p && PROJECT_ICONS[p.icon]) ? p.icon : "folder";
+    _paintColors();
+    _paintIcons();
+    $("projectModal").classList.add("show");
+    setTimeout(() => { try { $("pmName").focus(); } catch (_) {} }, 30);
+  }
+  function closeProjectModal() { const m = $("projectModal"); if (m) m.classList.remove("show"); _pmKey = null; }
+  function saveProjectModal() {
+    const name = ($("pmName").value || "").trim();
+    if (!name) { $("pmName").focus(); return; }
+    const fields = { name, color: _pmColor, icon: _pmIcon, instructions: ($("pmInstr").value || "").trim() };
+    if (_pmKey) Projects.update(_pmKey, fields);
+    else {
+      const p = Projects.create(fields);
+      if (_pendingMoveKey) Sessions.setProject(_pendingMoveKey, p.key);
+    }
+    _pendingMoveKey = null;
+    closeProjectModal();
+    renderSessions();
+    SessionSync.schedule();
+  }
+  if ($("pmSave")) $("pmSave").onclick = saveProjectModal;
+  if ($("pmCancel")) $("pmCancel").onclick = () => { _pendingMoveKey = null; closeProjectModal(); };
+  if ($("pmDelete")) $("pmDelete").onclick = () => { if (_pmKey) deleteProject(_pmKey); };
+  if ($("pmName")) $("pmName").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); saveProjectModal(); } });
+  if ($("projectModal")) $("projectModal").addEventListener("click", (e) => { if (e.target === $("projectModal")) closeProjectModal(); });
+
+  // --- Move-to-project picker ---------------------------------------------
+  function openMoveModal(key) {
+    const list = $("moveList"); if (!list) return;
+    const cur = Sessions.projectOf(key);
+    const curLive = Projects.get(cur) ? cur : "";
+    list.innerHTML = "";
+    const opt = (pkey, label, color, icon) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "move-opt" + (pkey === curLive ? " cur" : "");
+      b.innerHTML = (color ? _icoProject(icon, color) : _icoChat("voice", ""))
+                  + '<span class="stitle-text">' + escapeHtml(label) + '</span>'
+                  + (pkey === curLive ? '<span class="here">current</span>' : "");
+      b.onclick = () => { closeMoveModal(); if (pkey !== curLive) moveChat(key, pkey); };
+      list.appendChild(b);
+    };
+    opt("", "No project (Sessions)", "");
+    Projects.list().forEach((p) => opt(p.key, p.name || "Project", p.color || PROJECT_COLORS[0], p.icon));
+    const nb = document.createElement("button");
+    nb.type = "button"; nb.className = "move-opt"; nb.innerHTML = '<span class="pdot" style="border:1px dashed var(--cyan-soft)"></span><span>+ New project…</span>';
+    nb.onclick = () => { closeMoveModal(); _pendingMoveKey = key; openProjectModal(null); };
+    list.appendChild(nb);
+    $("moveModal").classList.add("show");
+  }
+  // A chat whose "Move → New project…" is waiting on the editor's Save.
+  let _pendingMoveKey = null;
+  function closeMoveModal() { const m = $("moveModal"); if (m) m.classList.remove("show"); }
+  if ($("mvCancel")) $("mvCancel").onclick = closeMoveModal;
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if ($("moveModal") && $("moveModal").classList.contains("show")) closeMoveModal();
+    else if ($("projectModal") && $("projectModal").classList.contains("show")) { _pendingMoveKey = null; closeProjectModal(); }
+  });
+  if ($("moveModal")) $("moveModal").addEventListener("click", (e) => { if (e.target === $("moveModal")) closeMoveModal(); });
 
   // Relative age of a deletion, in the archive's terse style.
   function _agoLabel(ms) {

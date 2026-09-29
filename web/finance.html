@@ -835,7 +835,7 @@ async function loadBatches(){
       return '<div class="lcard"><div class="lav">' + icon("layers") + '</div>' +
         '<div class="lmain"><div class="ltitle">' + esc(x.id) + '</div><div class="lmeta">' + (x.staged_count || 0) + " rows" +
         (x.needs_review ? ' · <span style="color:var(--amber)">' + x.needs_review + " to review</span>" : "") + '</div></div>' +
-        '<button class="btn ghost" style="margin:0;padding:8px 13px" data-batch="' + esc(x.id) + '" onclick="showReview(this.dataset.batch)">Open</button></div>";
+        '<button class="btn ghost" style="margin:0;padding:8px 13px" data-batch="' + esc(x.id) + '" onclick="showReview(this.dataset.batch)">Open</button></div>';
     }).join("");
   } catch (e){}
 }

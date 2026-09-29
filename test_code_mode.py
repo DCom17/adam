@@ -408,7 +408,7 @@ def main() -> int:
     calls: dict = {}
 
     async def fake_rc(message, session_id, timeout=None, mode="voice",
-                      attachments=None, job_id=None):
+                      attachments=None, job_id=None, project=None):
         calls.update(timeout=timeout, mode=mode, job_id=job_id)
         return {"result": "r", "spoken": "s", "mode": mode,
                 "session_id": "sid", "proposed_changes": []}
