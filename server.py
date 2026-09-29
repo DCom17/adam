@@ -665,6 +665,37 @@ def _action_proposal_note(auto_run_calendar: bool = False, auto_run_hunter: bool
             "past tense ('Made you a checklist — it's under Checklists in the Adam menu.'). Write "
             "steps as short imperatives, one action each, in the order they should be done."
         )
+    if "health.water" in avail:
+        lines.append(
+            "WATER (the Health tracker's water counter): when the user says they drank water or asks "
+            'you to log it, stage a health.water block: <<ACTION type="health.water" summary="Log 16 oz '
+            'water">>{ "amount": 16, "unit": "oz" }<<END_ACTION>>. unit is oz, ml, or cup — use the unit '
+            "the user SAID; if they gave none, use the unit in their Health snapshot, else oz. Add "
+            '"date": "YYYY-MM-DD" only for a day other than today. If they CORRECT an amount you just '
+            'logged ("actually make that 16 ounces"), send the new amount with "replace_last": true so '
+            "the earlier entry is fixed, not doubled. Water goes ONLY through health.water — never into "
+            "hunter.sync / the XP log; that is the quest board, not the Health tracker. WATER ACTIONS RUN "
+            "IMMEDIATELY (no approval tap), so confirm in past tense. Only say you logged or corrected "
+            "something if this reply contains the block that does it."
+        )
+    if "health.meal" in avail:
+        lines.append(
+            "FOOD (the Health tracker's meals): when the user says they ate something or asks you "
+            'to log food, stage a health.meal block: <<ACTION type="health.meal" summary="Log '
+            'breakfast">>{ "items": [ { "name": "Scrambled eggs", "qty": "2 large eggs", "kcal": 180, '
+            '"protein_g": 12, "carbs_g": 1, "fat_g": 14 }, { "name": "Flour tortilla", "qty": "2 small", '
+            '"kcal": 190, "protein_g": 5, "carbs_g": 32, "fat_g": 5 } ] }<<END_ACTION>> — one item per '
+            "distinct food, your single best estimate (never a range). PORTION RULE: if they gave no "
+            "quantity, assume ONE standard serving for ONE adult (2-3 eggs, 3-4 oz meat, 2 tortillas) "
+            "— never a family-sized portion — and spell the assumed portion out in qty. Price the form "
+            "the dish implies (fresh vs cured meat, cooked vs dry weight for rice/pasta/oats). The "
+            "server re-checks calories against the macros and applies the user's saved food "
+            'corrections, so tell them the logged numbers from your block. To CORRECT the food you just '
+            'logged, send one item with "replace_last": true. Add "date" only for another day. Food '
+            "goes ONLY through health.meal — never hunter.sync / the XP log. FOOD ACTIONS RUN "
+            "IMMEDIATELY (no approval tap): confirm in past tense, briefly (e.g. 'Logged — about 370 "
+            "calories, 17 g protein.'), and only when this reply contains the block."
+        )
     if auto_run_calendar:
         lines.append(
             "CALENDAR AUTO-RUN IS ON: any calendar.create / calendar.update block you emit takes "
@@ -968,6 +999,14 @@ async def _auto_run_checklist_actions(actions: list[dict]) -> None:
     registry at all, so nothing here can be destroyed irreversibly. Still
     SERVER-executed and still fully audited, exactly like every other action."""
     await _auto_run_actions_matching(actions, lambda t: t.startswith("checklist."))
+
+
+async def _auto_run_health_actions(actions: list[dict]) -> None:
+    """Auto-run health.* (water, meals) — always on, same reasoning as checklists:
+    local SQLite only, no connector or network, and no delete path (add or
+    replace-last). A log parked behind an approval tap is a log the user thinks
+    happened."""
+    await _auto_run_actions_matching(actions, lambda t: t.startswith("health."))
 
 
 def _brain_write_note(vault_path: str, auto_apply: bool = False) -> str:
@@ -2359,6 +2398,7 @@ async def run_claude(
             # restores in one tap. Parking "make me a checklist" behind an
             # approval tap would add friction without adding safety.
             await _auto_run_checklist_actions(actions)
+            await _auto_run_health_actions(actions)
 
     # Chat management (EVERY mode, incl. code): rename the current chat, or open a
     # fresh one on the user's spoken yes. Not gated on restrict — it's a UI relay to

@@ -3,6 +3,24 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.75 - Tell Adam what you drank or ate, and it actually logs it
+
+- **Water by voice now lands in the Health Tracker.** "Log 16 ounces of water"
+  used to get a confident "done" while the water card stayed at zero — Adam
+  had no way to write to the tracker, so the note went somewhere else. Now it
+  goes straight onto the water gauge, in ounces, millilitres, or cups.
+- **Food by voice, too.** Tell Adam what you ate and each food is logged as
+  its own entry with calories and macros. It uses the same accuracy rules as
+  the Health page's estimator: if you don't say how much, it assumes one normal
+  adult serving (and writes that portion down so you can see it); calories are
+  re-checked against the protein, carbs, and fat; and any food you've corrected
+  before uses your numbers.
+- **Corrections fix the entry instead of doubling it.** "Actually make that
+  20 ounces" or "it was three eggs" updates the last thing logged rather than
+  adding a second one.
+- Both run instantly with no approval tap — like checklists, they never leave
+  your machine — and Adam only says something is logged when it really is.
+
 ## 0.9.74 - Checklists, and Adam can build them for you
 
 - **A new Checklists view**, in the ADAM menu alongside Finance and Health.

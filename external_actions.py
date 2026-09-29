@@ -29,10 +29,16 @@ Design rules:
 
 from __future__ import annotations
 
+import re
+import time
+
 import checklist_store
 import config
 import google_calendar
 import gmail
+import health_import
+import health_metrics
+import health_store
 import hunter
 import linkedin
 
@@ -129,6 +135,102 @@ def _checklist_archive(p: dict) -> dict:
     return {"checklist_id": cid, "archived": True, "recoverable": True}
 
 
+_WATER_UNITS = ("oz", "ml", "cup")
+_WATER_MAX_ML = 5000.0   # one logged drink above ~5 L is a misheard number, not water
+
+
+def _health_water(p: dict) -> dict:
+    """Log water into the Health tracker (local SQLite, same store as the Health
+    page's counter). `replace_last` corrects the day's most recent drink in place
+    instead of adding a second one ("actually make that 16 ounces"), so a spoken
+    correction never double-counts. No delete path: a wrong entry is fixed by a
+    replace, or removed by the user in the Log tab."""
+    try:
+        amount = float(p.get("amount"))
+    except (TypeError, ValueError):
+        raise ActionError("health.water requires a numeric 'amount'.")
+    unit = str(p.get("unit") or "").strip().lower()
+    unit = {"ounce": "oz", "ounces": "oz", "fl oz": "oz", "milliliter": "ml",
+            "milliliters": "ml", "millilitre": "ml", "millilitres": "ml",
+            "cups": "cup"}.get(unit, unit)
+    if unit not in _WATER_UNITS:
+        raise ActionError("health.water 'unit' must be one of oz, ml, cup.")
+    ml = health_metrics.to_ml(amount, unit)
+    if not 0 < ml <= _WATER_MAX_ML:
+        raise ActionError(f"health.water amount out of range: {amount:g} {unit}.")
+    date = _action_date(p, "health.water")
+    health_store.init()
+    replaced = None
+    if p.get("replace_last"):
+        last = health_store.list_water(date=date, limit=1)
+        if last:
+            replaced = last[0]
+            health_store.update_water(replaced["id"], ml=ml)
+    if replaced is None:
+        wid = health_store.add_water(date, ml, note=str(p.get("note") or ""))
+    else:
+        wid = replaced["id"]
+    summary = health_metrics.water_summary(health_store, date)
+    return {"water_id": wid, "date": date, "logged_ml": round(ml, 1),
+            "replaced_ml": round(replaced["ml"], 1) if replaced else None,
+            "day_total": summary}
+
+
+_MEAL_MAX_KCAL = 5000.0   # one logged item above this is a misheard number
+
+
+def _action_date(p: dict, action: str) -> str:
+    date = str(p.get("date") or time.strftime("%Y-%m-%d", time.localtime())).strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+        raise ActionError(f"{action} 'date' must be YYYY-MM-DD.")
+    return date
+
+
+def _health_meal(p: dict) -> dict:
+    """Log food into the Health tracker (same meals table the Health page writes).
+    The agent supplies the estimate; Python owns the arithmetic and the learning
+    loop, exactly like the page's own estimator: health_import.normalize_candidate
+    reconciles kcal against the macros (4/4/9) and apply_corrections swaps in any
+    macros the user has corrected for that food before. Accepts one item or
+    {"items": [...]}; `replace_last` (single item only) overwrites the day's most
+    recent meal instead of adding a duplicate. No delete path."""
+    raw_items = p.get("items") if isinstance(p.get("items"), list) else [p]
+    if not raw_items:
+        raise ActionError("health.meal requires a food ('name') or a non-empty 'items' list.")
+    date = _action_date(p, "health.meal")
+    replace_last = bool(p.get("replace_last"))
+    if replace_last and len(raw_items) != 1:
+        raise ActionError("health.meal 'replace_last' takes exactly one item.")
+    cands = []
+    for it in raw_items:
+        if not isinstance(it, dict) or not str(it.get("name") or "").strip():
+            raise ActionError("health.meal: every item needs a 'name'.")
+        cand = health_import.normalize_candidate(it, source="voice")
+        cand = health_import.apply_corrections(cand, health_store)
+        nums = [cand[k] for k in ("kcal", "protein_g", "carbs_g", "fat_g")]
+        if any(n < 0 for n in nums) or cand["kcal"] > _MEAL_MAX_KCAL or not any(nums):
+            raise ActionError(f"health.meal: implausible numbers for {cand['name']!r}.")
+        cands.append(cand)
+    health_store.init()
+    logged, replaced = [], None
+    for cand in cands:
+        fields = {k: cand[k] for k in ("name", "qty", "kcal", "protein_g", "carbs_g", "fat_g")}
+        last = health_store.list_meals(date=date, limit=1) if replace_last else []
+        if last:
+            replaced = last[0]
+            health_store.update_meal(replaced["id"], **fields, source="voice")
+            mid = replaced["id"]
+        else:
+            mid = health_store.add_meal(date, fields.pop("name"), source="voice", **fields)
+        logged.append({"meal_id": mid, **{k: cand[k] for k in
+                       ("name", "qty", "kcal", "protein_g", "carbs_g", "fat_g")},
+                       "corrected": bool(cand.get("corrected")),
+                       "kcal_adjusted_from": cand.get("kcal_adjusted")})
+    totals = health_metrics.day_summary(health_store, date)["totals"]
+    return {"date": date, "logged": logged,
+            "replaced": replaced["name"] if replaced else None, "day_totals": totals}
+
+
 def _email_draft(p: dict) -> dict:
     for k in ("to", "subject", "body"):
         if not p.get(k):
@@ -190,6 +292,18 @@ ACTIONS: dict[str, dict] = {
         "executor": _checklist_archive,
         "available": lambda: True,
         "risk": "low", "brain_proposable": True, "label": "Archive a checklist (recoverable)",
+    },
+    # Health water/meals are local-only like checklists (SQLite on this machine, no
+    # connector, no network) and has no delete path — only add or replace-last.
+    "health.water": {
+        "executor": _health_water,
+        "available": lambda: True,
+        "risk": "low", "brain_proposable": True, "label": "Log water in the Health tracker",
+    },
+    "health.meal": {
+        "executor": _health_meal,
+        "available": lambda: True,
+        "risk": "low", "brain_proposable": True, "label": "Log food in the Health tracker",
     },
     "email.draft": {
         "executor": _email_draft,
