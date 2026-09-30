@@ -102,6 +102,25 @@ server._ensure_vapid_keypair()
 check("re-running keygen does NOT rotate the PEM", server.VAPID_PRIVATE_PEM.read_bytes() == _pem_before)
 check("re-running keygen keeps the same public key", server.VAPID_PUBLIC_KEY == _pub_before)
 
+# Regression (2026-09-29): a sandbox that redirected STATE_DIR (so the public
+# cache was missing) but not the PEM path generated a fresh pair OVER the real
+# PEM, orphaning every phone subscription. An existing PEM must never be
+# rewritten — a missing or mismatched public cache is re-derived from it.
+server.VAPID_PUBLIC_FILE.unlink()
+server._ensure_vapid_keypair()
+check("missing public cache does NOT rotate an existing PEM",
+      server.VAPID_PRIVATE_PEM.read_bytes() == _pem_before)
+check("missing public cache is re-derived from the PEM",
+      server.VAPID_PUBLIC_KEY == _pub_before
+      and server.VAPID_PUBLIC_FILE.read_text("utf-8").strip() == _pub_before)
+server.VAPID_PUBLIC_FILE.write_text("BStaleKeyFromAnOlderPair", encoding="utf-8")
+server._ensure_vapid_keypair()
+check("mismatched public cache does NOT rotate the PEM",
+      server.VAPID_PRIVATE_PEM.read_bytes() == _pem_before)
+check("mismatched public cache is healed to the PEM's public half",
+      server.VAPID_PUBLIC_KEY == _pub_before
+      and server.VAPID_PUBLIC_FILE.read_text("utf-8").strip() == _pub_before)
+
 # --- /push/key --------------------------------------------------------------
 
 check("/push/key rejects a missing token", client.get("/push/key").status_code == 403)
@@ -143,5 +162,85 @@ finally:
 config.PUSH_SUB_FILE.write_text("[]", encoding="utf-8")
 server._send_push("hi", "sess", 123)            # must not raise
 check("_send_push is a no-op with zero subscriptions", True)
+
+# A 403 (subscription made for a different VAPID key) can never verify: prune it,
+# along with 404/410. A 5xx is transient and keeps the subscription.
+class _Resp:
+    def __init__(self, code, text=""):
+        self.status_code = code
+        self.text = text
+
+
+def _fake_webpush(subscription_info, **_kw):
+    tail = subscription_info["endpoint"].rsplit("/", 1)[-1]
+    code = int(tail.split("-")[0])
+    if code != 201:
+        text = '{"reason":"VapidPkHashMismatch"}' if tail == "400-apple" else ""
+        raise server.WebPushException("rejected", response=_Resp(code, text))
+
+
+# 400-apple / 401 = the real key-mismatch answers from Apple / WNS; plain 400 = a
+# bad payload (not the subscription's fault) → keep.
+config.PUSH_SUB_FILE.write_text(json.dumps([
+    {"endpoint": f"https://push.example.com/{c}", "keys": {}}
+    for c in ("201", "400", "400-apple", "401", "403", "410", "503")
+]), encoding="utf-8")
+try:
+    server.webpush = _fake_webpush
+    server._send_push("hi", "sess", 123)
+finally:
+    server.webpush = _real_webpush
+_left = sorted(s["endpoint"].rsplit("/", 1)[-1]
+               for s in json.loads(config.PUSH_SUB_FILE.read_text("utf-8")))
+check("_send_push prunes key-mismatch/gone subs, keeps delivered + transient",
+      _left == ["201", "400", "503"])
+
+# --- PEM location follows STATE_DIR ------------------------------------------
+# Unless .env pins it, the private key lives beside its public cache, so a
+# sandbox that redirects STATE_DIR can never read or clobber the real key.
+check("PEM path follows STATE_DIR (not the repo's data/state)",
+      config.VAPID_PRIVATE_PEM_EXPLICIT
+      or server.VAPID_PRIVATE_PEM.parent == config.STATE_DIR == server.VAPID_PUBLIC_FILE.parent)
+
+# --- /push/status ------------------------------------------------------------
+check("/push/status rejects a missing token", client.get("/push/status").status_code == 403)
+_st = client.get("/push/status", headers=AUTH).json()
+check("/push/status: ok after a send that reached a device",
+      _st["state"] == "ok" and _st["key_matches"] and _st["last_delivered"] == 1)
+
+# Total wipe-out: every device rejected + pruned. Must read FAILING, not the
+# "no_devices" the pruning leaves behind — that silence was the original bug.
+config.PUSH_SUB_FILE.write_text(json.dumps(
+    [{"endpoint": "https://push.example.com/400-apple", "keys": {}}]), encoding="utf-8")
+try:
+    server.webpush = _fake_webpush
+    server._send_push("hi", "sess", 123)
+finally:
+    server.webpush = _real_webpush
+_st = client.get("/push/status", headers=AUTH).json()
+check("/push/status: failing (not no_devices) after every device was rejected",
+      _st["state"] == "failing" and _st["devices"] == 0
+      and "VapidPkHashMismatch" in _st.get("last_error", ""))
+
+client.post("/push/subscribe", json={"subscription": {
+    "endpoint": "https://push.example.com/201", "keys": {}}}, headers=AUTH)
+check("/push/status: unverified once a device re-registers after a failure",
+      client.get("/push/status", headers=AUTH).json()["state"] == "unverified")
+try:
+    server.webpush = _fake_webpush
+    server._send_push("hi", "sess", 123)
+finally:
+    server.webpush = _real_webpush
+check("/push/status: back to ok after the next delivered send",
+      client.get("/push/status", headers=AUTH).json()["state"] == "ok")
+
+_real_pub = server.VAPID_PUBLIC_KEY
+try:
+    server.VAPID_PUBLIC_KEY = "BStaleKeyFromAnOlderPair"
+    _st = client.get("/push/status", headers=AUTH).json()
+    check("/push/status: failing when the advertised key isn't the PEM's",
+          _st["state"] == "failing" and _st["key_matches"] is False)
+finally:
+    server.VAPID_PUBLIC_KEY = _real_pub
 
 print(f"\nALL PASSED ({_passed})")

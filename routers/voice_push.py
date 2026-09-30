@@ -104,7 +104,15 @@ async def push_subscribe(body: PushSubscribe):
     subs = [s for s in server._load_subs() if s.get("endpoint") != sub["endpoint"]]
     subs.append(sub)
     server._save_subs(subs)
+    server._record_push_health(None, subscribed=True)
     return {"status": "subscribed", "count": len(subs)}
+
+
+@router.get("/push/status", dependencies=[Depends(require_token)])
+async def push_status():
+    """Notification delivery health (ok | failing | unverified | no_devices |
+    disabled). Read by the owner's ops console so a silent push outage gets seen."""
+    return server.push_status()
 
 
 @router.post("/clientlog", dependencies=[Depends(require_token)])

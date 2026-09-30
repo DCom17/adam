@@ -14,7 +14,7 @@
  * fall back to cache only when the network fails), so a redeploy is picked up on
  * the next online launch. Only the static icon/manifest are served cache-first.
  */
-const CACHE = "adam-shell-v20";   // v20: per-project icons + icon picker. v19: section-heading icons (PROJECTS/SESSIONS), none per row. v18: folder/session icons + SESSIONS section. v17: project folders in the sessions drawer (new modals + sync). v16: Checklists view added to the ADAM menu (new overlay + /checklists-view page in index.html). Bump forces a clean SW re-activate + refreshes the offline shell copy
+const CACHE = "adam-shell-v23";   // v23: push subscription re-checked against the server key on open/foreground. v22: replies route by chat key (no srv- duplicates / no undelete). v21: orb self-heals a canvas context reset (desktop off-center). v20: per-project icons + icon picker. v19: section-heading icons (PROJECTS/SESSIONS), none per row. v18: folder/session icons + SESSIONS section. v17: project folders in the sessions drawer (new modals + sync). v16: Checklists view added to the ADAM menu (new overlay + /checklists-view page in index.html). Bump forces a clean SW re-activate + refreshes the offline shell copy
 // (v15: desktop three-pane layout (sessions rail | conversation panel | orb stage) at ≥1100px; mobile unchanged (index.html))
 // (v14: accessibility phase 1 — orb is a real keyboard-reachable <button>, state/error/transcript are live regions, composer is labelled, global :focus-visible ring)
 // (v13: code-mode long-turn fix — a mid-task server restart now shows "restarted mid-task — ask again" instead of "Connection error, sir." (index.html fail() handles the JVL_INTERRUPTED tag))

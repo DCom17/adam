@@ -81,6 +81,10 @@ class AskRequest(StrictModel):
     mode: str | None = None  # "voice" (default) | "work" | "code" (needs allow_code_mode)
     attachments: list[str] | None = None  # server-side upload paths from /upload
     project: str | None = None  # project-folder key; its instructions ride the turn
+    # The client's chat key for this turn. Echoed back on /push/last so ANY device
+    # surfacing the reply routes it to the chat it came from, instead of minting a
+    # duplicate "srv-" chat when it can't match the (not yet known) session id.
+    chat: str | None = None
 
 
 class SpeakRequest(StrictModel):

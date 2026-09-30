@@ -2862,7 +2862,7 @@
           res = await fetch(LS.url + "/ask_async", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + LS.token },
-            body: JSON.stringify({ message: text, session_id: Sessions.activeSid(), mode: currentMode(), attachments: attachmentPaths, project: (Projects.get(Sessions.projectOf(turnKey)) ? Sessions.projectOf(turnKey) : null) }),
+            body: JSON.stringify({ message: text, session_id: Sessions.activeSid(), mode: currentMode(), attachments: attachmentPaths, chat: turnKey, project: (Projects.get(Sessions.projectOf(turnKey)) ? Sessions.projectOf(turnKey) : null) }),
             signal: ctrl.signal,
           });
         } finally { clearTimeout(killer); }
@@ -3119,9 +3119,28 @@
     // SMS, etc.) carries a sid this device never saw — give it its OWN brand-new
     // chat instead of hijacking whatever conversation was last open.
     const prevActive = Sessions.activeKey();
-    let key = d.session_id ? Sessions.keyForSid(d.session_id) : "";
+    const spokenOut = (d.spoken && d.spoken.trim()) ? d.spoken.trim() : reply;
+    let key = "";
+    // An in-app turn names its own chat (chat_key). Route by THAT, never by guessing:
+    // a brand-new chat has no session id until its first reply lands, so the sid
+    // lookup below used to miss and mint a loose "srv-" duplicate (project chats
+    // showing up again under SESSIONS). If that chat is deleted here, or hasn't
+    // synced to this device yet, the reply is NOT given a new chat — the originating
+    // chat already holds it, and sync brings it here. (2026-09-29)
+    const ck = d.chat_key || "";
+    if (ck) {
+      const own = Sessions._find(Sessions._all(), ck);
+      if (!own || own.deleted) { markSurfaced(ts); return spokenOut; }
+      key = ck;
+      if (d.session_id && !own.sid) Sessions.setSidFor(ck, d.session_id);
+    }
+    if (!key && d.session_id) key = Sessions.keyForSid(d.session_id);
     if (!key && ts && ts === lastSurfacedTs) key = lastSurfacedKey;   // same push, already has a chat
     if (!key) {
+      // Never resurrect a chat the user deleted: a stale /push/last (or a fresh
+      // device replaying it) used to undelete the old "srv-" chat via create({key}).
+      const tomb = d.session_id ? Sessions._find(Sessions._all(), "srv-" + d.session_id) : null;
+      if (tomb && tomb.deleted) { markSurfaced(ts); return spokenOut; }
       // Deterministic key so BOTH devices converge on ONE chat for the same reply
       // (otherwise each would mint its own and sync would show duplicates).
       const detKey = d.session_id ? ("srv-" + d.session_id) : (ts ? ("srv-" + ts) : null);
@@ -3416,6 +3435,20 @@
     return arr;
   }
 
+  // Was this push subscription made with the server's current VAPID key? A browser
+  // that doesn't expose options.applicationServerKey gets the benefit of the doubt
+  // (true) — the server prunes a mismatched subscription on its first failed send.
+  function pushSubMatchesKey(sub, keyB64) {
+    try {
+      const have = sub && sub.options && sub.options.applicationServerKey;
+      if (!have) return true;
+      const a = new Uint8Array(have), b = urlBase64ToUint8Array(keyB64);
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+      return true;
+    } catch (_) { return true; }
+  }
+
   // iOS only delivers Web Push to an INSTALLED PWA (Add to Home Screen), and only
   // from a standalone window. Detect that so we can guide instead of failing mute.
   function pushNeedsHomeScreen() {
@@ -3453,6 +3486,14 @@
       let sub = await reg.pushManager.getSubscription();
       // Key rotated (e.g. the server just generated its first real keypair) — the
       // old subscription won't verify, so drop it and re-subscribe with the new key.
+      // Belt and braces: also compare the subscription's OWN key to the server's.
+      // localStorage can be wiped (iOS evicts PWA storage) while the push
+      // subscription survives, and then lastKey alone would keep re-posting a
+      // subscription the push service rejects on every send.
+      if (sub && !pushSubMatchesKey(sub, info.key)) {
+        try { await sub.unsubscribe(); } catch (_) {}
+        sub = null;
+      }
       if (sub && lastKey && lastKey !== info.key) {
         try { await sub.unsubscribe(); } catch (_) {}
         sub = null;
@@ -3848,14 +3889,26 @@
   // re-derived from the .orb button's CSS size (200px mobile, 260px on the desktop
   // layout) so the orb renders crisp at any displayed size. setTransform (not
   // scale) so repeated calls on resize never compound.
+  //
+  // The scale is ALSO re-applied at the top of every frame (orbFrame). The browser
+  // can drop and restore a canvas's 2D context (GPU reset, sleep, a long-lived app
+  // window being throttled); a restored context keeps its size but comes back with
+  // an IDENTITY transform, so the 200px drawing lands in the top-left of the 260px
+  // desktop orb — ~30px left and up, and it never corrected itself. (2026-09-29)
+  let orbK = ORB_DPR;
   function orbFit() {
     const css = (orbCanvas.parentElement && orbCanvas.parentElement.clientWidth) || ORB_S;
-    const k = ORB_DPR * (css / ORB_S);
-    orbCanvas.width = Math.max(1, Math.round(ORB_S * k));
-    orbCanvas.height = Math.max(1, Math.round(ORB_S * k));
-    octx.setTransform(k, 0, 0, k, 0, 0);
+    orbK = ORB_DPR * (css / ORB_S);
+    const px = Math.max(1, Math.round(ORB_S * orbK));
+    if (orbCanvas.width !== px) orbCanvas.width = px;
+    if (orbCanvas.height !== px) orbCanvas.height = px;
+    octx.setTransform(orbK, 0, 0, orbK, 0, 0);
   }
   orbFit();
+  // Re-fit whenever the orb's own box changes size (the phone -> desktop layout
+  // switch, an overlay closing), not only on a window resize.
+  try { new ResizeObserver(() => orbFit()).observe(orbCanvas.parentElement); } catch (_) {}
+  orbCanvas.addEventListener("contextrestored", orbFit);
 
   const mixN = (a, b, k) => a + (b - a) * k;
   const mix3 = (a, b, k) => [mixN(a[0], b[0], k), mixN(a[1], b[1], k), mixN(a[2], b[2], k)];
@@ -3954,6 +4007,7 @@
     const energy = orbCur.glow * (0.7 + 0.3 * pulse) + voiceLevel * 0.45;
     const scale = 1 + orbCur.breathe * Math.sin(orbT * Math.PI * 2 * orbCur.hz) + voiceLevel * 0.1;
 
+    octx.setTransform(orbK, 0, 0, orbK, 0, 0);   // self-heal a context reset (see orbFit)
     octx.globalCompositeOperation = "source-over";
     octx.clearRect(0, 0, ORB_S, ORB_S);
     octx.globalCompositeOperation = "lighter";
@@ -4073,6 +4127,7 @@
       const dt = Math.min((now - bLast) / 1000, 0.05); bLast = now;
       if (document.hidden) return;
       bT += dt;
+      bctx.setTransform(BDPR, 0, 0, BDPR, 0, 0);   // self-heal a context reset, same as the orb
       bctx.clearRect(0, 0, BW, BH);
       bctx.globalCompositeOperation = "lighter";
       for (const m of motes) {
@@ -5060,9 +5115,24 @@
       scheduleListen(MIC_RESTART_AFTER_SPEAK_MS);
     }
   }
+  // Keep this device's push subscription current without waiting for Activate:
+  // on open and on each return to the foreground (throttled), re-check it against
+  // the server's key. Silent — only runs once permission is already granted, so it
+  // never prompts. A rotated/healed server key then reaches every phone on its own.
+  let lastPushRefresh = 0;
+  function refreshPushSilently() {
+    try {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      if (!LS.url || !LS.token || Date.now() - lastPushRefresh < 10 * 60 * 1000) return;
+      lastPushRefresh = Date.now();
+      setTimeout(enablePush, 3000);
+    } catch (_) {}
+  }
+  refreshPushSilently();
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") { releaseMicForBackground(); return; }
     recoverForeground();
+    refreshPushSilently();
   });
   window.addEventListener("focus", recoverForeground);     // iOS standalone: often unreliable
   window.addEventListener("pageshow", recoverForeground);  // …so don't depend on any one event

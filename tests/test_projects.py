@@ -51,3 +51,14 @@ def test_project_note(tmp_path, monkeypatch):
     assert "Inspection" in note and "Rates" not in note   # own chat excluded
     assert server._project_note(None) == ""
     assert server._project_note("missing") == ""
+
+
+def test_last_result_carries_the_originating_chat(tmp_path, monkeypatch):
+    """/push/last must name the chat a reply came from, so a device surfacing it
+    routes there instead of minting a loose "srv-" duplicate."""
+    import json
+    monkeypatch.setattr(server, "LAST_RESULT_FILE", tmp_path / "last.json")
+    server._store_last_result("hi", "sid-1", 123, prompt="q", chat_key="house-1")
+    assert json.loads((tmp_path / "last.json").read_text("utf-8"))["chat_key"] == "house-1"
+    server._store_last_result("sms", "", 124)          # server-initiated: no chat
+    assert json.loads((tmp_path / "last.json").read_text("utf-8"))["chat_key"] == ""

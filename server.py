@@ -27,6 +27,7 @@ import time
 from collections import deque
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
@@ -99,7 +100,13 @@ WORK_EXTRA_DIRS = config.WORK_EXTRA_DIRS
 # key goes to the browser, private key (PEM) stays here and signs the push.
 VAPID_PUBLIC_KEY = config.VAPID_PUBLIC_KEY
 VAPID_SUBJECT = config.VAPID_SUBJECT
-VAPID_PRIVATE_PEM = config.VAPID_PRIVATE_PEM
+# Unless .env pins the PEM, it lives in STATE_DIR beside its public-key cache —
+# re-derived here (not trusted from config's import-time value) so the pair can
+# never be split across two directories by a runtime STATE_DIR redirect.
+VAPID_PRIVATE_PEM = (
+    config.VAPID_PRIVATE_PEM if config.VAPID_PRIVATE_PEM_EXPLICIT
+    else config.STATE_DIR / "vapid_private.pem"
+)
 # Push subscriptions persist to disk so a server restart doesn't lose them.
 PUSH_SUB_FILE = config.PUSH_SUB_FILE
 # The most recent finished result, so a notification tap can re-fetch and speak
@@ -125,22 +132,48 @@ def _ensure_vapid_keypair() -> None:
     """
     global VAPID_PUBLIC_KEY
     pem_path = VAPID_PRIVATE_PEM
-    # A previously auto-generated pair on disk is authoritative — this also makes
-    # us ignore any stale/orphaned VAPID_PUBLIC_KEY left behind in .env.
-    if pem_path.exists() and VAPID_PUBLIC_FILE.exists():
-        try:
-            saved = VAPID_PUBLIC_FILE.read_text("utf-8").strip()
-            if saved:
-                VAPID_PUBLIC_KEY = saved
-            return
-        except Exception:
-            pass
-    # An explicit, hand-set .env keypair (public key + its matching PEM) wins.
-    if VAPID_PUBLIC_KEY and pem_path.exists():
-        return
     try:
         import base64 as _b64
         from cryptography.hazmat.primitives import serialization
+    except Exception as e:  # noqa: BLE001 — push is optional; never block startup
+        log.warning("vapid: cryptography unavailable (%s); push disabled", e)
+        return
+
+    def _pub_of(priv) -> str:
+        raw = priv.public_key().public_bytes(
+            encoding=serialization.Encoding.X962,
+            format=serialization.PublicFormat.UncompressedPoint,
+        )  # 65-byte uncompressed point (0x04 || X || Y)
+        return _b64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
+
+    # An existing private PEM is authoritative and is NEVER overwritten: the public
+    # key is always DERIVED from it. Generating a fresh pair over an existing PEM
+    # (a sandbox/test that redirected STATE_DIR but not the PEM path did exactly
+    # that, 2026-09-29) silently orphaned every device subscription — pushes were
+    # signed with a key the phones never subscribed to and all got rejected.
+    if pem_path.exists():
+        try:
+            priv = serialization.load_pem_private_key(pem_path.read_bytes(), None)
+            derived = _pub_of(priv)
+            try:
+                saved = VAPID_PUBLIC_FILE.read_text("utf-8").strip()
+            except Exception:
+                saved = ""
+            if saved != derived:
+                if saved:
+                    log.warning("vapid: cached public key did not match the private PEM; "
+                                "re-derived it (devices re-subscribe on next open)")
+                try:
+                    VAPID_PUBLIC_FILE.parent.mkdir(parents=True, exist_ok=True)
+                    VAPID_PUBLIC_FILE.write_text(derived, encoding="utf-8")
+                except Exception:
+                    pass
+            VAPID_PUBLIC_KEY = derived
+            return
+        except Exception as e:  # noqa: BLE001 — unreadable PEM: leave push disabled
+            log.warning("vapid: private PEM unreadable (%s); push disabled", e)
+            return
+    try:
         from cryptography.hazmat.primitives.asymmetric import ec
 
         priv = ec.generate_private_key(ec.SECP256R1())
@@ -152,11 +185,7 @@ def _ensure_vapid_keypair() -> None:
             format=serialization.PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=serialization.NoEncryption(),
         ))
-        raw = priv.public_key().public_bytes(
-            encoding=serialization.Encoding.X962,
-            format=serialization.PublicFormat.UncompressedPoint,
-        )  # 65-byte uncompressed point (0x04 || X || Y)
-        pub_b64 = _b64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
+        pub_b64 = _pub_of(priv)
         VAPID_PUBLIC_FILE.write_text(pub_b64, encoding="utf-8")
         VAPID_PUBLIC_KEY = pub_b64
         log.info("vapid: generated a fresh push keypair (%s)", pem_path.name)
@@ -2476,6 +2505,7 @@ async def run_claude(
 async def _run_job(
     job_id: str, message: str, session_id: str | None, mode: str = "voice",
     attachments: list[str] | None = None, project: str | None = None,
+    chat: str | None = None,
 ) -> None:
     """Background runner — writes its outcome into the persistent job store."""
     try:
@@ -2509,7 +2539,7 @@ async def _run_job(
         # /push/last (before the full transcript syncs) shows input → output.
         _store_last_result(
             out["result"], out["session_id"], ts, spoken=out["spoken"],
-            prompt=message,
+            prompt=message, chat_key=chat,
         )
         if not foreground:
             await asyncio.to_thread(
@@ -2636,7 +2666,7 @@ def _save_subs(subs: list[dict]) -> None:
 
 def _store_last_result(
     result: str, session_id: str, ts: int, spoken: str | None = None,
-    prompt: str = "",
+    prompt: str = "", chat_key: str | None = None,
 ) -> None:
     """Persist the latest finished reply so a notification tap can replay it.
     `spoken` is what gets read aloud (the summary in work mode); defaults to the
@@ -2650,6 +2680,10 @@ def _store_last_result(
                 "result": result, "session_id": session_id, "ts": ts,
                 "spoken": spoken if spoken is not None else result,
                 "prompt": prompt or "",
+                # The originating chat (client key), when an in-app turn produced this
+                # reply. Lets every device route the reply to THAT chat — the fix for
+                # replies duplicating into a loose "srv-" chat. Empty for SMS/voicemail.
+                "chat_key": str(chat_key or "")[:80],
             }),
             encoding="utf-8",
         )
@@ -2685,6 +2719,8 @@ def _send_push(
     # it try to parse the string as a raw base64 key and fail to deserialize.
     pem_path = str(VAPID_PRIVATE_PEM)
     alive: list[dict] = []
+    delivered = 0
+    last_error = ""
     for sub in subs:
         try:
             webpush(
@@ -2695,15 +2731,109 @@ def _send_push(
                 timeout=10,
             )
             alive.append(sub)
+            delivered += 1
         except WebPushException as e:
-            status = getattr(getattr(e, "response", None), "status_code", None)
-            if status in (404, 410):
-                continue  # subscription gone — drop it
+            resp = getattr(e, "response", None)
+            status = getattr(resp, "status_code", None)
+            body = str(getattr(resp, "text", "") or "")[:200]
+            host = urlparse(str(sub.get("endpoint", ""))).netloc
+            log.warning("push: %s rejected (HTTP %s) %s", host, status, body)
+            last_error = f"{host} HTTP {status} {body}".strip()
+            # 404/410 = subscription gone. A subscription made for a different VAPID
+            # key can never verify — Apple answers 400 VapidPkHashMismatch, WNS 401,
+            # others 403 (observed live 2026-09-30). Drop them all; a live device
+            # re-registers with the current key the next time the app opens.
+            if status in (401, 403, 404, 410) or (
+                status == 400 and "VapidPkHashMismatch" in body
+            ):
+                continue
             alive.append(sub)  # transient — keep it
-        except Exception:
+        except Exception as e:
+            log.warning("push: send failed: %s", e)
+            last_error = f"send failed: {e}"[:240]
             alive.append(sub)  # network hiccup — keep it
     if len(alive) != len(subs):
         _save_subs(alive)
+    if not delivered:
+        log.warning("push: 0 of %d device(s) accepted this notification", len(subs))
+    _record_push_health(len(subs), delivered, last_error)
+
+
+# --- Push delivery health ----------------------------------------------------
+# The 2026-09-29 key clobber went unnoticed because every failure was silent.
+# Each send's outcome is persisted so /push/status (and the owner's ops console)
+# can say "notifications are failing" instead of waiting for someone to notice.
+PUSH_HEALTH_FILE = config.STATE_DIR / "push_health.json"
+
+
+def _record_push_health(attempted: int | None, delivered: int = 0, error: str = "",
+                        subscribed: bool = False) -> None:
+    """Record a send outcome, or (subscribed=True) that a device (re-)registered."""
+    try:
+        try:
+            h = json.loads(PUSH_HEALTH_FILE.read_text("utf-8"))
+        except Exception:
+            h = {}
+        now = time.time()
+        if subscribed:
+            h["last_subscribe_ts"] = now
+        else:
+            h.update({"last_attempt_ts": now, "last_attempted": attempted,
+                      "last_delivered": delivered})
+            if delivered:
+                h["last_ok_ts"] = now
+            if error:
+                h["last_error"] = error
+                h["last_error_ts"] = now
+        PUSH_HEALTH_FILE.write_text(json.dumps(h), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _vapid_pair_matches() -> bool:
+    """True when the advertised public key is the PEM's own public half."""
+    try:
+        from cryptography.hazmat.primitives import serialization
+        priv = serialization.load_pem_private_key(VAPID_PRIVATE_PEM.read_bytes(), None)
+        raw = priv.public_key().public_bytes(
+            serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
+        return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii") == VAPID_PUBLIC_KEY
+    except Exception:
+        return False
+
+
+def push_status() -> dict:
+    """Push health for /push/status. `state`:
+      ok          — the last send reached at least one device (or none tried yet)
+      failing     — key pair mismatched, or the last send reached no device and
+                    nothing has re-registered since (failure wins over the pruning
+                    that follows it, so a wipe-out can't read as "no_devices")
+      unverified  — the last send failed, but a device re-registered afterwards;
+                    the next notification will confirm
+      no_devices  — nothing subscribed and no failure on record
+      disabled    — pywebpush or the keypair unavailable
+    No secrets — counts, timestamps, and the last push-service error text."""
+    try:
+        h = json.loads(PUSH_HEALTH_FILE.read_text("utf-8"))
+    except Exception:
+        h = {}
+    enabled = bool(webpush and VAPID_PUBLIC_KEY and VAPID_PRIVATE_PEM.exists())
+    key_ok = enabled and _vapid_pair_matches()
+    devices = len(_load_subs())
+    last_failed = bool(h.get("last_attempted")) and not h.get("last_delivered")
+    resubscribed = h.get("last_subscribe_ts", 0) > h.get("last_attempt_ts", 0)
+    if not enabled:
+        state = "disabled"
+    elif not key_ok:
+        state = "failing"
+    elif last_failed:
+        state = "unverified" if (resubscribed and devices) else "failing"
+    elif not devices:
+        state = "no_devices"
+    else:
+        state = "ok"
+    return {"state": state, "enabled": enabled, "key_matches": key_ok,
+            "devices": devices, **h}
 
 
 # --- Voice-install status helper ---------------------------------------------

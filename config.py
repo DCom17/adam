@@ -37,7 +37,7 @@ CONFIG_ROOT = Path(os.environ.get("ADAM_CONFIG_ROOT", "").strip()
 load_dotenv(CONFIG_ROOT / ".env")  # secrets + machine values
 
 APP_NAME = "adam-local"
-APP_VERSION = "0.9.76"
+APP_VERSION = "0.9.77"
 
 
 # --- Settings file ----------------------------------------------------------
@@ -196,8 +196,14 @@ LOG_FILE = LOG_DIR / "voice_server.log"
 PUSH_SUB_FILE = STATE_DIR / "push_sub.json"
 LAST_RESULT_FILE = STATE_DIR / "last_result.json"
 # VAPID private key path: secret, so it comes from .env (or defaults under state).
-VAPID_PRIVATE_PEM = _resolve_path(
-    os.environ.get("VAPID_PRIVATE_PEM", ""), "data/state/vapid_private.pem"
+# The default FOLLOWS STATE_DIR (server.py re-derives it at import, so a runtime
+# STATE_DIR redirect is honoured too). It used to be pinned to the repo's
+# data/state while the public-key cache followed STATE_DIR — a sandbox with its
+# own state dir then generated a new pair over the real PEM (2026-09-29).
+VAPID_PRIVATE_PEM_EXPLICIT = bool(os.environ.get("VAPID_PRIVATE_PEM", "").strip())
+VAPID_PRIVATE_PEM = (
+    _resolve_path(os.environ["VAPID_PRIVATE_PEM"], "") if VAPID_PRIVATE_PEM_EXPLICIT
+    else STATE_DIR / "vapid_private.pem"
 )
 
 # --- Permissions (Level 3 controlled-action foundation) ---------------------

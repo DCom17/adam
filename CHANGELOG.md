@@ -3,6 +3,28 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.77 - Notifications that keep working
+
+- **Notifications arrive again, and stay fixed.** In some setups Adam's
+  notification key could be replaced behind the scenes. After that, every
+  notification was quietly rejected by Apple and Microsoft, and nothing said
+  so. Adam now never replaces an existing key, it notices a mismatched one,
+  and it repairs it on start.
+- **Your phone fixes its own notifications.** Each time you open Adam, your
+  device checks its notification registration against your PC and renews it
+  if needed. You no longer have to press Activate or turn notifications off
+  and on again.
+- **Failed notifications are no longer silent.** Adam logs every rejected
+  notification with the reason and drops dead device registrations. A new
+  notification status check reports whether notifications are getting
+  through.
+- **No more duplicate chats.** A reply that arrived while a chat was brand
+  new, or opened from a notification, could appear a second time as a loose
+  chat outside its project. A deleted chat could also come back. Replies now
+  go to the chat they belong to, and deleted chats stay deleted.
+- **The orb stays centered on desktop.** In a maximized window the orb could
+  drift up and to the left after a while. It now re-centers itself.
+
 ## 0.9.76 - Project folders for your sessions
 
 - **Projects, like ChatGPT's.** A PROJECTS section now sits at the top of the

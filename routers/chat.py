@@ -204,7 +204,7 @@ async def ask_async(request: Request, response: Response, body: AskRequest):
     )
     server.keep_task(asyncio.create_task(
         server._run_job(job_id, message, body.session_id, mode, body.attachments,
-                        project=body.project)
+                        project=body.project, chat=body.chat)
     ))
     return {"job_id": job_id}
 
