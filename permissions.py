@@ -290,6 +290,11 @@ def make_backup_before_write(path: str | os.PathLike) -> Path | None:
         n += 1
     try:
         shutil.copy2(src, dest)
+        # copy2 carries the SOURCE's mtime, and prune_backups ages backups by mtime —
+        # so backing up any file untouched for PERM_BACKUP_MAX_AGE_DAYS got the fresh
+        # backup deleted by the prune on the very next line (a vault packet's only
+        # pre-overwrite copy vanished this way, 2026-09-30). Age = when it was backed up.
+        os.utime(dest, None)
         prune_backups()
         return dest
     except OSError:

@@ -46,6 +46,9 @@ if not config.CLAUDE_EXE:
     config.CLAUDE_EXE = sys.executable
 
 import server  # noqa: E402
+# These checks read the prompt off argv; pin the argv path (the prompt-file path
+# is covered in tests/test_restore_and_checklist_ids.py).
+server._PROMPT_FILE_SUPPORT[str(config.CLAUDE_EXE)] = False
 import job_store  # noqa: E402
 import permissions  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
@@ -76,6 +79,17 @@ def check(name: str, cond: bool) -> None:
 _RESULT_TEXT = "Edited the file. <<SPEAK>>Done, sir.<<SPEAK>>"
 
 
+class _FakeStdin:
+    def write(self, _data):
+        pass
+
+    async def drain(self):
+        pass
+
+    def close(self):
+        pass
+
+
 class _FakeStreamProc:
     """--output-format stream-json path: NDJSON lines via stdout.readline().
     The only spawn shape left — every mode streams now, so there is no json fake."""
@@ -87,6 +101,7 @@ class _FakeStreamProc:
         self.pid = 4242
         self.stdout = self
         self.stderr = self
+        self.stdin = _FakeStdin()   # a long message rides stdin, like the real proc
 
     async def readline(self):
         return self._lines.pop(0) if self._lines else b""

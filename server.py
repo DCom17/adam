@@ -24,6 +24,7 @@ import re
 import subprocess
 import sys
 import time
+import uuid
 from collections import deque
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -45,6 +46,7 @@ import config
 import permissions
 import approvals
 import proposed_changes
+import checklist_store
 import job_store
 import usage_store
 try:
@@ -1083,6 +1085,72 @@ def _brain_write_note(vault_path: str, auto_apply: bool = False) -> str:
     )
 
 
+def _recent_changes_note(vault_path: str = "", auto_apply: bool = False) -> str:
+    """Adam's own recent applied file writes WITH their change ids, so it can put a
+    file back when asked ("undo that", "revert the packet"). Before this, every
+    overwrite was backed up but Adam could neither see the backup nor stage a
+    restore, and told the user it couldn't undo its own write (2026-09-30).
+    Empty + cheap when nothing was applied in the last week."""
+    try:
+        recent = proposed_changes.recent_applied(days=7, limit=12)
+    except Exception:  # noqa: BLE001 — never break a turn over this
+        return ""
+    if not recent:
+        return ""
+    root = Path(vault_path) if vault_path else None
+    rows = []
+    for r in recent:
+        tgt = Path(str(r.get("target_path") or ""))
+        try:
+            shown = str(tgt.relative_to(root)) if root else tgt.name
+        except ValueError:
+            shown = tgt.name
+        when = str(r.get("resolved_at") or r.get("created_at") or "")[:16].replace("T", " ")
+        flag = ("restorable" if r.get("restorable")
+                else "already undone" if r.get("undone") else "not restorable")
+        rows.append(f"  {r['id']} · {when} · {r.get('action')} {shown} — "
+                    f"{str(r.get('summary') or '')[:80]} [{flag}]")
+    posture = ("With auto-apply on, a restore applies immediately — confirm it in past tense."
+               if auto_apply else
+               "A restore overwrites a file, so it waits for the user's approval like any "
+               "edit — say you've proposed it.")
+    return (
+        "\n\nYOUR RECENT FILE CHANGES (newest first; id · when · change — summary):\n"
+        + "\n".join(rows) + "\n"
+        "A change marked [restorable] still has an automatic backup of what the file held "
+        "before it, so you CAN undo it yourself — even when you never saw the old content. "
+        "To put a file back exactly as it was before one of these changes, emit:\n"
+        '<<PROPOSE action="restore" change="<id>" summary="one line">><<END_PROPOSE>>\n'
+        "No path or content — the server takes both from that change's backup (for a "
+        "change that created a new file, restoring removes it). To undo SEVERAL edits to the "
+        "same file, restore the EARLIEST of them: its backup is the file from before all of "
+        "them. If that earliest edit is [not restorable], restoring a later one only goes "
+        "part of the way back — say exactly that, never present it as the original. "
+        + posture + " Never tell the user you can't undo your own write, or ask them to dig "
+        "out a backup, when the change is listed here as restorable; and never claim a "
+        "restore is limited to certain folders — this list is the whole truth."
+    )
+
+
+def _checklists_note() -> str:
+    """The user's active checklists WITH their ids, injected each turn, so
+    checklist.archive / add_items can target a list by name. Before this Adam had
+    to ask the user to read a list's number off the screen (2026-09-30).
+    Empty when there are no lists; bounded and fail-soft."""
+    try:
+        lists = checklist_store.list_checklists(archived=False)
+    except Exception:  # noqa: BLE001
+        return ""
+    if not lists:
+        return ""
+    rows = [f"  id {c['id']} · {str(c.get('title') or '')[:70]} "
+            f"({c.get('done', 0)}/{c.get('total', 0)} done)" for c in lists[:30]]
+    more = f"\n  …and {len(lists) - 30} more" if len(lists) > 30 else ""
+    return ("\n\nTHE USER'S ACTIVE CHECKLISTS (use these ids for checklist.add_items / "
+            "checklist.archive — never ask the user for a list's number):\n"
+            + "\n".join(rows) + more)
+
+
 def _brain_bootstrap_note(vault_path: str) -> str:
     """Re-inject the brain's operating instructions + a MUST-read-first directive.
 
@@ -2022,6 +2090,54 @@ async def _read_stream_result(proc, job_id: str | None, timeout: int) -> dict:
     return result_event
 
 
+# --- System prompt via file (off the Windows command line) ---------------------
+_PROMPT_FILE_SUPPORT: dict[str, bool] = {}
+
+
+def _cli_supports_prompt_file(exe: str) -> bool:
+    """Does this claude CLI accept --append-system-prompt-file? Asked once per exe
+    via --help (read-only, no API call); any failure means 'no' → the argv path."""
+    if exe in _PROMPT_FILE_SUPPORT:
+        return _PROMPT_FILE_SUPPORT[exe]
+    ok = False
+    try:
+        r = subprocess.run([exe, "--help"], capture_output=True, text=True,
+                           timeout=20, encoding="utf-8", errors="replace",
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        text = (r.stdout or "") + (r.stderr or "")
+        ok = ("append-system-prompt-file" in text
+              or "append-system-prompt[-file]" in text)
+    except Exception:  # noqa: BLE001
+        ok = False
+    _PROMPT_FILE_SUPPORT[exe] = ok
+    return ok
+
+
+async def _turn_prompt_file(prompt: str) -> Path | None:
+    """Write this turn's system prompt to a private temp file under STATE_DIR and
+    return it, or None to keep the argv path (old CLI / write failure). The file
+    holds the same text the argv did; it is deleted when the turn ends."""
+    exe = str(config.CLAUDE_EXE or "")
+    if not exe or not await asyncio.to_thread(_cli_supports_prompt_file, exe):
+        return None
+    try:
+        d = Path(config.STATE_DIR) / "turn_prompts"
+        d.mkdir(parents=True, exist_ok=True)
+        f = d / f"prompt_{uuid.uuid4().hex}.txt"
+        f.write_text(prompt, encoding="utf-8")
+        return f
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _drop_turn_prompt_file(f: Path | None) -> None:
+    if f is not None:
+        try:
+            f.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 async def run_claude(
     message: str, session_id: str | None, timeout: int = CLAUDE_TIMEOUT_SECONDS,
     mode: str = "voice", attachments: list[str] | None = None,
@@ -2132,10 +2248,15 @@ async def run_claude(
             prompt = prompt + _brain_bootstrap_note(VAULT_PATH)
         if config.BRAIN_WRITE_ENABLED and VAULT_PATH:
             prompt = prompt + _brain_write_note(VAULT_PATH, auto_apply)
+        # Adam's own recent writes WITH ids + how to restore one (undo its own work).
+        prompt = prompt + _recent_changes_note(VAULT_PATH or "", auto_apply)
         prompt = prompt + _action_proposal_note(
             auto_run_calendar=_get_auto_run_calendar(),
             auto_run_hunter=_get_auto_run_hunter(),
         )
+        # Active checklists WITH ids, so archive/add_items can target a list by name.
+        if external_actions.brain_proposable("checklist.archive"):
+            prompt = prompt + _checklists_note()
         # Live read of today's calendar WITH event IDs, so Adam can move/edit an
         # existing event (its own or the user's) instead of falsely claiming it
         # needs approval. Empty + cheap when the connector isn't configured.
@@ -2232,7 +2353,15 @@ async def run_claude(
 
     # --append-system-prompt must come last (before the positional message) so the
     # variadic --disallowedTools / --add-dir lists terminate cleanly.
-    cmd += ["--append-system-prompt", prompt]
+    # The system prompt goes in a FILE when the CLI supports it. On argv it had grown
+    # to ~28.7k of Windows' 32,767-char command-line cap by 2026-09-30, so one more
+    # live note (a busy calendar day, a long project brief) would make the spawn
+    # itself fail. Older CLIs without the flag keep the argv path.
+    prompt_file = await _turn_prompt_file(prompt)
+    if prompt_file is not None:
+        cmd += ["--append-system-prompt-file", str(prompt_file)]
+    else:
+        cmd += ["--append-system-prompt", prompt]
     # Windows caps a process command line at ~32,767 chars. A long pasted message
     # (an email, a document) on argv makes the spawn itself fail with a cryptic
     # WinError — so long messages ride stdin instead (`claude -p` reads the prompt
@@ -2255,16 +2384,20 @@ async def run_claude(
     if config.AUTH_MODE == "api_key" and config.ANTHROPIC_API_KEY:
         child_env["ANTHROPIC_API_KEY"] = config.ANTHROPIC_API_KEY
 
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        cwd=run_cwd,
-        env=child_env,
-        stdin=(asyncio.subprocess.PIPE if stdin_payload is not None
-               else asyncio.subprocess.DEVNULL),
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        limit=STREAM_LINE_LIMIT,
-    )
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            cwd=run_cwd,
+            env=child_env,
+            stdin=(asyncio.subprocess.PIPE if stdin_payload is not None
+                   else asyncio.subprocess.DEVNULL),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            limit=STREAM_LINE_LIMIT,
+        )
+    except BaseException:
+        _drop_turn_prompt_file(prompt_file)
+        raise
     # Register the live turn so /jobs/{id}/stop can kill it and /poll can show
     # its activity. Any mode — the stop button works for voice/work turns too.
     if job_id:
@@ -2310,6 +2443,7 @@ async def run_claude(
             await proc.wait()
             raise
     finally:
+        _drop_turn_prompt_file(prompt_file)
         if job_id:
             RUNNING_PROCS.pop(job_id, None)
             JOB_PROGRESS.pop(job_id, None)

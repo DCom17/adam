@@ -3,6 +3,22 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.78 - Adam can undo its own changes
+
+- **"Undo that" works now.** Adam can see the files it changed recently and can
+  put any of them back exactly as they were, even if it never saw the old
+  version. A restore waits for your approval like any other edit and keeps its
+  own backup, so you can undo the undo.
+- **Backups actually stay put.** A backup of a file you hadn't touched in a
+  month was deleted the moment it was made, because it kept the old file's
+  date. Backups are now dated when they're made.
+- **Checklists by name.** Adam knows the lists in your Checklists view, so
+  "archive the grocery list" just works. It no longer asks you for the list's
+  number.
+- **Room to grow.** Adam's instructions are now handed to Claude through a file
+  instead of the command line, which was close to Windows' length limit. A long
+  day of notes no longer risks a turn failing to start.
+
 ## 0.9.77 - Notifications that keep working
 
 - **Notifications arrive again, and stay fixed.** In some setups Adam's

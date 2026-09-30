@@ -111,8 +111,10 @@ def create(
     session_id: str | None = None,
     job_id: str | None = None,
     ttl_seconds: int = DEFAULT_TTL_SECONDS,
+    restores: str | None = None,
 ) -> dict:
-    """Record a proposed change in 'pending' state and return it."""
+    """Record a proposed change in 'pending' state and return it. `restores` names
+    the applied change this one undoes (set by propose_restore)."""
     action = (action or "create").strip().lower()
     if action not in VALID_ACTIONS:
         raise ValueError(f"invalid action: {action}")
@@ -190,6 +192,7 @@ def create(
         "error": None,
         "expires_at": _iso(now + ttl_seconds),
         "expires_at_ts": now + ttl_seconds,
+        "restores": restores,
     }
     with _LOCK:
         items = _expire(_load())
@@ -574,6 +577,94 @@ def undo_last() -> dict | None:
                 "action": action, "how": how, "backup_path": backup}
 
 
+def restorable(rec: dict) -> bool:
+    """Can this applied change be put back to how the file was before it? True when
+    its pre-write backup still exists, or when it created a file that is still there
+    (restoring = removing it). Renames are not restorable this way."""
+    if rec.get("status") != "applied" or rec.get("undone"):
+        return False
+    action = rec.get("action")
+    if action == "rename":
+        return False
+    backup = rec.get("backup_path")
+    if backup and _backup_file(backup) is not None:
+        return True
+    target = rec.get("target_path")
+    return action == "create" and bool(target) and Path(target).is_file()
+
+
+def _backup_file(backup: str) -> Path | None:
+    """The backup as a Path, only if it is a real file INSIDE the backups dir — a
+    record's backup_path is data, never trusted to point anywhere else."""
+    try:
+        p = Path(backup).resolve()
+        root = Path(config.BACKUP_DIR).resolve()
+        if p.is_file() and (p == root or root in p.parents):
+            return p
+    except OSError:
+        pass
+    return None
+
+
+def propose_restore(
+    change_id: str, *, session_id: str | None = None, job_id: str | None = None,
+    summary: str = "",
+) -> dict:
+    """Stage a restore of one applied change as an ordinary proposal: its content is
+    the file exactly as it was BEFORE that change (the change's pre-write backup), or
+    a delete when that change created the file. Because it rides the normal lane, it
+    gets the same approval/auto-apply posture, a fresh diff, and its own backup — so
+    a restore is itself restorable. To roll back several edits to one file, restore
+    the EARLIEST of them: its backup is the state before the whole sequence.
+    Raises ValueError when the change is unknown or cannot be restored."""
+    rec = _get_raw(change_id)
+    if rec is None:
+        raise ValueError(f"no change with id {change_id}")
+    if not restorable(rec):
+        raise ValueError(f"change {change_id} cannot be restored "
+                         "(not applied, already undone, a rename, or its backup is gone)")
+    target = rec["target_path"]
+    name = Path(target).name
+    backup = rec.get("backup_path")
+    bfile = _backup_file(backup) if backup else None
+    if bfile is not None:
+        try:
+            content = bfile.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as e:
+            raise ValueError(f"backup for {change_id} is not readable text: {e}")
+        action = "replace" if Path(target).exists() else "create"
+    else:
+        content, action = None, "delete"  # the change created the file
+    return create(
+        target_path=target, action=action, content=content,
+        summary=summary or f"Restore {name} to before change {change_id}",
+        session_id=session_id, job_id=job_id, restores=change_id,
+    )
+
+
+def recent_applied(days: int = 7, limit: int = 12) -> list[dict]:
+    """Newest applied changes (no content), each flagged `restorable` — what the
+    agent is shown so it can name a change to restore."""
+    cutoff = _now() - days * 24 * 3600
+    with _LOCK:
+        items = _load()
+    out = []
+    for idx, r in enumerate(items):
+        ts = r.get("resolved_at_ts") or r.get("created_at_ts") or 0
+        if r.get("status") == "applied" and ts >= cutoff:
+            pub = _public(r)
+            pub.pop("content", None)
+            pub.pop("diff", None)
+            pub["restorable"] = restorable(r)
+            pub["undone"] = bool(r.get("undone"))
+            out.append(((ts, idx), pub))
+    # Timestamps are whole seconds, so same-second writes tie; the store is append-
+    # ordered, so its index breaks the tie — otherwise "the most recent change" can
+    # name the older of two (seen live 2026-09-30: Adam restored the wrong one).
+    out.sort(key=lambda t: t[0], reverse=True)
+    return [pub for _, pub in out[:limit]]
+
+
 def _rollback_self_edit(
     action: str, target: Path, backup, new_path: Path | None = None
 ) -> tuple[bool, str]:
@@ -765,6 +856,18 @@ def extract_from_reply(
     records: list[dict] = []
     for m in _PROPOSE_RE.finditer(text):
         attrs = dict(_ATTR_RE.findall(m.group("attrs") or ""))
+        # <<PROPOSE action="restore" change="<id>">><<END_PROPOSE>> — put a file back
+        # to how it was before one of Adam's applied changes. No path/body: the
+        # target and content come from that change's own record + backup.
+        if (attrs.get("action") or "").strip().lower() == "restore":
+            try:
+                records.append(propose_restore(
+                    (attrs.get("change") or "").strip(), session_id=session_id,
+                    job_id=job_id, summary=attrs.get("summary", ""),
+                ))
+            except Exception:
+                pass
+            continue
         path = (attrs.get("path") or "").strip()
         if not path:
             continue
