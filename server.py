@@ -67,6 +67,7 @@ import linkedin
 import external_actions
 import merge
 import updater
+import operator_session
 
 # Shared pieces split out of this module. Every name is re-exported here for
 # back-compat: tests (and the routers) reach them as server.<name>.
@@ -361,17 +362,21 @@ WORK_SYSTEM_PROMPT = (
 )
 
 
-# Claude Code mode: a chat the user deliberately escalated (long-press on the
-# Operator Mode button; gated by agent_safety.allow_code_mode, default OFF). The
-# spawn is RAW Claude Code — full tools, cwd=vault, permission prompts bypassed —
-# so this prompt must be honest about that power, keep the voice loop working
-# (<<SPEAK>> summary), and demand a heads-up before anything irreversible.
+# Operator mode: a chat the user switched to Operator (agent_safety.operator_mode,
+# default on; one-time consent in the app). It runs as a LIVE Claude Code session —
+# full tools, cwd=vault, permission prompts bypassed except questions and plan
+# approval, which reach the app as cards — so this prompt must be honest about that
+# power, keep the voice loop working (<<SPEAK>> summary), and demand a heads-up
+# before anything irreversible.
 CODE_SYSTEM_PROMPT = (
-    "You are Adam in Claude Code mode — raw Claude Code with FULL tools (file "
-    "edits, shell, everything) running directly in the user's files. The safety "
+    "You are Adam in Operator mode — the user's own Claude Code with FULL tools (file "
+    "edits, shell, everything) running directly in their files. The safety "
     "wrapper that normally turns your writes into approval-gated proposals is OFF "
-    "for this chat: what you do happens immediately, for real. The user escalated "
-    "this chat deliberately. Work like Claude Code: investigate, edit, run, verify. "
+    "for this chat: what you do happens immediately, for real. The user switched "
+    "this chat to Operator deliberately. Work like Claude Code: investigate, edit, run, verify. "
+    "When a decision is genuinely the user's, ask with the AskUserQuestion tool — it "
+    "shows them a card with your options and you get their answer. The user can also "
+    "send you follow-up messages while you work; treat one as a change of direction. "
     "Keep the dry, precise Adam register. Long on-screen replies are fine — they "
     "render on a screen. End EVERY reply with a one or two sentence spoken summary "
     "wrapped exactly in <<SPEAK>> and <<SPEAK>> — plain text, no markdown, no "
@@ -382,11 +387,12 @@ CODE_SYSTEM_PROMPT = (
 
 
 def _normalize_mode(mode: str | None) -> str:
-    """'voice' | 'work' | 'code'; anything else (incl. None) means voice.
-    'code' is only reachable when agent_safety.allow_code_mode is on — run_claude
-    enforces that (403), so a stale/forged client value can't escalate silently."""
+    """Two modes: 'voice' (Normal) and 'code' (Operator). Anything else — including
+    the retired 'work' mode and None — means Normal. 'code' is only reachable when
+    agent_safety.operator_mode is on: run_claude enforces that (403), so a stale or
+    forged client value can't escalate silently."""
     m = (mode or "").strip().lower()
-    return m if m in ("work", "code") else "voice"
+    return "code" if m == "code" else "voice"
 
 
 def _cwd_bucket(mode: str) -> str:
@@ -900,28 +906,32 @@ _NEW_CHAT_RE = re.compile(r"<<NEW_CHAT(?::\s*(.+?))?>>", re.IGNORECASE)
 # mode", "switch to Claude Code", "back to voice"). The client owns the mode toggle,
 # so this is the same relay pattern — and the client applies the same confirmation
 # gate for a switch INTO code that the hold gesture uses (code starts a fresh session).
-_SET_MODE_RE = re.compile(r"<<SET_MODE:\s*(voice|operator|work|code)\s*>>", re.IGNORECASE)
-_MODE_ALIASES = {"voice": "voice", "operator": "operator", "work": "operator", "code": "code"}
+_SET_MODE_RE = re.compile(r"<<SET_MODE:\s*(normal|voice|operator|work|code)\s*>>", re.IGNORECASE)
+# Two modes: Normal (wire value "voice") and Operator (wire value "code"). The old
+# middle mode's names ("work", and "operator" when it meant work) now mean Operator.
+_MODE_ALIASES = {"normal": "voice", "voice": "voice",
+                 "operator": "code", "work": "code", "code": "code"}
 _CHAT_TITLE_MAX = 60
 
 
 def _chat_control_note() -> str:
     """Teach the agent the chat-management directives + the consent rules (open a new
-    chat / switch into code mode). Used in EVERY mode (voice/work/code) — organizing the
-    conversation is a UI relay, not a file write, so it isn't tied to the safe-write
-    posture. The code-mode switch is only offered when allow_code_mode is on."""
-    mode_line = (
-        "- SWITCH MODE: put <<SET_MODE: operator>> or <<SET_MODE: voice>> in your reply "
-        "when the user asks you to change modes (e.g. 'go into operator mode', 'back to "
-        "voice'). Confirm what you're switching to before the marker."
-    )
+    chat / switch modes). Used in EVERY mode — organizing the conversation is a UI
+    relay, not a file write, so it isn't tied to the safe-write posture. The switch
+    into Operator is only offered when agent_safety.operator_mode is on."""
     if config.AGENT_ALLOW_CODE_MODE:
-        mode_line += (
-            " You may also switch INTO Claude Code with <<SET_MODE: code>>, but that one "
-            "starts a FRESH conversation (code runs in its own workspace, so this chat's "
-            "context won't carry over) — say so in your reply, and the app will show a "
-            "final confirm before it switches. Only emit <<SET_MODE: code>> when the user "
-            "actually asks for code mode."
+        mode_line = (
+            "- SWITCH MODE: Adam has two modes. Normal is the everyday assistant; "
+            "Operator is full Claude Code (real file edits and shell, no approval step). "
+            "Put <<SET_MODE: operator>> or <<SET_MODE: normal>> in your reply when the "
+            "user asks to change modes (e.g. 'go into operator mode', 'back to normal'). "
+            "The conversation carries over either way. Confirm what you're switching to "
+            "before the marker, and only switch into Operator when the user actually asks."
+        )
+    else:
+        mode_line = (
+            "- SWITCH MODE: Operator mode is turned off on this install, so this chat "
+            "stays in Normal mode. If the user asks for it, say it's off in settings."
         )
     return (
         "\n\nORGANIZING THIS CONVERSATION (hands-free chat control). You can manage the "
@@ -946,7 +956,7 @@ def _chat_control_note() -> str:
 def _extract_chat_control(text: str) -> tuple[str, dict | None]:
     """Pull chat-management directives out of a reply. Returns (cleaned_text, control)
     where control is e.g. {"rename": "Daily Planning July 3"}, {"new_chat": {...}},
-    and/or {"set_mode": "operator"}, or None if the reply had none. The markers are
+    and/or {"set_mode": "code"}, or None if the reply had none. The markers are
     always stripped from the returned text. Last RENAME_CHAT / last SET_MODE wins if the
     model emits more than one."""
     control: dict = {}
@@ -965,7 +975,11 @@ def _extract_chat_control(text: str) -> tuple[str, dict | None]:
 
     modes = [m.lower() for m in _SET_MODE_RE.findall(cleaned)]
     if modes:
-        control["set_mode"] = _MODE_ALIASES[modes[-1]]  # last SET_MODE wins
+        target = _MODE_ALIASES[modes[-1]]  # last SET_MODE wins
+        if target == "code" and not config.AGENT_ALLOW_CODE_MODE:
+            target = None   # never relay a switch into a mode this install can't run
+        if target:
+            control["set_mode"] = target
     cleaned = _SET_MODE_RE.sub("", cleaned)
 
     return cleaned.strip(), (control or None)
@@ -1417,9 +1431,13 @@ def _capability_awareness_note(auto_apply: bool = False) -> str:
         "no self-edit.\n"
         "  • Unrestricted — full power: file, brain, and app changes you propose apply immediately "
         "with no tap (auto-approved), and this is the ONLY tier that enables self-edit (changing Adam "
-        "itself); turning it on requires an explicit confirmation. NOTE: in this voice/operator chat "
-        "you still work by PROPOSING — running shell commands or editing files directly happens in a "
-        "separate Claude Code chat (long-press Operator Mode), not here.\n"
+        "itself); turning it on requires an explicit confirmation. NOTE: in this Normal chat you "
+        "still work by PROPOSING — running shell commands or editing files directly is OPERATOR MODE "
+        "(the user taps the Operator button, or asks you to switch), not here.\n"
+        "MODES — Adam has two: Normal (this one — the everyday assistant under the tier above) and "
+        "Operator (the user's full Claude Code in that chat: direct edits and shell, no approval "
+        "step, questions and follow-ups while it works). The conversation carries over when they "
+        "switch.\n"
         "ALWAYS-ON RAILS (true at EVERY tier, even Unrestricted, and cannot be disabled): every write "
         "is backed up first, everything is written to an audit log, secret files (.env, settings.json, "
         "keys) are never readable or writable, and a self-edit that breaks the app auto-rolls-back. So "
@@ -1696,11 +1714,14 @@ async def _drain_on_shutdown():
     never reaches this: Windows terminates the process outright, and that path
     falls back to the recoverable 'restarted mid-task — ask again' message."""
     if not RUNNING_PROCS:
+        await operator_session.shutdown_all()
         return
     log.warning("shutdown: draining %d in-flight turn(s) before exit (cap %ss)",
                 len(RUNNING_PROCS), config.DRAIN_MAX_WAIT_SECONDS)
     res = await drain_inflight()
     log.warning("shutdown drain complete: %s", res)
+    # Idle Operator sessions die with the server; their transcripts resume later.
+    await operator_session.shutdown_all()
 
 
 # Request models now live in models.py; require_token in security.py. Both
@@ -1953,6 +1974,16 @@ def _note_progress(job_id: str | None, line: str) -> None:
         del buf[: len(buf) - PROGRESS_MAX_LINES]
 
 
+# Operator sessions report tool activity through the same feed as one-shot turns.
+operator_session.progress_hook = _note_progress
+operator_session.activity_line = _tool_activity_line
+operator_session.LOG_DIR = Path(config.DATA_DIR) / "operator_logs"
+operator_session.IDLE_SECONDS = max(60, config.OPERATOR_IDLE_MINUTES * 60)
+operator_session.MAX_SESSIONS = max(1, config.OPERATOR_MAX_SESSIONS)
+operator_session.ASK_TIMEOUT_SECONDS = max(60, config.OPERATOR_ASK_TIMEOUT_MINUTES * 60)
+operator_session.ask_hook = lambda job_id, ask: _operator_ask_hook(job_id, ask)
+
+
 async def _kill_proc_tree(proc: asyncio.subprocess.Process) -> None:
     """Kill a Claude turn AND its children (a Bash tool may have spawned work).
     Windows TerminateProcess doesn't cascade, so prefer taskkill /T there."""
@@ -2142,6 +2173,7 @@ async def run_claude(
     message: str, session_id: str | None, timeout: int = CLAUDE_TIMEOUT_SECONDS,
     mode: str = "voice", attachments: list[str] | None = None,
     job_id: str | None = None, untrusted: bool = False, project: str | None = None,
+    mode_switch: bool = False,
 ) -> dict:
     """Spawn claude.exe in the vault and return parsed JSON output.
 
@@ -2158,10 +2190,17 @@ async def run_claude(
     # conversation found") or silently starts fresh, WIPING the conversation's context.
     # Honor the session's true origin mode instead, so context survives and the reply
     # lands in the right workspace. The corrected mode is returned to the client, which
-    # repaints its toggle to match. Only overrides a session we've actually run before;
-    # a deliberate mode switch clears the sid client-side, so it arrives with no
-    # session_id and is honored as a clean fresh start (never overridden here).
-    if session_id and session_store is not None:
+    # repaints its toggle to match. Only overrides a session we've actually run before.
+    # A DELIBERATE switch (mode_switch: the user tapped the button or asked by voice)
+    # keeps its sid and is honored as asked: the conversation is carried into the new
+    # mode's workspace (transcript copied — see operator_session.migrate_transcript)
+    # instead of being overridden here or started fresh.
+    if mode_switch and session_id:
+        # A live Operator session holds its own in-memory copy of the conversation;
+        # after a switch the transcript on disk is the truth, so drop the live one and
+        # let the next Operator turn resume from disk (including any Normal turns).
+        await operator_session.close_session(session_id)
+    if session_id and session_store is not None and not mode_switch:
         try:
             origin = session_store.get_session_mode(session_id)
         except Exception:  # noqa: BLE001 — a broken map must never break a turn
@@ -2183,8 +2222,8 @@ async def run_claude(
         # in settings.json to enable it.
         raise HTTPException(
             status_code=403,
-            detail="Claude Code mode is not enabled on this install "
-                   "(agent_safety.allow_code_mode is off).",
+            detail="Operator mode is turned off on this install "
+                   "(agent_safety.operator_mode is false in settings.json).",
         )
 
     # Budget governor (pay-as-you-go installs only). Checked BEFORE spawning so a
@@ -2288,6 +2327,16 @@ async def run_claude(
         # real local numbers (empty + cheap when the trackers aren't used). H4.
         prompt = prompt + _trackers_snapshot_note()
 
+    # Operator chats run in a LIVE Claude Code session (operator_session.py) instead
+    # of a one-shot spawn: that's what lets them ask the user questions, take steers
+    # mid-task, run slash commands, and show their full output. Never for untrusted
+    # input — `restrict` is forced on above, and this branch requires it off.
+    if mode == "code" and not restrict:
+        data = await _run_operator_turn(message, session_id, prompt, timeout, job_id)
+        return await _finish_turn(data, message=message, session_id=session_id,
+                                  timeout=timeout, mode=mode, attachments=attachments,
+                                  job_id=job_id, untrusted=untrusted, project=project)
+
     # config.VOICE_MODEL (not the module-load copy): the AI-plan endpoint changes
     # the model live, and the next turn must pick it up without a restart.
     cmd = [CLAUDE_EXE, "-p"]
@@ -2350,6 +2399,10 @@ async def run_claude(
                 "reason": "chat escalated to raw Claude Code (allow_code_mode on)",
                 "session_id": session_id,
             })
+
+    if mode_switch and session_id:
+        # Carry-over into this mode's folder (Operator → Normal).
+        operator_session.migrate_transcript(session_id, str(run_cwd))
 
     # --append-system-prompt must come last (before the positional message) so the
     # variadic --disallowedTools / --add-dir lists terminate cleanly.
@@ -2449,6 +2502,133 @@ async def run_claude(
             JOB_PROGRESS.pop(job_id, None)
             CANCELLED_JOBS.discard(job_id)
 
+    return await _finish_turn(data, message=message, session_id=session_id,
+                              timeout=timeout, mode=mode, attachments=attachments,
+                              job_id=job_id, untrusted=untrusted, project=project)
+
+
+def _operator_child_env() -> dict:
+    """Same auth isolation as the one-shot spawn: never inherit an API key implicitly."""
+    env = dict(os.environ)
+    env.pop("ANTHROPIC_API_KEY", None)
+    if config.AUTH_MODE == "api_key" and config.ANTHROPIC_API_KEY:
+        env["ANTHROPIC_API_KEY"] = config.ANTHROPIC_API_KEY
+    return env
+
+
+async def _run_operator_turn(message: str, session_id: str | None, prompt: str,
+                             timeout: int, job_id: str | None) -> dict:
+    """One Operator turn on the chat's live Claude Code session. Returns the CLI's
+    terminal `result` event (the same shape the one-shot path returns), so
+    _finish_turn handles both alike. Raises the same failures the one-shot path does."""
+    argv = [CLAUDE_EXE, "--output-format", "stream-json", "--verbose",
+            "--input-format", "stream-json", "--replay-user-messages",
+            "--permission-prompt-tool", "stdio",
+            # Full power, as the user chose for this chat: everything runs without a
+            # prompt — except questions (AskUserQuestion) and plan approval
+            # (ExitPlanMode), which still reach the app as cards (verified 2026-10-02).
+            "--permission-mode", "bypassPermissions"]
+    if config.VOICE_MODEL and config.VOICE_MODEL.lower() != "default":
+        argv += ["--model", config.VOICE_MODEL]
+    for d in list(WORK_EXTRA_DIRS) + list(config.AGENT_CODE_MODE_DIRS):
+        argv += ["--add-dir", d]
+    # The session's system prompt is fixed at spawn. Hash it into the signature so
+    # a changed prompt (another project's instructions, an updated Adam) respawns the
+    # session — its transcript carries over by --resume. The per-turn live notes
+    # (proposal outcomes, add-on state) are excluded: they change constantly and
+    # would otherwise respawn every turn.
+    sig_src = "\0".join(argv[1:]) + "\0" + (VAULT_PATH or "") + "\0" + CODE_SYSTEM_PROMPT
+    signature = hashlib.sha256(sig_src.encode("utf-8")).hexdigest()[:16]
+    prompt_file = await _turn_prompt_file(prompt)
+    if prompt_file is not None:
+        argv += ["--append-system-prompt-file", str(prompt_file)]
+    else:
+        argv += ["--append-system-prompt", prompt]
+
+    if session_id:
+        # Carry-over: a chat switched in from Normal mode has its transcript in the
+        # agent workspace's project dir; a resume from the vault won't find it there.
+        operator_session.migrate_transcript(session_id, VAULT_PATH)
+    try:
+        sess, _reused = await operator_session.get_session(
+            session_id, argv, VAULT_PATH, _operator_child_env(), signature,
+            cleanup=lambda f=prompt_file: _drop_turn_prompt_file(f))
+    except operator_session.OperatorBusy:
+        raise HTTPException(status_code=409, detail=(
+            "Operator is still working on your last message — send this as a "
+            "follow-up while it runs, or stop it first."))
+    except (operator_session.OperatorDied, RuntimeError, asyncio.TimeoutError) as e:
+        err = str(e) or ("Claude Code didn't start in time — try again in a moment."
+                         if isinstance(e, asyncio.TimeoutError) else type(e).__name__)
+        if session_id and _is_session_not_found(err):
+            log.info("operator resume %s not found at start — starting fresh",
+                     str(session_id)[:12])
+            return await _run_operator_turn(message, None, prompt, timeout, job_id)
+        log.error("Operator session failed to start: %s", err[:500])
+        try:
+            _raise_claude_failure(err)
+        except SessionNotFound:
+            pass
+        raise HTTPException(status_code=502, detail=f"Claude failed: {err[:500] or '(no output)'}")
+
+    if sess.busy:
+        # Backstop for the /ask_async pre-check (a race between two devices): a typed,
+        # readable refusal — never an empty error the app would treat as a dead session.
+        raise HTTPException(status_code=409, detail=(
+            "Operator is still working on the last message — send this as a "
+            "follow-up while it runs, or stop it first."))
+    permissions.record_audit_event({
+        "action_type": "code_mode_turn", "target": VAULT_PATH,
+        "allowed": True, "requires_approval": False, "approved": True, "risk": "high",
+        "reason": "operator chat — live Claude Code session (operator_mode on)",
+        "session_id": session_id,
+    })
+    if job_id:
+        RUNNING_PROCS[job_id] = sess.proc   # drain + stop see it like any live turn
+        JOB_PROGRESS.pop(job_id, None)
+    try:
+        data = await sess.run_turn(job_id, message, timeout)
+    except operator_session.OperatorBusy:
+        raise HTTPException(status_code=409, detail=(
+            "Operator is still working on the last message — send this as a "
+            "follow-up while it runs, or stop it first."))
+    except operator_session.OperatorStopped:
+        raise TurnStopped()
+    except asyncio.TimeoutError:
+        await sess.interrupt()
+        log.error("Operator turn timed out after %ss", timeout)
+        raise HTTPException(status_code=504, detail="Claude timed out")
+    except operator_session.OperatorDied as e:
+        if job_id and job_id in CANCELLED_JOBS:
+            raise TurnStopped()
+        err = str(e)
+        if session_id and _is_session_not_found(err):
+            # Same recovery as the one-shot path: a gone resume id starts fresh once.
+            log.info("operator resume %s not found — starting fresh", str(session_id)[:12])
+            return await _run_operator_turn(message, None, prompt, timeout, job_id)
+        log.error("Operator session died: %s", err[:500])
+        try:
+            _raise_claude_failure(err)
+        except SessionNotFound:
+            pass
+        raise HTTPException(status_code=502, detail=f"Claude failed: {err[:500] or '(no output)'}")
+    finally:
+        if job_id:
+            RUNNING_PROCS.pop(job_id, None)
+            JOB_PROGRESS.pop(job_id, None)
+            CANCELLED_JOBS.discard(job_id)
+    return data
+
+
+async def _finish_turn(
+    data: dict, *, message: str, session_id: str | None, timeout: int, mode: str,
+    attachments: list[str] | None, job_id: str | None, untrusted: bool,
+    project: str | None,
+) -> dict:
+    """Everything after the CLI's terminal `result` event — shared by the one-shot
+    spawn and a live Operator session so the two can never drift: cost meter,
+    exit-0 error ladder, spoken summary, session-mode record, proposals/actions,
+    chat control."""
     # Feed the cost meter. The CLI reports total_cost_usd in every result
     # (subscription runs too — there it reads as what the plan covered). The
     # budget gate above is what turns these rows into a hard ceiling.
@@ -2639,7 +2819,7 @@ async def run_claude(
 async def _run_job(
     job_id: str, message: str, session_id: str | None, mode: str = "voice",
     attachments: list[str] | None = None, project: str | None = None,
-    chat: str | None = None,
+    chat: str | None = None, mode_switch: bool = False,
 ) -> None:
     """Background runner — writes its outcome into the persistent job store."""
     try:
@@ -2651,6 +2831,7 @@ async def _run_job(
         out = await run_claude(
             message, session_id, timeout=timeout, mode=mode,
             attachments=attachments, job_id=job_id, project=project,
+            mode_switch=mode_switch,
         )
         # One canonical timestamp per finished result, shared by the poll
         # response, the stored last-result, and the push payload — so the phone
@@ -2689,7 +2870,12 @@ async def _run_job(
         _end_job_safely(job_store.fail_job, job_id, str(e.detail))
     except Exception as e:  # noqa: BLE001 — never let a job die silently
         log.exception("job %s crashed", job_id)
-        _end_job_safely(job_store.fail_job, job_id, str(e)[:500])
+        _end_job_safely(job_store.fail_job, job_id,
+                        (str(e) or type(e).__name__)[:500])
+    finally:
+        # An Operator turn that never reached its session (spawn failed) still leaves
+        # the reattach list; one that did was already removed by the session.
+        operator_session.JOB_CHAT.pop(job_id, None)
 
 
 def _end_job_safely(writer, job_id: str, detail: str) -> None:
@@ -2842,13 +3028,49 @@ def _send_push(
         return
     banner = (spoken if spoken is not None else result) or ""
     banner = banner.strip() or "Done, sir."
-    payload = json.dumps({
+    _deliver_push(json.dumps({
         "title": "Adam",
         "body": banner[:1500],        # banner text; full result replayed on open
         "spoken": banner[:1500],      # what the page speaks on tap
         "session_id": session_id,
         "ts": ts,
-    })
+    }), subs)
+
+
+def _send_ask_push(question: str, chat_key: str | None) -> None:
+    """An Operator turn is waiting on the user's answer and the app isn't on screen.
+    A distinct `kind` + tag: it never replaces (or replays as) a reply notification,
+    and a tap opens the app on that chat, where the question card is waiting."""
+    if webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_PEM.exists():
+        return
+    subs = _load_subs()
+    if not subs:
+        return
+    q = " ".join((question or "").split()) or "Operator needs your answer."
+    _deliver_push(json.dumps({
+        "kind": "ask",
+        "title": "Adam",
+        "body": ("Operator is asking: " + q)[:400],
+        "chat": chat_key or "",
+    }), subs)
+
+
+def _operator_ask_hook(job_id: str, ask: dict) -> None:
+    """operator_session calls this when a question/plan arrives. Push only when the
+    user isn't looking (same foreground heartbeat the reply banner uses)."""
+    if (time.time() - _last_seen) <= FOREGROUND_SEEN_WINDOW:
+        return
+    if ask.get("kind") == "plan":
+        text = "A plan is ready for your approval."
+    else:
+        text = " / ".join(q.get("question", "") for q in ask.get("questions") or [])
+    chat = operator_session.JOB_CHAT.get(job_id)
+    keep_task(asyncio.get_running_loop().create_task(
+        asyncio.to_thread(_send_ask_push, text, chat)))
+
+
+def _deliver_push(payload: str, subs: list[dict]) -> None:
+    """Send one payload to every stored subscription, prune dead ones, record health."""
     # pywebpush wants a PEM *file path* here — handing it the PEM contents makes
     # it try to parse the string as a raw base64 key and fail to deserialize.
     pem_path = str(VAPID_PRIVATE_PEM)

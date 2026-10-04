@@ -37,7 +37,7 @@ CONFIG_ROOT = Path(os.environ.get("ADAM_CONFIG_ROOT", "").strip()
 load_dotenv(CONFIG_ROOT / ".env")  # secrets + machine values
 
 APP_NAME = "adam-local"
-APP_VERSION = "0.9.78"
+APP_VERSION = "0.9.80"
 
 
 # --- Settings file ----------------------------------------------------------
@@ -173,6 +173,14 @@ ASYNC_CLAUDE_TIMEOUT_SECONDS = int(_get("async_claude_timeout_seconds", 600))
 # Live tool-activity streaming + the stop button make a long turn supervisable,
 # so the cap is a backstop against a wedged process, not a UX guarantee.
 CODE_CLAUDE_TIMEOUT_SECONDS = int(_get("code_claude_timeout_seconds", 3600))
+# Operator chats keep ONE live Claude Code process each (operator_session.py) so
+# they can ask questions, take steers mid-task, and run slash commands. An idle one
+# is closed after this long (the next message resumes it from its transcript); at
+# most this many live at once (least-recently-used idle one closes to make room);
+# an unanswered question is declined after this long.
+OPERATOR_IDLE_MINUTES = int(_get("operator_idle_minutes", 30))
+OPERATOR_MAX_SESSIONS = int(_get("operator_max_sessions", 4))
+OPERATOR_ASK_TIMEOUT_MINUTES = int(_get("operator_ask_timeout_minutes", 30))
 JOB_TTL_SECONDS = int(_get("job_ttl_seconds", 600))
 # On a COOPERATIVE restart (Ctrl+C on the server window, or POST /drain via
 # restart-adam / the updater), stop taking new turns and wait up to this long for
@@ -366,7 +374,14 @@ AGENT_DENIED_TOOLS = [t for t in AGENT_DENIED_TOOLS if t not in _OBSOLETE_DENY_T
 # gate, no backup-before-write, no write allow-list) for that chat only — the
 # global tier/mode below stays authoritative for every other chat. Owner-grade
 # power; a friend's install keeps this false unless they flip it themselves.
-AGENT_ALLOW_CODE_MODE = bool(_as("allow_code_mode", False))
+# Operator mode (agent_safety.operator_mode, default ON — D23): a chat the user
+# switches to Operator runs as their own full Claude Code (a live session — see
+# operator_session.py): direct edits, shell, no approval gate, for that chat only;
+# Normal chats keep the posture above. First use asks a one-time consent in the app.
+# Set operator_mode: false to remove Operator from this install entirely.
+# The retired allow_code_mode key is ignored on purpose: every install copied it as
+# `false` from the old settings template, so its value says nothing about the user.
+AGENT_ALLOW_CODE_MODE = bool(_as("operator_mode", True))
 # Extra folders a Claude Code mode chat can reach with file tools (--add-dir),
 # on top of the vault + work_extra_dirs. Point this at repos you actually code
 # on (e.g. the app's own dev source). Only meaningful when allow_code_mode is on.

@@ -3,6 +3,41 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.80 - Self-test fix
+
+- **The bundled self-tests pass again.** In 0.9.79 one of the optional tests you
+  can run on your own computer (`test_code_mode.py`) was missing a helper file
+  and failed. Adam itself was not affected. The file now ships, and the release
+  build refuses to go out if a bundled test is missing anything it needs.
+
+## 0.9.79 - Operator mode: your full Claude Code, inside Adam
+
+- **Two modes now: Normal and Operator.** Normal is the Adam you know. Tap
+  **OPERATOR MODE** and that chat becomes your own Claude Code, with everything
+  your terminal can do: it edits files and runs commands directly, with no
+  approval step. The first time, Adam explains what that means and asks once,
+  on any of your devices.
+  The old in-between mode is gone. Its chats now open in Normal.
+- **It asks you questions.** When Operator needs a decision, a card appears
+  with the options. Tap one, or type your answer. Plans can be approved, or
+  sent back with a note before any work starts. If Adam isn't open, you get a
+  notification. Tap it to go straight to the question.
+- **Nothing gets lost when your phone closes the app.** Reopen Adam and any
+  Operator work still running comes right back, with its question if it asked one.
+- **Steer it while it works.** Type while Operator is busy and your message
+  goes straight to it. It reads it at its next step and changes course. STOP
+  now pauses the work without losing the conversation.
+- **See everything it did.** A live panel shows each command and its output
+  as it happens. Every finished turn leaves a "view full output" link in the
+  chat.
+- **Slash commands work.** Type **/** in an Operator chat to pick from your
+  Claude Code commands and skills, like /model, /compact or your own.
+- **The conversation carries over.** Switching between Normal and Operator
+  keeps the whole conversation. Before, switching started a fresh chat. An
+  Operator hiccup no longer resets the chat either.
+- To turn Operator off on a computer, set `"operator_mode": false` under
+  `agent_safety` in settings.json.
+
 ## 0.9.78 - Adam can undo its own changes
 
 - **"Undo that" works now.** Adam can see the files it changed recently and can

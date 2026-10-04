@@ -160,8 +160,14 @@ async def get_ui_prefs():
             "auto_run_calendar": server._get_auto_run_calendar(),
             "auto_run_hunter": server._get_auto_run_hunter(),
             # Read-only capability fact (set in settings.json, not togglable here):
-            # tells the PWA whether the long-press Claude Code escalation exists.
-            "code_mode_allowed": config.AGENT_ALLOW_CODE_MODE}
+            # tells the PWA whether Operator mode exists on this install.
+            "code_mode_allowed": config.AGENT_ALLOW_CODE_MODE,
+            # This server runs Operator chats as LIVE sessions (questions, steering,
+            # full output, slash commands). The PWA turns those features on only when
+            # it sees this — an older server keeps the older client behavior.
+            "operator_live": True,
+            # The one-time "what full power means" consent, shared by every device.
+            "operator_consent": bool(server._load_ui_prefs().get("operator_consent"))}
 
 
 @router.post("/ui-prefs", dependencies=[Depends(require_token)])

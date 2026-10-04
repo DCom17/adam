@@ -328,6 +328,22 @@ def main() -> int:
         raised = True
     check("changelog gate raises for a version with no notes", raised)
 
+    print("\n[9h] Test-support guard: shipped tests must find their helpers")
+    rels_ok = mr.staged_files()
+    check("fake Claude CLI ships (test_code_mode.py needs it)",
+          "tests/fake_claude_operator.py" in rels_ok)
+    try:
+        mr.check_test_support_ships(rels_ok)
+        check("clean staged set passes the test-support guard", True)
+    except RuntimeError:
+        check("clean staged set passes the test-support guard", False)
+    raised = False
+    try:
+        mr.check_test_support_ships([r for r in rels_ok if r != "tests/fake_claude_operator.py"])
+    except RuntimeError:
+        raised = True
+    check("guard trips when the fake CLI is dropped", raised)
+
     print("\n[10] Boot-the-ZIP: the built ZIP must import in isolation")
     # The v0.9.35 incident proof: static guards can lie; actually extract the ZIP
     # and import server FROM IT with the repo off sys.path. Any staged-set gap

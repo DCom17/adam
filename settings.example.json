@@ -42,11 +42,11 @@
   "upload_max_mb": 25,
   "upload_ttl_days": 7,
 
-  "_agent_safety_comment": "Phase 3 - controls how Claude Code itself may act. draft_only (default, safe) = Claude gets no file-write/shell tools and runs in a throwaway workspace, not your files; it proposes changes the server applies after approval. legacy_direct = old full-agent behavior, PERSONAL USE ONLY, unsafe for a product. allow_code_mode (default false) = opt-in Claude Code mode chats: long-pressing the Operator Mode button escalates THAT ONE chat to raw Claude Code - full tools, direct edits and shell, no approval gate - while every other chat keeps the posture above. Owner-grade power; leave false unless this is your own machine and you explicitly want it.",
+  "_agent_safety_comment": "Controls how Claude Code may act in NORMAL chats. draft_only (default, safe) = Claude gets no file-write/shell tools and runs in a throwaway workspace, not your files; it proposes changes the server applies after approval. legacy_direct = old full-agent behavior, PERSONAL USE ONLY. operator_mode (default true) = the Operator button: a chat switched to Operator runs as your own full Claude Code - direct edits and shell, no approval gate, questions and follow-ups mid-task - while Normal chats keep the posture above. The app asks once before the first Operator chat. Set false to remove Operator mode from this install.",
   "agent_safety": {
     "mode": "draft_only",
     "allow_direct_claude_writes": false,
-    "allow_code_mode": false,
+    "operator_mode": true,
     "code_mode_dirs": [],
     "force_outputs_to_drafts": true,
     "require_server_applied_writes": true,
@@ -54,7 +54,7 @@
     "denied_tools": ["Write", "Edit", "NotebookEdit", "Bash"]
   },
 
-  "_code_mode_comment": "code_mode_dirs: extra folders a Claude Code mode chat can reach with file tools, on top of the vault (e.g. a repo you code on). code_claude_timeout_seconds: how long one code-mode turn may run before it is killed (default 3600 = 60 min; normal chats keep async_claude_timeout_seconds). Both only matter when allow_code_mode is true.",
+  "_code_mode_comment": "code_mode_dirs: extra folders an Operator chat can reach with file tools, on top of the vault (e.g. a repo you code on). code_claude_timeout_seconds: how long one Operator turn may run before it is stopped (default 3600 = 60 min; time spent waiting on your answer to a question does not count). operator_idle_minutes / operator_max_sessions / operator_ask_timeout_minutes tune the live Operator sessions (defaults 30 / 4 / 30).",
   "code_claude_timeout_seconds": 3600,
 
   "_integrations_comment": "Optional add-ons, all OFF by default; the core product never needs them. google_calendar talks to YOUR own Apps Script bridge (calendar_bridge.gs) running in YOUR Google account. The bridge token is a secret and lives in .env as GOOGLE_CALENDAR_TOKEN, never here. Reads are direct; create/edit go through approval; delete is unsupported.",

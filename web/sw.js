@@ -14,7 +14,7 @@
  * fall back to cache only when the network fails), so a redeploy is picked up on
  * the next online launch. Only the static icon/manifest are served cache-first.
  */
-const CACHE = "adam-shell-v23";   // v23: push subscription re-checked against the server key on open/foreground. v22: replies route by chat key (no srv- duplicates / no undelete). v21: orb self-heals a canvas context reset (desktop off-center). v20: per-project icons + icon picker. v19: section-heading icons (PROJECTS/SESSIONS), none per row. v18: folder/session icons + SESSIONS section. v17: project folders in the sessions drawer (new modals + sync). v16: Checklists view added to the ADAM menu (new overlay + /checklists-view page in index.html). Bump forces a clean SW re-activate + refreshes the offline shell copy
+const CACHE = "adam-shell-v24";   // v24: Operator mode — live console, question cards, steering, slash menu, question pushes. v23: push subscription re-checked against the server key on open/foreground. v22: replies route by chat key (no srv- duplicates / no undelete). v21: orb self-heals a canvas context reset (desktop off-center). v20: per-project icons + icon picker. v19: section-heading icons (PROJECTS/SESSIONS), none per row. v18: folder/session icons + SESSIONS section. v17: project folders in the sessions drawer (new modals + sync). v16: Checklists view added to the ADAM menu (new overlay + /checklists-view page in index.html). Bump forces a clean SW re-activate + refreshes the offline shell copy
 // (v15: desktop three-pane layout (sessions rail | conversation panel | orb stage) at ≥1100px; mobile unchanged (index.html))
 // (v14: accessibility phase 1 — orb is a real keyboard-reachable <button>, state/error/transcript are live regions, composer is labelled, global :focus-visible ring)
 // (v13: code-mode long-turn fix — a mid-task server restart now shows "restarted mid-task — ask again" instead of "Connection error, sir." (index.html fail() handles the JVL_INTERRUPTED tag))
@@ -85,6 +85,20 @@ self.addEventListener("push", (event) => {
   // Always show — iOS requires a notification per push, and the SERVER already
   // decided to send this only because the app wasn't on-screen (foreground
   // heartbeat). Trying to suppress here would just make iOS show a generic one.
+  if (data.kind === "ask") {
+    // An Operator turn is waiting on the user's answer. Its own tag, so it never
+    // collapses into (or replays as) a finished-reply notification.
+    event.waitUntil(
+      self.registration.showNotification(data.body || "Operator has a question for you.", {
+        icon: "/icon.png",
+        badge: "/icon.png",
+        tag: "adam-ask",
+        renotify: true,
+        data: { kind: "ask", chat: data.chat || "" },
+      })
+    );
+    return;
+  }
   event.waitUntil(
     self.registration.showNotification(title, {
       icon: "/icon.png",
@@ -98,6 +112,22 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+  const nd = event.notification.data || {};
+  if (nd.kind === "ask") {
+    // Open (or focus) the app on the chat whose Operator turn is asking; the page
+    // re-attaches to the running turn and shows the question card.
+    event.waitUntil((async () => {
+      const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const c of wins) {
+        if ("focus" in c) {
+          c.postMessage({ type: "adam-open-ask", chat: nd.chat || "" });
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow("/?ask=" + encodeURIComponent(nd.chat || ""));
+    })());
+    return;
+  }
   event.waitUntil((async () => {
     const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     for (const c of wins) {

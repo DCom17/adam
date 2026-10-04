@@ -2,7 +2,7 @@
 Adam — Claude Code mode (opt-in, long-press escalation) tests.
 
 Covers the flag-gated 'code' chat mode and its supervision rig:
-  * config: agent_safety.allow_code_mode default-off + code_mode_dirs +
+  * config: agent_safety.operator_mode default-ON (D23) + code_mode_dirs +
     code_claude_timeout_seconds, surfaced in agent_safety_summary;
   * _normalize_mode accepts 'code' (and still folds junk to 'voice');
   * _extract_spoken treats code like work (<<SPEAK>> summary / first-sentence fallback);
@@ -129,9 +129,18 @@ _DEFAULT_STREAM = [
 ]
 
 
+FAKE_OPERATOR_CLI = str(ROOT / "tests" / "fake_claude_operator.py")
+
+
 def _run(mode: str, job_id: str | None = None) -> tuple[dict, dict]:
     """Run one run_claude turn against a stubbed subprocess; return (captured, out).
-    Stubs the audit + ui-prefs writers so dev data/logs stay untouched."""
+    Stubs the audit + ui-prefs writers so dev data/logs stay untouched.
+
+    An Operator ('code') turn rides a LIVE session (operator_session.py) that talks
+    the CLI's stream-json host protocol — so instead of a canned stream it spawns
+    tests/fake_claude_operator.py (a real subprocess speaking that protocol), with
+    the argv the server built captured for the checks."""
+    import operator_session
     captured: dict = {"audit": []}
 
     async def fake_exec(*cmd, **kw):
@@ -139,16 +148,36 @@ def _run(mode: str, job_id: str | None = None) -> tuple[dict, dict]:
         captured["cwd"] = kw.get("cwd")
         return _FakeStreamProc(_stream_lines(_DEFAULT_STREAM))
 
+    real_start = operator_session.OperatorSession.start
+
+    async def fake_start(self):
+        captured["cmd"] = list(self.argv)
+        captured["cwd"] = self.cwd
+        self.argv = [sys.executable, FAKE_OPERATOR_CLI] + self.argv[1:]
+        await real_start(self)
+
+    async def go():
+        try:
+            return await server.run_claude("hello there", None, mode=mode, job_id=job_id)
+        finally:
+            await operator_session.shutdown_all()
+
     real_exec = asyncio.create_subprocess_exec
     real_audit = permissions.record_audit_event
     real_note = server._proposal_outcome_note
-    asyncio.create_subprocess_exec = fake_exec
+    real_log_dir = operator_session.LOG_DIR
+    if mode != "code":
+        asyncio.create_subprocess_exec = fake_exec
+    operator_session.OperatorSession.start = fake_start
+    operator_session.LOG_DIR = Path(tempfile.mkdtemp(prefix="jvl_op_log_"))
     permissions.record_audit_event = lambda ev: captured["audit"].append(ev)
     server._proposal_outcome_note = lambda: ""   # writer — keep dev ui_prefs.json clean
     try:
-        out = asyncio.run(server.run_claude("hello there", None, mode=mode, job_id=job_id))
+        out = asyncio.run(go())
     finally:
         asyncio.create_subprocess_exec = real_exec
+        operator_session.OperatorSession.start = real_start
+        operator_session.LOG_DIR = real_log_dir
         permissions.record_audit_event = real_audit
         server._proposal_outcome_note = real_note
     return captured, out
@@ -177,8 +206,15 @@ def main() -> int:
     check("summary exposes code_mode_allowed", "code_mode_allowed" in summ)
     check("summary exposes code_mode_dirs", "code_mode_dirs" in summ)
     ex = json.loads((ROOT / "settings.example.json").read_text(encoding="utf-8-sig"))
-    check("example ships allow_code_mode: false",
-          ex.get("agent_safety", {}).get("allow_code_mode") is False)
+    check("example ships operator_mode: true (D23: Operator for all users)",
+          ex.get("agent_safety", {}).get("operator_mode") is True)
+    check("retired allow_code_mode key no longer shipped",
+          "allow_code_mode" not in ex.get("agent_safety", {}))
+    src = (ROOT / "config.py").read_text(encoding="utf-8")
+    check("config reads operator_mode, default True",
+          'bool(_as("operator_mode", True))' in src)
+    check("config ignores the retired allow_code_mode key",
+          '_as("allow_code_mode"' not in src)
     check("example ships code_mode_dirs: []",
           ex.get("agent_safety", {}).get("code_mode_dirs") == [])
     check("example ships code_claude_timeout_seconds",
@@ -187,7 +223,7 @@ def main() -> int:
     print("\n[2] mode normalization")
     check("'code' -> code", server._normalize_mode("code") == "code")
     check("' CODE ' -> code", server._normalize_mode(" CODE ") == "code")
-    check("'work' -> work", server._normalize_mode("work") == "work")
+    check("legacy 'work' -> voice (folded into Normal)", server._normalize_mode("work") == "voice")
     check("junk -> voice", server._normalize_mode("root") == "voice")
     check("None -> voice", server._normalize_mode(None) == "voice")
 
@@ -206,14 +242,14 @@ def main() -> int:
     except HTTPException as e:
         check("run_claude raised", True)
         check("403", e.status_code == 403)
-        check("says it's not enabled", "not enabled" in str(e.detail))
+        check("says Operator is turned off", "turned off" in str(e.detail))
     r = client.post("/ask", headers=AUTH, json={"message": "hi", "mode": "code"})
     check("/ask mode=code -> 403", r.status_code == 403)
     r = client.get("/ui-prefs", headers=AUTH)
     check("/ui-prefs reports code_mode_allowed false",
           r.status_code == 200 and r.json().get("code_mode_allowed") is False)
 
-    print("\n[5] flag ON -> the spawn is raw, streaming Claude Code")
+    print("\n[5] flag ON -> Operator is a live, full-power Claude Code session")
     _flag(True)
     config.AGENT_CODE_MODE_DIRS = [str(sandbox)]
     cap, out = _run("code", job_id="jt5")
@@ -223,18 +259,26 @@ def main() -> int:
           "--permission-mode" in cmd and cmd[cmd.index("--permission-mode") + 1] == "bypassPermissions")
     check("streaming output", "--output-format" in cmd
           and cmd[cmd.index("--output-format") + 1] == "stream-json")
-    check("--verbose present (required for -p stream-json)", "--verbose" in cmd)
+    check("--verbose present (required for stream-json)", "--verbose" in cmd)
+    check("live session: stream-json INPUT (messages, steers, answers)",
+          "--input-format" in cmd and cmd[cmd.index("--input-format") + 1] == "stream-json")
+    check("questions + plan approval routed to the app (stdio host)",
+          "--permission-prompt-tool" in cmd
+          and cmd[cmd.index("--permission-prompt-tool") + 1] == "stdio")
+    check("steer acknowledgements on (--replay-user-messages)", "--replay-user-messages" in cmd)
+    check("not a one-shot -p run", "-p" not in cmd)
     check("cwd is the vault (not the sandbox)", cap["cwd"] == server.VAULT_PATH)
     check("not the agent workspace", cap["cwd"] != str(config.AGENT_WORKSPACE))
     check("code_mode_dirs granted as --add-dir",
           any(cmd[i] == "--add-dir" and cmd[i + 1] == str(sandbox) for i in range(len(cmd) - 1)))
     prompt = cmd[cmd.index("--append-system-prompt") + 1]
-    check("CODE_SYSTEM_PROMPT used", "Claude Code mode" in prompt)
+    check("CODE_SYSTEM_PROMPT used", "Adam in Operator mode" in prompt)
     check("no SAFETY MODE (draft) note", "SAFETY MODE" not in prompt)
     check("no brain bootstrap note (code runs cwd=vault, loads CLAUDE.md natively)",
           "YOUR BRAIN" not in prompt)
     check("wire mode is 'code'", out.get("mode") == "code")
-    check("spoken summary extracted", out.get("spoken") == "Done, sir.")
+    check("reply came back through the live session", out.get("result") == "echo: hello there")
+    check("session id learned from the session", out.get("session_id") == "fake-sid-1")
     audits = [a for a in cap["audit"] if a.get("action_type") == "code_mode_turn"]
     check("turn audited as code_mode_turn", len(audits) == 1)
     check("audit carries no message content",
@@ -246,7 +290,7 @@ def main() -> int:
           r.status_code == 200 and r.json().get("code_mode_allowed") is True)
     config.AGENT_CODE_MODE_DIRS = real_dirs
 
-    print("\n[6] work mode is untouched by the feature")
+    print("\n[6] legacy work mode now runs as Normal (two modes)")
     cap, out = _run("work")
     cmd = cap["cmd"]
     if config.AGENT_RESTRICT_TOOLS:
@@ -262,7 +306,7 @@ def main() -> int:
     # separates the modes is the sandbox, the tool denial and bypassPermissions above.
     check("work streams too (activity feed)",
           cmd[cmd.index("--output-format") + 1] == "stream-json" and "--verbose" in cmd)
-    check("wire mode is 'work'", out.get("mode") == "work")
+    check("wire mode is 'voice' (Normal)", out.get("mode") == "voice")
 
     print("\n[6b] brain bootstrap note reconnects the vault in voice/work (not code)")
     # --add-dir grants READ access to the vault but Claude Code loads no CLAUDE.md memory
@@ -341,33 +385,42 @@ def main() -> int:
     except Exception:
         check("gone resume -> SessionNotFound", False)
 
-    print("\n[8b] code-mode stale resume recovers with one fresh re-run")
+    print("\n[8b] Operator stale resume recovers with one fresh session")
     _flag(True)
-    spawns = {"n": 0, "resume_flags": []}
+    import operator_session
+    spawns = {"argv": []}
+    real_start = operator_session.OperatorSession.start
 
-    async def fake_exec_stale(*cmd, **kw):
-        spawns["n"] += 1
-        spawns["resume_flags"].append("--resume" in cmd)
-        if spawns["n"] == 1:
-            return _FakeStaleProc()   # first attempt: the resume target is gone
-        return _FakeStreamProc(_stream_lines(_DEFAULT_STREAM))   # retry: fresh success
+    async def fake_start(self):
+        spawns["argv"].append(list(self.argv))
+        self.argv = [sys.executable, FAKE_OPERATOR_CLI] + self.argv[1:]
+        await real_start(self)
 
-    real_exec = asyncio.create_subprocess_exec
+    async def go_stale():
+        try:
+            return await server.run_claude("hello", "stale-xyz", mode="code", job_id="jstale")
+        finally:
+            await operator_session.shutdown_all()
+
     real_audit = permissions.record_audit_event
     real_note = server._proposal_outcome_note
-    asyncio.create_subprocess_exec = fake_exec_stale
+    real_log_dir = operator_session.LOG_DIR
+    operator_session.OperatorSession.start = fake_start
+    operator_session.LOG_DIR = Path(tempfile.mkdtemp(prefix="jvl_op_log_"))
     permissions.record_audit_event = lambda ev: None
     server._proposal_outcome_note = lambda: ""
     try:
-        out = asyncio.run(server.run_claude("hello", "stale-xyz", mode="code", job_id="jstale"))
+        out = asyncio.run(go_stale())
     finally:
-        asyncio.create_subprocess_exec = real_exec
+        operator_session.OperatorSession.start = real_start
+        operator_session.LOG_DIR = real_log_dir
         permissions.record_audit_event = real_audit
         server._proposal_outcome_note = real_note
-    check("stale code resume recovered (result returned)", out.get("session_id") == "sid-test-1")
-    check("spawned twice: original + one fresh retry", spawns["n"] == 2)
+    check("stale Operator resume recovered (fresh session answered)",
+          out.get("session_id") == "fake-sid-1" and out.get("result") == "echo: hello")
+    check("spawned twice: original + one fresh retry", len(spawns["argv"]) == 2)
     check("first spawn resumed; retry dropped --resume",
-          spawns["resume_flags"] == [True, False])
+          ["--resume" in a for a in spawns["argv"]] == [True, False])
     check("live registries cleaned after recovery",
           "jstale" not in server.RUNNING_PROCS and "jstale" not in server.JOB_PROGRESS)
 
@@ -423,7 +476,7 @@ def main() -> int:
     calls: dict = {}
 
     async def fake_rc(message, session_id, timeout=None, mode="voice",
-                      attachments=None, job_id=None, project=None):
+                      attachments=None, job_id=None, project=None, mode_switch=False):
         calls.update(timeout=timeout, mode=mode, job_id=job_id)
         return {"result": "r", "spoken": "s", "mode": mode,
                 "session_id": "sid", "proposed_changes": []}

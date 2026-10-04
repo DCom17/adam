@@ -105,18 +105,28 @@ def _run(result_text: str, mode: str = "voice") -> tuple[dict, dict]:
         captured["cmd"] = list(cmd)
         return _FakeStreamProc(result_text)
 
+    async def fake_operator(message, session_id, prompt, timeout, job_id):
+        # Operator turns ride a live session (operator_session.py); capture the
+        # system prompt it would be spawned with, in the argv shape the checks read.
+        captured["cmd"] = ["--append-system-prompt", prompt]
+        return {"type": "result", "subtype": "success", "result": result_text,
+                "session_id": "sid-cc-1"}
+
     real_exec = asyncio.create_subprocess_exec
     real_audit = permissions.record_audit_event
     real_note = server._proposal_outcome_note
+    real_op = server._run_operator_turn
     asyncio.create_subprocess_exec = fake_exec
     permissions.record_audit_event = lambda ev: None
     server._proposal_outcome_note = lambda: ""
+    server._run_operator_turn = fake_operator
     try:
         out = asyncio.run(server.run_claude("hello", None, mode=mode))
     finally:
         asyncio.create_subprocess_exec = real_exec
         permissions.record_audit_event = real_audit
         server._proposal_outcome_note = real_note
+        server._run_operator_turn = real_op
     return captured, out
 
 
@@ -160,21 +170,29 @@ def main() -> int:
     _, c = server._extract_chat_control(f"<<RENAME_CHAT: {long}>>")
     check("rename title capped at 60", len(c["rename"]) == 60)
 
-    print("\n[1b] _extract_chat_control — SET_MODE")
+    print("\n[1b] _extract_chat_control — SET_MODE (two modes: Normal=voice, Operator=code)")
+    _real_allow_1b = config.AGENT_ALLOW_CODE_MODE
+    config.AGENT_ALLOW_CODE_MODE = True
     d, c = server._extract_chat_control("Switching now. <<SET_MODE: operator>>")
-    check("set_mode operator parsed", c == {"set_mode": "operator"})
+    check("set_mode operator -> code (full-power Operator)", c == {"set_mode": "code"})
     check("set_mode marker stripped", "SET_MODE" not in d and d == "Switching now.")
     _, c = server._extract_chat_control("<<SET_MODE: work>>")
-    check("set_mode work aliases to operator", c == {"set_mode": "operator"})
+    check("legacy set_mode work -> code", c == {"set_mode": "code"})
     _, c = server._extract_chat_control("<<SET_MODE: voice>>")
     check("set_mode voice parsed", c == {"set_mode": "voice"})
+    _, c = server._extract_chat_control("<<SET_MODE: normal>>")
+    check("set_mode normal -> voice", c == {"set_mode": "voice"})
     _, c = server._extract_chat_control("<<SET_MODE: code>>")
     check("set_mode code parsed", c == {"set_mode": "code"})
     _, c = server._extract_chat_control("<<SET_MODE: voice>> hmm <<SET_MODE: code>>")
     check("last SET_MODE wins", c == {"set_mode": "code"})
     _, c = server._extract_chat_control(
         "rename <<RENAME_CHAT: T>> and switch <<SET_MODE: operator>>")
-    check("rename + set_mode together", c == {"rename": "T", "set_mode": "operator"})
+    check("rename + set_mode together", c == {"rename": "T", "set_mode": "code"})
+    config.AGENT_ALLOW_CODE_MODE = False
+    d, c = server._extract_chat_control("ok <<SET_MODE: operator>>")
+    check("operator switch NOT relayed when Operator is off", c is None and "SET_MODE" not in d)
+    config.AGENT_ALLOW_CODE_MODE = _real_allow_1b
 
     print("\n[2] markers never reach screen / TTS")
     stripped = server._strip_chat_control_markers(
@@ -198,13 +216,14 @@ def main() -> int:
     config.AGENT_ALLOW_CODE_MODE = True
     note_code = server._chat_control_note()
     check("note names SET_MODE", "<<SET_MODE:" in note_code)
-    check("note offers code switch + FRESH warning when allowed",
-          "<<SET_MODE: code>>" in note_code and "FRESH" in note_code)
+    check("note offers operator/normal switch when allowed",
+          "<<SET_MODE: operator>>" in note_code and "<<SET_MODE: normal>>" in note_code)
+    check("note says context carries over (no FRESH warning)",
+          "carries over" in note_code and "FRESH" not in note_code)
     config.AGENT_ALLOW_CODE_MODE = False
     note_nocode = server._chat_control_note()
-    check("note omits code switch when flag off", "<<SET_MODE: code>>" not in note_nocode)
-    check("note still offers operator/voice switch",
-          "<<SET_MODE: operator>>" in note_nocode and "<<SET_MODE: voice>>" in note_nocode)
+    check("note omits operator switch when flag off", "<<SET_MODE: operator>>" not in note_nocode)
+    check("note says Operator is off", "turned off" in note_nocode)
     config.AGENT_ALLOW_CODE_MODE = _real_allow
 
     print("\n[4] note is in the system prompt for every mode")
@@ -231,8 +250,11 @@ def main() -> int:
     _, out = _run("Just a normal answer, sir.")
     check("no directive -> chat_control None", out.get("chat_control") is None)
 
+    _allow = config.AGENT_ALLOW_CODE_MODE
+    config.AGENT_ALLOW_CODE_MODE = True
     _, out = _run("Operator mode it is. <<SET_MODE: operator>>")
-    check("set_mode routed to chat_control", out.get("chat_control") == {"set_mode": "operator"})
+    check("set_mode routed to chat_control", out.get("chat_control") == {"set_mode": "code"})
+    config.AGENT_ALLOW_CODE_MODE = _allow
     check("set_mode marker not in result", "SET_MODE" not in out["result"])
     check("set_mode marker not spoken", "SET_MODE" not in out["spoken"])
 

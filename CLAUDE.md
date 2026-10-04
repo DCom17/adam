@@ -55,8 +55,10 @@ Claude Code project memory and `docs/ROADMAP.md`; decisions are D-numbered in
   their state). Do not rename them to `adam_*`.
 - The old-name shims (`start-jarvis.ps1`, `jarvis-app.vbs`) stay shipped —
   pre-rename desktop/taskbar shortcuts point at them.
-- The shipped product is **safe mode**: no shell, external writes only via
+- **Normal** chats are **safe mode**: no shell, external writes only via
   ACTION blocks. Don't add brain-template instructions that assume a shell.
+  The shell exists only in an **Operator** chat (the user's own full Claude
+  Code, live session in `operator_session.py`, consent-gated) — D23.
 - Owner's personal vault is `My Drive\JARVIS` — a separate live system, never
   a test fixture. Its `vault_path` must never be blanked or pointed here.
 - Verify before claiming: after any change to server/web/brain, exercise the

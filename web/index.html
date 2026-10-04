@@ -207,6 +207,100 @@
   /* Claude Code mode — the active CHAT runs as raw Claude Code (full tools, no
      approval gate). Amber so it can never be mistaken for cyan operator mode. */
   .mode.code { border-color: #ffb454; color: #ffd79a; background: rgba(255,180,84,.14); }
+  /* Operator live console: the running turn's full output, questions and plans.
+     Lives OUTSIDE #transcript so the (synced) chat history never carries tool output;
+     a finished turn leaves a one-line .opsum in the chat that reopens it in #opSheet. */
+  #opLive { width: 100%; max-width: 480px; max-height: 42vh; overflow-y: auto; margin: 4px 0 6px;
+    flex: 0 0 auto; box-sizing: border-box; text-align: left;
+    border: 1px solid rgba(255,180,84,.35); border-radius: 12px; background: rgba(255,180,84,.05);
+    padding: 8px 10px; font-size: 13px; color: var(--text); }
+  #opLive[hidden] { display: none; }
+  .op-head { position: sticky; top: -8px; z-index: 1; display: flex; align-items: center; gap: 8px;
+    font-size: 11px; letter-spacing: .1em; color: #ffd79a; margin: -8px -10px 6px; padding: 8px 10px 6px;
+    background: linear-gradient(180deg, #120f0a 70%, rgba(18,15,10,0)); }
+  .op-head .op-dot { width: 7px; height: 7px; border-radius: 50%; background: #ffaa3c;
+    box-shadow: 0 0 8px #ffaa3c; animation: opPulse 1.4s ease-in-out infinite; flex: 0 0 auto; }
+  .op-head.waiting .op-dot { background: #8df2ff; box-shadow: 0 0 8px #8df2ff; }
+  .op-head.waiting { color: #bff6ff; }
+  .op-head .op-meta { margin-left: auto; color: var(--faint); letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+  @keyframes opPulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .op-head .op-dot { animation: none; } }
+  .op-tool.ok > summary::after { content: " ✓"; color: #6fe3a6; }
+  .op-tool.bad > summary::after { content: " ✗"; color: #ff8fa3; }
+  .op-text { white-space: pre-wrap; color: var(--cyan-soft); margin: 6px 0; line-height: 1.45; }
+  .op-tool { margin: 4px 0; border-left: 2px solid rgba(255,180,84,.45); padding-left: 8px; }
+  .op-tool > summary { cursor: pointer; color: #ffd79a; font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; list-style: none; }
+  .op-tool > summary::before { content: "▸ "; }
+  .op-tool[open] > summary::before { content: "▾ "; }
+  .op-tool pre { white-space: pre-wrap; word-break: break-word; font-size: 11.5px; margin: 4px 0;
+    padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,.35); color: var(--text);
+    max-height: 40vh; overflow: auto; }
+  .op-tool pre.op-err { color: #ffb3c0; }
+  .op-sub { opacity: .7; margin-left: 10px; }
+  .op-note { color: var(--faint); font-size: 12px; margin: 4px 0; }
+  .op-steer { color: var(--ink); margin: 6px 0; }
+  .op-card { border: 1px solid #ffb454; border-radius: 10px; padding: 10px; margin: 8px 0;
+    background: rgba(255,180,84,.10); }
+  .op-card .op-q { color: var(--ink); font-weight: 600; margin: 6px 0 4px; }
+  .op-card .op-hdr { font-size: 11px; letter-spacing: .08em; color: #ffd79a; }
+  .op-card .op-plan { white-space: pre-wrap; max-height: 30vh; overflow: auto; font-size: 12.5px;
+    background: rgba(0,0,0,.3); border-radius: 6px; padding: 8px; margin: 6px 0; }
+  .op-card .op-opts { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .op-card button { border: 1px solid rgba(255,180,84,.6); background: rgba(255,180,84,.12); color: #ffe2b8;
+    border-radius: 8px; padding: 6px 10px; font-size: 13px; cursor: pointer; text-align: left; }
+  .op-card button.on { background: rgba(255,180,84,.38); color: #fff; }
+  .op-card button small { display: block; opacity: .7; font-size: 11px; }
+  .op-card input, .op-card textarea { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 6px 8px;
+    border-radius: 8px; border: 1px solid rgba(255,180,84,.4); background: rgba(0,0,0,.3); color: var(--ink);
+    font: inherit; font-size: 13px; }
+  .op-card .op-go { margin-top: 8px; background: rgba(255,180,84,.3); }
+  .transcript .opsum { margin: 4px 0; }
+  .transcript .opsum button { border: 1px solid rgba(255,180,84,.35); background: transparent; color: #ffd79a;
+    border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  #opSheet { position: fixed; inset: 0; z-index: 9999; background: var(--bg); display: flex;
+    flex-direction: column; padding: max(12px, env(safe-area-inset-top)) 14px max(12px, env(safe-area-inset-bottom)); }
+  #opSheet[hidden] { display: none; }
+  #opSheet .op-sheet-bar { display: flex; justify-content: space-between; align-items: center; color: #ffd79a;
+    font-size: 13px; letter-spacing: .06em; margin-bottom: 8px; }
+  #opSheet .op-sheet-bar button { border: 1px solid rgba(255,180,84,.5); background: transparent; color: #ffd79a;
+    border-radius: 8px; padding: 4px 12px; cursor: pointer; }
+  #opSheetBody { flex: 1; overflow-y: auto; font-size: 13px; color: var(--text); max-width: 900px;
+    width: 100%; margin: 0 auto; }
+  /* One-time Operator consent — a real sheet, not a browser confirm(). */
+  #opConsent { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: flex-end;
+    justify-content: center; background: rgba(2,4,8,.72); backdrop-filter: blur(3px); }
+  #opConsent[hidden] { display: none; }
+  #opConsent .oc-card { width: 100%; max-width: 460px; margin: 0 12px max(12px, env(safe-area-inset-bottom));
+    border-radius: 18px; border: 1px solid rgba(255,180,84,.55); background: linear-gradient(180deg, #1a130a, #0b0d12 70%);
+    box-shadow: 0 -10px 40px rgba(255,170,60,.12); padding: 20px 18px 16px; color: var(--text);
+    animation: ocUp .22s ease-out; }
+  @keyframes ocUp { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { #opConsent .oc-card { animation: none; } }
+  #opConsent .oc-badge { font-size: 11px; letter-spacing: .14em; color: #ffd79a; }
+  #opConsent h2 { margin: 6px 0 10px; font-size: 20px; color: var(--ink); font-weight: 650; letter-spacing: .01em; }
+  #opConsent ul { margin: 0 0 12px; padding: 0; list-style: none; font-size: 14px; line-height: 1.45; }
+  #opConsent li { padding: 6px 0 6px 26px; position: relative; border-top: 1px solid rgba(255,255,255,.05); }
+  #opConsent li:first-child { border-top: 0; }
+  #opConsent li span { position: absolute; left: 0; top: 6px; width: 20px; text-align: center; }
+  #opConsent li b { color: var(--ink); font-weight: 600; }
+  #opConsent .oc-fine { font-size: 12px; color: var(--faint); margin: 0 0 14px; }
+  #opConsent .oc-row { display: flex; gap: 10px; }
+  #opConsent button { flex: 1; border-radius: 12px; padding: 12px 10px; font-size: 14px; font-weight: 600;
+    letter-spacing: .04em; cursor: pointer; }
+  #opConsent .oc-no { background: transparent; border: 1px solid rgba(255,255,255,.18); color: var(--dim); }
+  #opConsent .oc-yes { background: linear-gradient(180deg, #ffbf66, #ff9f2e); border: 0; color: #1b1104; }
+  #opConsent button:focus-visible { outline: 2px solid #ffd79a; outline-offset: 2px; }
+  #slashMenu { width: 100%; max-width: 480px; max-height: 34vh; overflow-y: auto; border-radius: 10px;
+    border: 1px solid rgba(255,180,84,.4); background: var(--panel); margin-bottom: 4px; }
+  #slashMenu[hidden] { display: none; }
+  #slashMenu button { display: block; width: 100%; text-align: left; background: transparent; border: 0;
+    border-bottom: 1px solid rgba(255,255,255,.05); color: var(--ink); padding: 7px 10px; cursor: pointer;
+    font-size: 13px; }
+  #slashMenu button b { color: #ffd79a; font-family: ui-monospace, Consolas, monospace; font-weight: 600; }
+  #slashMenu button span { display: block; color: var(--faint); font-size: 11.5px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+  #slashMenu button.sel, #slashMenu button:hover { background: rgba(255,180,84,.12); }
   /* Hold-to-escalate progress: an amber fill sweeps left→right across the button
      over the hold window (same pattern as the replay hold-to-restart). Release
      early → snaps back to 0, treated as a normal tap. The 1.2s here MUST match
@@ -674,9 +768,29 @@
          lands, not the whole history. Session switching replaces innerHTML wholesale,
          so loadActiveSession() mutes this region for that one paint. -->
     <div class="transcript" id="transcript" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation"></div>
+    <!-- Operator live console (see #opLive CSS). aria-live so a question card is announced. -->
+    <div id="opLive" hidden aria-live="polite" aria-label="Operator activity"></div>
+    <div id="opConsent" hidden role="dialog" aria-modal="true" aria-labelledby="ocTitle">
+      <div class="oc-card">
+        <div class="oc-badge">◆ OPERATOR MODE</div>
+        <h2 id="ocTitle">Your full Claude Code, in this chat</h2>
+        <ul>
+          <li><span>⚡</span><b>It acts directly.</b> Operator edits and deletes files and runs commands on this computer — no approval step first.</li>
+          <li><span>❓</span><b>It checks with you.</b> It asks before anything destructive, and can ask you questions while it works.</li>
+          <li><span>↪</span><b>You stay in charge.</b> Type to redirect it mid-task, or tap STOP. Switch back to Normal any time — the conversation carries over.</li>
+        </ul>
+        <p class="oc-fine">You'll only see this once on this Adam. To remove Operator entirely, set "operator_mode": false in settings.json.</p>
+        <div class="oc-row"><button type="button" class="oc-no" id="ocNo">Not now</button><button type="button" class="oc-yes" id="ocYes">Turn on Operator</button></div>
+      </div>
+    </div>
+    <div id="opSheet" hidden role="dialog" aria-modal="true" aria-label="Operator full output">
+      <div class="op-sheet-bar"><span>◆ OPERATOR · FULL OUTPUT</span><button type="button" id="opSheetClose">Close</button></div>
+      <div id="opSheetBody"></div>
+    </div>
 
     <div id="composerDock" style="width:100%; max-width:480px; display:flex; flex-direction:column; gap:12px;">
       <div class="chips" id="attachChips"></div>
+      <div id="slashMenu" hidden role="listbox" aria-label="Slash commands"></div>
       <div class="composer">
         <button class="attach" id="attachBtn" title="Attach file or photo" aria-label="Attach"><img class="ai" src="data:image/png;base64,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" alt=""></button>
         <input type="file" id="fileInput" accept="image/*,.pdf,.txt,.md,.csv,.json,.py,.js,.html" multiple hidden>
@@ -695,7 +809,7 @@
         <button type="button" id="voiceDismissBtn" title="Hide" style="margin-left:8px;padding:3px 10px;border-radius:6px;border:1px solid rgba(33,230,255,.3);background:transparent;color:#cdeaf0;cursor:pointer;">Got it</button>
       </div>
       <div class="btnrow">
-        <button class="mode half" id="modeBtn" aria-pressed="false" title="Operator mode: full agent — long on-screen replies, only the spoken summary read aloud. Lights up cyan when engaged. If Claude Code mode is enabled in settings, press and hold until the bar fills to escalate THIS chat to raw Claude Code (amber); hold again to exit.">OPERATOR MODE</button>
+        <button class="mode half" id="modeBtn" aria-pressed="false" title="Operator mode: your full Claude Code in this chat.">OPERATOR MODE</button>
         <button class="replay half" id="replayBtn" title="Speak the last reply again" disabled>🔊 REPLAY</button>
       </div>
       <button class="mute" id="mute">MUTE MIC</button>
@@ -942,6 +1056,8 @@
   #voiceControls { display: none; }
 
   @media (min-width: 1100px) {
+    /* The Operator console spans the conversation column, like the composer. */
+    #opLive { max-width: none; max-height: 46vh; }
     #app {
       display: grid;
       grid-template-columns: clamp(224px, 18vw, 264px) minmax(0, 1fr);
@@ -1258,7 +1374,7 @@
     const h = $("autoApplyHint"); if (h) h.style.display = on ? "block" : "none";
   }
   async function loadAutoApply() {
-    try { const d = await jget("/ui-prefs"); setAutoApplyUI(!!d.auto_apply_proposed); window.__jvlCodeAllowed = !!d.code_mode_allowed; } catch (_) {}
+    try { const d = await jget("/ui-prefs"); setAutoApplyUI(!!d.auto_apply_proposed); window.__jvlCodeAllowed = !!d.code_mode_allowed; window.__jvlOperatorLive = !!d.operator_live; window.__jvlOperatorConsent = !!d.operator_consent; if (typeof syncModeUI === "function") syncModeUI(); } catch (_) {}
   }
   if (autoApplyToggle) {
     autoApplyToggle.addEventListener("change", async () => {
@@ -1714,8 +1830,25 @@
                         : (s === "warming") ? "starting microphone…"
                         : (s === "muted") ? "mic is off — tap mute to resume"
                         : (active && !sttSupported) ? "voice input unavailable here — type to Adam" : "";
-    // A typed turn shares the one in-flight pipeline; lock SEND while busy.
-    if (sendBtn) sendBtn.disabled = (s === "processing" || s === "speaking");
+    // A typed turn shares the one in-flight pipeline; lock SEND while busy —
+    // EXCEPT during a live Operator turn in this chat, where a send steers the turn
+    // or answers its question (see sendToRunningOperator).
+    if (sendBtn) sendBtn.disabled = (s === "speaking") || (s === "processing" && !operatorTurnOnScreen());
+    syncComposerHint();
+  }
+  // True when the chat on screen has a live Operator turn (guarded: setState can run
+  // before the Operator module below is initialized).
+  function operatorTurnOnScreen() {
+    try { return opLive() && OpUI.running(Sessions.activeKey()); } catch (_) { return false; }
+  }
+  let composerHintDefault = null;
+  function syncComposerHint() {
+    try {
+      if (composerHintDefault === null) composerHintDefault = composerInput.placeholder;
+      composerInput.placeholder = operatorTurnOnScreen()
+        ? (OpUI.openAsk(Sessions.activeKey()) ? "Type your answer…" : "Steer it while it works…")
+        : composerHintDefault;
+    } catch (_) {}
   }
   function showErr(msg) { const _had = !!errEl.textContent; errEl.textContent = msg || ""; if (msg && !_had) { try { sfx("fault"); } catch (_) {} } }
 
@@ -2185,7 +2318,7 @@
     var caUrl = function () { return (LS.url || location.origin).replace(/\/$/, "") + "/ui-prefs"; };
     var setCA = function (on) { var s = $("autoCalState"); if (s) s.textContent = on ? "On" : "Off"; };
     async function refreshCA() {
-      try { var r = await fetch(caUrl(), { headers: { Authorization: "Bearer " + LS.token } }); var d = await r.json(); setCA(!!d.auto_run_calendar); window.__jvlCodeAllowed = !!d.code_mode_allowed; } catch (_) {}
+      try { var r = await fetch(caUrl(), { headers: { Authorization: "Bearer " + LS.token } }); var d = await r.json(); setCA(!!d.auto_run_calendar); window.__jvlCodeAllowed = !!d.code_mode_allowed; window.__jvlOperatorLive = !!d.operator_live; window.__jvlOperatorConsent = !!d.operator_consent; if (typeof syncModeUI === "function") syncModeUI(); } catch (_) {}
     }
     async function toggleCA() {
       var on = (($("autoCalState") || {}).textContent || "").trim().toLowerCase() === "on";
@@ -2730,6 +2863,434 @@
     } catch (_) {}
   }
 
+  // --- Operator mode: live console, questions, steering, full output ------------
+  // An Operator chat is a LIVE Claude Code session on the server (operator_session.py).
+  // While a turn runs, /poll reports `events_n` (full-output events so far) and `ask`
+  // (a question or plan waiting on the user); this module renders them in #opLive,
+  // which sits OUTSIDE #transcript so synced chat history never carries tool output.
+  // A finished turn leaves a one-line summary in the chat that reopens the whole
+  // transcript (from the server) in #opSheet. Everything here is inert unless the
+  // server says it runs live sessions (`operator_live` from /ui-prefs).
+  // twoModes: the server runs the Normal/Operator model (decides how the mode button
+  // behaves). opLive: ...and Operator is turned on here (gates the Operator features).
+  function twoModes() { return !!window.__jvlOperatorLive; }
+  function opLive() { return twoModes() && !!window.__jvlCodeAllowed; }
+  const OpUI = (function () {
+    const runs = new Map();   // jobId -> { key, jid, n, el, tools, steps, ask, askEl, fetching }
+    const live = $("opLive");
+    const authH = () => ({ "Authorization": "Bearer " + LS.token });
+
+    function short(name, input) {
+      const i = input || {};
+      const pick = i.command || i.file_path || i.path || i.pattern || i.url || i.query
+        || i.description || i.prompt || "";
+      const s = String(pick).split("\n")[0];
+      return name + (s ? ": " + s : "");
+    }
+    // Render one event into `box` (live console or the full-output sheet). `tools`
+    // maps tool_use ids to their card so a tool's output lands under its call.
+    function renderEvent(box, tools, e) {
+      const sub = e.sub ? " op-sub" : "";
+      if (e.t === "text") {
+        box.insertAdjacentHTML("beforeend", `<div class="op-text${sub}">${escapeHtml(e.text || "")}</div>`);
+      } else if (e.t === "tool") {
+        const d = document.createElement("details");
+        d.className = "op-tool" + sub;
+        const inp = JSON.stringify(e.input || {}, null, 2);
+        d.innerHTML = `<summary>${escapeHtml(short(e.name, e.input))}</summary><pre>${escapeHtml(inp)}</pre>`;
+        box.appendChild(d);
+        if (e.id) tools[e.id] = d;
+      } else if (e.t === "out") {
+        const host = (e.id && tools[e.id]) || box;
+        if (host !== box) host.classList.add(e.error ? "bad" : "ok");
+        host.insertAdjacentHTML("beforeend",
+          `<pre class="${e.error ? "op-err" : ""}">${escapeHtml(e.text || "(no output)")}</pre>`);
+      } else if (e.t === "ask") {
+        const q = e.kind === "plan" ? "Plan submitted for approval"
+          : (e.questions || []).map((x) => x.question).join(" / ");
+        box.insertAdjacentHTML("beforeend", `<div class="op-note">❓ ${escapeHtml(q)}</div>`);
+      } else if (e.t === "answer") {
+        box.insertAdjacentHTML("beforeend", `<div class="op-note">↳ ${escapeHtml(e.text || "")}</div>`);
+      } else if (e.t === "steer") {
+        box.insertAdjacentHTML("beforeend", `<div class="op-steer">↪ “${escapeHtml(e.text || "")}”</div>`);
+      } else if (e.t === "status") {
+        const t = e.text || (e.mode ? "Permission mode: " + e.mode : "");
+        if (t) box.insertAdjacentHTML("beforeend", `<div class="op-note">${escapeHtml(t)}</div>`);
+      }
+    }
+
+    function begin(key, jid) {
+      const el = document.createElement("div");
+      el.innerHTML = `<div class="op-head"><span class="op-dot"></span><span class="op-state">OPERATOR · WORKING</span><span class="op-meta"></span></div>`;
+      const run = { key, jid, n: 0, el, tools: {}, steps: 0, ask: null, askEl: null, fetching: false,
+                    t0: Date.now(), head: el.firstChild, timer: null };
+      run.timer = setInterval(() => paintHead(run), 1000);
+      runs.set(jid, run);
+      paintHead(run);
+      mount();
+    }
+    function paintHead(run) {
+      if (!run.head) return;
+      const sec = Math.round((Date.now() - run.t0) / 1000);
+      const t = Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
+      const waiting = !!run.ask;
+      run.head.classList.toggle("waiting", waiting);
+      run.head.querySelector(".op-state").textContent = waiting
+        ? (run.ask.kind === "plan" ? "OPERATOR · PLAN NEEDS YOUR OK" : "OPERATOR · WAITING FOR YOU")
+        : "OPERATOR · WORKING";
+      run.head.querySelector(".op-meta").textContent =
+        (run.steps ? run.steps + (run.steps === 1 ? " step · " : " steps · ") : "") + t;
+    }
+    function stopTimer(run) { if (run && run.timer) { clearInterval(run.timer); run.timer = null; } }
+    // Show the console for the chat on screen (or hide it). Called on every chat switch.
+    function mount() {
+      try { if (sendBtn && body.dataset.state === "processing") sendBtn.disabled = !operatorTurnOnScreen(); syncComposerHint(); } catch (_) {}
+      if (!live) return;
+      const k = Sessions.activeKey();
+      let run = null;
+      for (const r of runs.values()) if (r.key === k) run = r;
+      live.innerHTML = "";
+      if (!run) { live.hidden = true; return; }
+      live.appendChild(run.el);
+      live.hidden = false;
+      live.scrollTop = live.scrollHeight;
+    }
+    async function pull(run) {
+      if (run.fetching) return;
+      run.fetching = true;
+      try {
+        const r = await fetch(LS.url + "/jobs/" + run.jid + "/events?since=" + run.n, { headers: authH() });
+        if (!r.ok) return;
+        const d = await r.json();
+        const nearBottom = live && (live.scrollHeight - live.scrollTop - live.clientHeight < 60);
+        for (const e of d.events || []) {
+          if (e.n <= run.n) continue;
+          renderEvent(run.el, run.tools, e);
+          if (e.t === "tool") run.steps++;
+          run.n = e.n;
+        }
+        if (run.askEl) run.el.appendChild(run.askEl);   // keep an open question at the bottom
+        paintHead(run);
+        if (live && nearBottom) live.scrollTop = live.scrollHeight;
+      } catch (_) {} finally { run.fetching = false; }
+    }
+    // A /poll tick for an Operator turn.
+    function onPoll(jid, job) {
+      const run = runs.get(jid);
+      if (!run) return;
+      if ((job.events_n || 0) > run.n) pull(run);
+      const ask = job.ask || null;
+      if (ask && (!run.ask || run.ask.id !== ask.id)) showAsk(run, ask);
+      else if (!ask && run.ask) clearAsk(run);
+    }
+    function clearAsk(run) {
+      if (run.askEl) run.askEl.remove();
+      run.ask = null; run.askEl = null;
+      paintHead(run);
+      syncComposerHint();
+    }
+    function showAsk(run, ask) {
+      clearAsk(run);
+      run.ask = ask;
+      const card = document.createElement("div");
+      card.className = "op-card";
+      if (ask.kind === "plan") {
+        card.innerHTML = `<div class="op-hdr">PLAN — APPROVE TO START</div>
+          <div class="op-plan">${escapeHtml(ask.plan || "")}</div>
+          <textarea rows="2" placeholder="What should change? (optional)"></textarea>
+          <div class="op-opts"><button type="button" class="op-go" data-v="yes">Approve — go</button>
+          <button type="button" data-v="no">Keep planning</button></div>`;
+        card.querySelectorAll("button[data-v]").forEach((b) => b.onclick = () => {
+          const fb = card.querySelector("textarea").value.trim();
+          send(run, b.dataset.v === "yes" ? { approve: true } : { approve: false, feedback: fb },
+               b.dataset.v === "yes" ? "Approve" : ("Keep planning" + (fb ? ": " + fb : "")));
+        });
+      } else {
+        const picks = (ask.questions || []).map(() => new Set());
+        let html = "";
+        (ask.questions || []).forEach((q, qi) => {
+          html += `<div class="op-hdr">${escapeHtml(q.header || "QUESTION")}</div>
+            <div class="op-q">${escapeHtml(q.question)}</div><div class="op-opts">`;
+          q.options.forEach((o, oi) => {
+            html += `<button type="button" data-q="${qi}" data-o="${oi}">${escapeHtml(o.label)}`
+              + (o.description ? `<small>${escapeHtml(o.description)}</small>` : "") + `</button>`;
+          });
+          html += `</div><input type="text" data-other="${qi}" placeholder="Or type your own answer">`;
+        });
+        html += `<button type="button" class="op-go">Send answer</button>`;
+        card.innerHTML = html;
+        const single = (ask.questions || []).length === 1 && !(ask.questions[0] || {}).multi;
+        card.querySelectorAll("button[data-q]").forEach((b) => b.onclick = () => {
+          const qi = +b.dataset.q, oi = +b.dataset.o, q = ask.questions[qi];
+          if (!q.multi) { picks[qi].clear(); card.querySelectorAll(`button[data-q="${qi}"]`).forEach((x) => x.classList.remove("on")); }
+          if (picks[qi].has(oi)) { picks[qi].delete(oi); b.classList.remove("on"); }
+          else { picks[qi].add(oi); b.classList.add("on"); }
+          if (single) submitPicks();   // one single-choice question: a tap is the answer
+        });
+        function submitPicks() {
+          const answers = {};
+          let missing = false;
+          (ask.questions || []).forEach((q, qi) => {
+            const other = card.querySelector(`input[data-other="${qi}"]`).value.trim();
+            const chosen = [...picks[qi]].map((oi) => q.options[oi].label);
+            if (other) chosen.push(other);
+            if (!chosen.length) missing = true;
+            answers[q.question] = chosen.join(", ");
+          });
+          if (missing) { showErr("Pick an answer for each question."); return; }
+          send(run, { answers }, Object.values(answers).join(" · "));
+        }
+        card.querySelector(".op-go").onclick = submitPicks;
+        card.querySelectorAll("input[data-other]").forEach((inp) =>
+          inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); submitPicks(); } }));
+      }
+      run.askEl = card;
+      run.el.appendChild(card);
+      paintHead(run);
+      syncComposerHint();
+      if (live && run.key === Sessions.activeKey()) {
+        live.scrollTop = Math.max(0, card.offsetTop - live.offsetTop - 8);
+        sfx("reply");
+      } else {
+        Sessions.markUnseen(run.key);   // a question is waiting in another chat
+        renderSessions();
+      }
+    }
+    async function send(run, payload, label) {
+      const ask = run.ask;
+      if (!ask) return;
+      try {
+        const r = await fetch(LS.url + "/jobs/" + run.jid + "/answer", {
+          method: "POST", headers: { ...authH(), "Content-Type": "application/json" },
+          body: JSON.stringify({ ask_id: ask.id, ...payload }),
+        });
+        if (r.status === 409) { showErr("That question already closed."); clearAsk(run); return; }
+        if (!r.ok) { showErr("Couldn't send the answer — try again."); return; }
+        clearAsk(run);
+        sfx("send");
+        pull(run);
+      } catch (_) { showErr("Couldn't reach Adam to send the answer."); }
+    }
+    // The open question for a chat, if any (typed replies answer it).
+    function openAsk(key) {
+      for (const r of runs.values()) if (r.key === key && r.ask) return r;
+      return null;
+    }
+    // Answer an open question with free text: an option label (case-insensitive) is
+    // that option; for a plan, yes/approve/go approves; anything else is the answer
+    // (or, for a plan, the feedback that keeps it planning).
+    function answerText(key, text) {
+      const run = openAsk(key);
+      if (!run) return false;
+      const t = text.trim();
+      if (run.ask.kind === "plan") {
+        const yes = /^(yes|yep|yeah|approve[d]?|go( ahead)?|do it|ok(ay)?|sounds good|ship it)\b/i.test(t);
+        send(run, yes ? { approve: true } : { approve: false, feedback: t }, t);
+      } else {
+        const answers = {};
+        (run.ask.questions || []).forEach((q) => {
+          const hit = q.options.find((o) => o.label.toLowerCase() === t.toLowerCase());
+          answers[q.question] = hit ? hit.label : t;
+        });
+        send(run, { answers }, t);
+      }
+      return true;
+    }
+    async function steer(key, text) {
+      let run = null;
+      for (const r of runs.values()) if (r.key === key) run = r;
+      if (!run) return false;
+      try {
+        const r = await fetch(LS.url + "/jobs/" + run.jid + "/steer", {
+          method: "POST", headers: { ...authH(), "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+        if (!r.ok) return false;
+        pull(run);
+        return true;
+      } catch (_) { return false; }
+    }
+    function running(key) {
+      for (const r of runs.values()) if (r.key === key) return true;
+      return false;
+    }
+    // The turn ended: catch the last events, then leave a compact summary line in the
+    // chat (the full transcript stays on the server, reopened via the sheet).
+    async function finish(jid, job) {
+      const run = runs.get(jid);
+      if (!run) return "";
+      if ((job && job.events_n || 0) > run.n) { run.fetching = false; await pull(run); }
+      runs.delete(jid);
+      stopTimer(run);
+      mount();
+      if (!run.n) return "";
+      const label = run.steps ? (run.steps + (run.steps === 1 ? " step · " : " steps · ")) : "";
+      return `<div class="opsum" data-job="${escapeHtml(jid)}"><button type="button" class="op-open">`
+        + `▸ Operator · ${label}view full output</button></div>`;
+    }
+    // Full-output sheet (from the server's stored transcript).
+    const sheet = $("opSheet"), sheetBody = $("opSheetBody");
+    if (sheet && sheet.parentElement !== document.body) document.body.appendChild(sheet);
+    async function openSheet(jid) {
+      if (!sheet) return;
+      sheetBody.innerHTML = `<div class="op-note">Loading…</div>`;
+      sheet.hidden = false;
+      try {
+        const r = await fetch(LS.url + "/jobs/" + encodeURIComponent(jid) + "/events?since=0", { headers: authH() });
+        if (!r.ok) { sheetBody.innerHTML = `<div class="op-note">This turn's full output has expired.</div>`; return; }
+        const d = await r.json();
+        sheetBody.innerHTML = "";
+        const tools = {};
+        for (const e of d.events || []) renderEvent(sheetBody, tools, e);
+      } catch (_) { sheetBody.innerHTML = `<div class="op-note">Couldn't load the output.</div>`; }
+    }
+    if (sheet) {
+      $("opSheetClose").onclick = () => { sheet.hidden = true; sheetBody.innerHTML = ""; };
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !sheet.hidden) $("opSheetClose").click(); });
+    }
+    transcript.addEventListener("click", (e) => {
+      const b = e.target.closest && e.target.closest(".opsum .op-open");
+      if (b) openSheet(b.closest(".opsum").dataset.job);
+    });
+    function drop(jid) { const r = runs.get(jid); if (runs.delete(jid)) { stopTimer(r); mount(); } }
+    return { begin, mount, onPoll, finish, drop, openAsk, answerText, steer, running };
+  })();
+
+  // Slash-command menu for Operator chats: typing "/" lists the user's Claude Code
+  // commands (built-ins, custom commands, skills) from /operator/commands.
+  const SlashMenu = (function () {
+    const menu = $("slashMenu");
+    let cmds = null, loading = null, sel = 0, shown = [];
+    function load() {
+      // One shared request: every keystroke awaits the same fetch, so none of them
+      // sees "not loaded yet" and gives up while the list is on its way.
+      if (cmds) return Promise.resolve();
+      if (!loading) {
+        loading = fetch(LS.url + "/operator/commands", { headers: { "Authorization": "Bearer " + LS.token } })
+          .then((r) => r.ok ? r.json() : null)
+          .then((d) => { if (d && d.commands && d.commands.length) cmds = d.commands; })
+          .catch(() => {})
+          .finally(() => { loading = null; });
+      }
+      return loading;
+    }
+    function hide() { if (menu) { menu.hidden = true; menu.innerHTML = ""; } shown = []; }
+    function pick(c) {
+      composerInput.value = "/" + c.name + " ";
+      hide();
+      composerInput.focus();
+      composerInput.dispatchEvent(new Event("input"));
+    }
+    let seq = 0;
+    async function update() {
+      if (!menu) return;
+      const my = ++seq;
+      const ok = () => opLive() && currentMode() === "code" && /^\/[\w:.-]*$/.test(composerInput.value);
+      if (!ok()) { hide(); return; }
+      await load();
+      // Typing continued while the list loaded: only the newest keystroke renders,
+      // against what's in the box NOW (not the value this call started with).
+      if (my !== seq) return;
+      if (!ok() || !cmds || !cmds.length) { hide(); return; }
+      const q = composerInput.value.slice(1).toLowerCase();
+      shown = cmds.filter((c) => c.name.toLowerCase().includes(q))
+        .sort((a, b) => (a.name.toLowerCase().startsWith(q) ? 0 : 1) - (b.name.toLowerCase().startsWith(q) ? 0 : 1))
+        .slice(0, 40);
+      if (!shown.length) { hide(); return; }
+      sel = 0;
+      menu.innerHTML = shown.map((c, i) => `<button type="button" role="option" data-i="${i}"${i === 0 ? ' class="sel"' : ""}>`
+        + `<b>/${escapeHtml(c.name)}</b>${c.hint ? " " + escapeHtml(c.hint) : ""}`
+        + (c.description ? `<span>${escapeHtml(c.description)}</span>` : "") + `</button>`).join("");
+      menu.querySelectorAll("button").forEach((b) => b.onclick = () => pick(shown[+b.dataset.i]));
+      menu.hidden = false;
+    }
+    function key(e) {
+      if (!menu || menu.hidden || !shown.length) return false;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        sel = (sel + (e.key === "ArrowDown" ? 1 : shown.length - 1)) % shown.length;
+        menu.querySelectorAll("button").forEach((b, i) => b.classList.toggle("sel", i === sel));
+        return true;
+      }
+      if (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey && composerInput.value.trim() !== "/" + shown[sel].name)) {
+        e.preventDefault(); pick(shown[sel]); return true;
+      }
+      if (e.key === "Escape") { hide(); return true; }
+      return false;
+    }
+    return { update, key, hide };
+  })();
+
+  // Re-attach to Operator turns this page lost track of. iOS suspends and reloads a
+  // backgrounded web app, which drops the in-memory poll loop — and an Operator turn
+  // can be sitting on a question for the user the whole time. On load, on return to
+  // the foreground, and on a question-notification tap, ask the server what's still
+  // running and pick each one back up (console, question card, stop, steer, reply).
+  let reattachBusy = false, reattachAt = 0;
+  async function reattachOperatorTurns(focusChat) {
+    if (!opLive() || !LS.url || !LS.token || reattachBusy) return;
+    if (!focusChat && Date.now() - reattachAt < 3000) return;
+    reattachBusy = true; reattachAt = Date.now();
+    try {
+      const r = await fetch(LS.url + "/operator/running", { headers: { "Authorization": "Bearer " + LS.token } });
+      if (!r.ok) return;
+      const d = await r.json();
+      for (const j of d.running || []) {
+        let key = null;
+        if (j.chat && Sessions._find(Sessions._all(), j.chat)) key = j.chat;
+        else if (j.session_id) key = Sessions.keyForSid(j.session_id);
+        if (!key) continue;
+        if (focusChat && key === focusChat && key !== Sessions.activeKey()) switchSession(key);
+        if (inflight.has(key)) continue;   // this page is already watching it
+        watchOperatorJob(key, j.job_id);
+      }
+    } catch (_) {} finally { reattachBusy = false; }
+  }
+  async function watchOperatorJob(key, jid) {
+    const onScreen = () => key === Sessions.activeKey();
+    inflight.set(key, jid);
+    OpUI.begin(key, jid);
+    if (onScreen()) { refreshBusy(); setState("processing"); label.textContent = "Operator is working…"; }
+    refreshStopBtn();
+    const settle = () => {
+      inflight.delete(key);
+      OpUI.drop(jid);
+      if (onScreen()) refreshBusy();
+      refreshStopBtn();
+    };
+    const summary = async (job) => {
+      const html = await OpUI.finish(jid, job);
+      if (!html) return;
+      if (onScreen()) { transcript.insertAdjacentHTML("beforeend", html); Sessions.saveTxFor(key, transcript.innerHTML); }
+      else Sessions.appendTx(key, html);
+    };
+    let misses = 0;
+    while (true) {
+      await new Promise((res) => setTimeout(res, POLL_INTERVAL_MS));
+      let job;
+      try {
+        const r = await fetch(LS.url + "/poll/" + jid, { headers: { "Authorization": "Bearer " + LS.token } });
+        if (r.status === 404) { settle(); if (onScreen()) setState(active ? "listening" : "idle"); return; }
+        if (!r.ok) { if (++misses > 600) { settle(); return; } continue; }
+        job = await r.json();
+      } catch (_) { if (++misses > 600) { settle(); return; } continue; }
+      misses = 0;
+      OpUI.onPoll(jid, job);
+      if (job.status === "running") continue;
+      await summary(job);
+      settle();
+      if (job.status === "error") {
+        if (onScreen()) {
+          showErr(/stopped by user/i.test(String(job.error || "")) ? "Stopped." : String(job.error || "Operator stopped with an error."));
+          setState(active ? "listening" : "idle");
+        }
+        return;
+      }
+      deliverTurnReply(key, onScreen(), job);
+      return;
+    }
+  }
+
   async function handleUtterance(text) {
     const turnKey = Sessions.activeKey();   // the chat this turn belongs to, for its whole life
     const nFiles = pendingFiles.length;
@@ -2759,6 +3320,9 @@
     const turnMode = currentMode();          // mode this turn runs in (code chats matter)
     const capMs = (turnMode === "code") ? CLIENT_CAP_CODE_MS : CLIENT_CAP_MS;
     let lastActivity = "", lastSteps = 0;    // live feed from /poll while running
+    let opJob = null;                        // this turn's job id when it runs as a live Operator turn
+    const turnSwitch = modeSwitched.has(turnKey);   // first turn since a deliberate mode switch
+    modeSwitched.delete(turnKey);
     let bubbledCount = 0;                    // progress entries already turned into activity bubbles
     const tick = setInterval(() => {
       if (turnKey === Sessions.activeKey() && body.dataset.state === "processing") {
@@ -2771,12 +3335,28 @@
     // A failed turn usually means a bloated/stale session was being resumed, or
     // the job was lost (server restart). Drop the session so the next message
     // starts a fresh, fast conversation — mirrors the old failure handling.
-    const endTurn = () => { inflight.delete(turnKey); if (turnKey === Sessions.activeKey()) refreshBusy(); refreshStopBtn(); };
+    const endTurn = () => { inflight.delete(turnKey); if (turnKey === Sessions.activeKey()) refreshBusy(); refreshStopBtn(); if (opJob) OpUI.drop(opJob); };
+    // A finished Operator turn leaves a one-line "view full output" summary in its chat,
+    // just above the reply. Resolves to nothing for every other turn.
+    const opSummary = async (job) => {
+      if (!opJob) return;
+      const html = await OpUI.finish(opJob, job);
+      if (!html) return;
+      if (turnKey === Sessions.activeKey()) {
+        transcript.insertAdjacentHTML("beforeend", html);
+        Sessions.saveTxFor(turnKey, transcript.innerHTML);
+      } else {
+        Sessions.appendTx(turnKey, html);
+      }
+    };
     const fail = (timedOut, reason, detail) => {
       clearInterval(tick);
       endTurn();
       beaconFail(reason || (timedOut ? "client-cap" : "unknown"), detail, turnSid, turnMode, Date.now() - startedAt);
-      Sessions.clearSidFor(turnKey, "turn-failed");   // this chat's resume id was bad — start it fresh next time
+      // This chat's resume id was likely bad — start it fresh next time. Not for an
+      // Operator turn: the server already recovers a stale Operator session on its own,
+      // so a timeout or crash there must not throw the whole conversation away.
+      if (!(turnMode === "code" && opLive())) Sessions.clearSidFor(turnKey, "turn-failed");
       if (turnKey === Sessions.activeKey()) {
         var authIdx = detail ? detail.indexOf("JVL_AUTH_REQUIRED:") : -1;
         var limitIdx = detail ? detail.indexOf("JVL_LIMIT_REACHED:") : -1;
@@ -2862,7 +3442,8 @@
           res = await fetch(LS.url + "/ask_async", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + LS.token },
-            body: JSON.stringify({ message: text, session_id: Sessions.activeSid(), mode: currentMode(), attachments: attachmentPaths, chat: turnKey, project: (Projects.get(Sessions.projectOf(turnKey)) ? Sessions.projectOf(turnKey) : null) }),
+            body: JSON.stringify(Object.assign({ message: text, session_id: Sessions.activeSid(), mode: currentMode(), attachments: attachmentPaths, chat: turnKey, project: (Projects.get(Sessions.projectOf(turnKey)) ? Sessions.projectOf(turnKey) : null) },
+                                               (turnSwitch && opLive()) ? { mode_switch: true } : {})),
             signal: ctrl.signal,
           });
         } finally { clearTimeout(killer); }
@@ -2889,6 +3470,16 @@
         }
         return;
       }
+      if (res.status === 409 && turnMode === "code") {
+        // The chat's Operator session is still finishing an earlier turn (e.g. one
+        // started on another device). Not a broken session — keep the resume id.
+        clearInterval(tick); endTurn();
+        if (turnKey === Sessions.activeKey()) {
+          showErr("Operator is still working on the last message — send this as a follow-up while it runs, or stop it first.");
+          setState(active ? "listening" : "idle");
+        }
+        return;
+      }
       if (!res.ok) { fail(false, "kickoff-error", "HTTP " + res.status); return; }
       let data;
       try { data = await res.json(); } catch (_) { fail(false, "kickoff-error", "bad json"); return; }
@@ -2896,6 +3487,7 @@
       if (!jobId) { fail(false, "kickoff-error", "No job_id"); return; }
       inflight.set(turnKey, jobId);   // the stop button targets this job while it runs
       refreshStopBtn();
+      if (turnMode === "code" && opLive()) { opJob = jobId; OpUI.begin(turnKey, jobId); }
       break;   // success
     }
 
@@ -2934,6 +3526,7 @@
       if (!resp.ok) continue;                            // transient — keep polling
 
       const job = await resp.json();
+      if (opJob) OpUI.onPoll(opJob, job);
       if (job.status === "running") {
         // Live activity (code-mode streaming): latest tool call + step count.
         if (job.progress && job.progress.length) {
@@ -2956,14 +3549,16 @@
         // The user hit STOP — not a failure. Keep the chat's resume id (context
         // survives; the next utterance redirects) and settle quietly.
         clearInterval(tick);
+        await opSummary(job);
         endTurn();
         if (turnKey === Sessions.activeKey()) { showErr("Stopped."); setState(active ? "listening" : "idle"); }
         return;
       }
-      if (job.status === "error") { fail(false, "job-error", (job && job.error) ? String(job.error) : ""); return; }
+      if (job.status === "error") { await opSummary(job); fail(false, "job-error", (job && job.error) ? String(job.error) : ""); return; }
 
       // done — deliver to the chat this turn belongs to, even if it's no longer visible.
       clearInterval(tick);
+      await opSummary(job);
       const wasActive = (turnKey === Sessions.activeKey());
       endTurn();
       deliverTurnReply(turnKey, wasActive, job);
@@ -4275,14 +4870,44 @@
   // a tap never enters OR exits it, and a new chat never inherits it.
   const modeBtn = $("modeBtn");
   let codeMode = false;   // the active CHAT is escalated to raw Claude Code
-  function currentMode() { return codeMode ? "code" : (workMode ? "work" : "voice"); }
+  // Two modes when the server runs live Operator sessions (opLive): Normal ("voice")
+  // and Operator ("code" — full Claude Code). The old middle "work" mode folds into
+  // Normal. Against an older server the three-mode behavior below is unchanged.
+  function currentMode() {
+    if (twoModes()) return codeMode ? "code" : "voice";
+    return codeMode ? "code" : (workMode ? "work" : "voice");
+  }
   function paintModeBtn() {
+    const two = twoModes();
+    // Operator turned off on this install (agent_safety.operator_mode: false): there
+    // is only Normal, so there is nothing to toggle — hide the button. An already-
+    // Operator chat still shows it, so the user can get back out.
+    modeBtn.style.display = (two && !window.__jvlCodeAllowed && !codeMode) ? "none" : "";
     modeBtn.classList.toggle("code", codeMode);
-    modeBtn.classList.toggle("work", workMode && !codeMode);
-    modeBtn.textContent = codeMode ? "◆ CLAUDE CODE" : "OPERATOR MODE";
-    modeBtn.setAttribute("aria-pressed", (codeMode || workMode) ? "true" : "false");
+    modeBtn.classList.toggle("work", !two && workMode && !codeMode);
+    modeBtn.textContent = codeMode ? (two ? "◆ OPERATOR" : "◆ CLAUDE CODE") : "OPERATOR MODE";
+    modeBtn.setAttribute("aria-pressed", (codeMode || (!two && workMode)) ? "true" : "false");
+    modeBtn.title = two
+      ? (codeMode ? "Operator mode is ON: full Claude Code in this chat — real edits and shell, no approval step. Tap to go back to Normal; the conversation carries over."
+                  : "Tap for Operator mode: full Claude Code in this chat — it can edit files, run commands, ask you questions and take follow-ups while it works. The conversation carries over.")
+      : "Operator mode: full agent — long on-screen replies, only the spoken summary read aloud. Lights up cyan when engaged. If Claude Code mode is enabled in settings, press and hold until the bar fills to escalate THIS chat to raw Claude Code (amber); hold again to exit.";
     body.dataset.mode = currentMode();
   }
+  // Repaint once /ui-prefs tells us whether the server runs live Operator sessions.
+  let askParamUsed = false;
+  function syncModeUI() {
+    try { if (modeBtn) applyChatMode(Sessions.active()); } catch (_) {}
+    // Cold launch from a question notification (/?ask=<chat>): open that chat once.
+    let focus = null;
+    if (!askParamUsed) {
+      askParamUsed = true;
+      try { focus = new URLSearchParams(location.search).get("ask") || null; } catch (_) {}
+    }
+    reattachOperatorTurns(focus);
+  }
+  // Chats whose mode the user deliberately switched since their last turn: that turn
+  // tells the server (mode_switch) to carry the conversation into the new mode.
+  const modeSwitched = new Set();
   function setWorkMode(on) {
     workMode = !!on;
     LS.mode = workMode ? "work" : "voice";
@@ -4291,6 +4916,16 @@
   }
   function setCodeMode(on) {
     codeMode = !!on;
+    if (twoModes()) {
+      // Live Operator sessions: the server carries the conversation across the switch
+      // (mode_switch on the next turn), so the chat KEEPS its resume id.
+      workMode = false;
+      LS.mode = "voice";
+      Sessions.setActiveMode(codeMode ? "code" : "voice");
+      modeSwitched.add(Sessions.activeKey());
+      paintModeBtn();
+      return;
+    }
     Sessions.setActiveMode(codeMode ? "code" : (workMode ? "work" : "voice"));
     // Crossing the code↔safe cwd boundary: this chat's Claude session lives in the
     // OTHER workspace and can't be resumed here. Drop the resume id so the next turn
@@ -4305,6 +4940,42 @@
   // entry point (the hold gesture, or a spoken "switch to code mode" that Adam relays
   // via <<SET_MODE: code>>). Code runs in its own workspace, so the current chat's
   // context can't carry over; Claude Code starts fresh. Returns true to proceed.
+  // The one-time Operator consent (two-mode servers). Resolves true once the user has
+  // agreed — on any device: the server stores it, so phone and PC ask only once.
+  function askOperatorConsent() {
+    if (window.__jvlOperatorConsent) return Promise.resolve(true);
+    const sheet = $("opConsent");
+    if (!sheet) return Promise.resolve(false);
+    if (sheet.parentElement !== document.body) document.body.appendChild(sheet);
+    return new Promise((resolve) => {
+      const prevFocus = document.activeElement;
+      const done = (ok) => {
+        sheet.hidden = true;
+        document.removeEventListener("keydown", onKey, true);
+        if (ok) {
+          window.__jvlOperatorConsent = true;
+          try { fetch(LS.url + "/operator/consent", { method: "POST", headers: { "Authorization": "Bearer " + LS.token } }); } catch (_) {}
+        }
+        try { if (prevFocus && prevFocus.focus) prevFocus.focus(); } catch (_) {}
+        resolve(ok);
+      };
+      const onKey = (e) => {
+        if (e.key === "Escape") { e.preventDefault(); done(false); }
+        else if (e.key === "Tab") {   // keep focus inside the sheet
+          const a = $("ocNo"), b = $("ocYes");
+          if (e.shiftKey && document.activeElement === a) { e.preventDefault(); b.focus(); }
+          else if (!e.shiftKey && document.activeElement === b) { e.preventDefault(); a.focus(); }
+        }
+      };
+      $("ocYes").onclick = () => done(true);
+      $("ocNo").onclick = () => done(false);
+      sheet.onclick = (e) => { if (e.target === sheet) done(false); };
+      document.addEventListener("keydown", onKey, true);
+      sheet.hidden = false;
+      try { sfx("panel"); } catch (_) {}
+      setTimeout(() => $("ocYes").focus(), 30);
+    });
+  }
   function confirmEnterCodeMode() {
     return window.confirm(
       "Switch to Claude Code mode?\n\n" +
@@ -4318,6 +4989,24 @@
   // same confirm as the hold gesture and is refused when the flag is off. Only ever
   // acts on the on-screen chat — the mode toggle is bound to the active chat.
   function applyModeDirective(target) {
+    if (twoModes()) {
+      const wantCode = (target === "code" || target === "operator");
+      if (wantCode === codeMode) return;
+      if (wantCode && !window.__jvlCodeAllowed) return;
+      if (wantCode) {
+        askOperatorConsent().then((ok) => {
+          if (!ok || codeMode) return;
+          setCodeMode(true);
+          try { if (window.JVLSound) window.JVLSound.play("operatorOn"); } catch (_) {}
+          SessionSync.schedule();
+        });
+        return;
+      }
+      setCodeMode(false);
+      try { if (window.JVLSound) window.JVLSound.play(wantCode ? "operatorOn" : "operatorOff"); } catch (_) {}
+      SessionSync.schedule();
+      return;
+    }
     if (target === "code") {
       if (!window.__jvlCodeAllowed || codeMode) return;   // can't force code / already there
       if (confirmEnterCodeMode()) {
@@ -4339,7 +5028,7 @@
   // session back, so merely VIEWING a chat can't change what it is).
   function applyChatMode(s) {
     codeMode = !!(s && s.mode === "code");
-    workMode = s ? (s.mode === "work") : (LS.mode === "work");
+    workMode = twoModes() ? false : (s ? (s.mode === "work") : (LS.mode === "work"));
     if (!codeMode) LS.mode = workMode ? "work" : "voice";
     paintModeBtn();
   }
@@ -4348,6 +5037,7 @@
     let codeHoldTimer = null, didCodeHold = false;
     const cancelCodeHold = () => { clearTimeout(codeHoldTimer); modeBtn.classList.remove("holding"); };
     modeBtn.addEventListener("pointerdown", () => {
+      if (twoModes()) return;   // two modes: a plain tap switches (see onclick)
       // The escalation gesture only exists when the server allows it; exiting an
       // already-escalated chat is always allowed (even if the flag was turned off).
       if (!codeMode && !window.__jvlCodeAllowed) return;
@@ -4375,6 +5065,18 @@
     modeBtn.addEventListener("pointercancel", cancelCodeHold);
     modeBtn.addEventListener("pointerleave", cancelCodeHold);
     modeBtn.onclick = () => {
+      if (twoModes()) {
+        // Normal ⇄ Operator. Entering asks for the one-time consent; leaving never asks.
+        const entering = !codeMode;
+        const go = () => {
+          setCodeMode(entering);
+          sfx(entering ? "operatorOn" : "operatorOff");
+          SessionSync.schedule();
+        };
+        if (!entering) { go(); return; }
+        askOperatorConsent().then((ok) => { if (ok && !codeMode) go(); else paintModeBtn(); });
+        return;
+      }
       if (didCodeHold) { didCodeHold = false; return; }   // the bar filled — that was the hold, not a tap
       if (codeMode) {
         // A stray tap must never silently drop a Claude Code chat back into a
@@ -4393,7 +5095,7 @@
         const r = await fetch((LS.url || location.origin).replace(/\/$/, "") + "/ui-prefs",
                               { headers: { Authorization: "Bearer " + LS.token } });
         const d = await r.json();
-        window.__jvlCodeAllowed = !!d.code_mode_allowed;
+        window.__jvlCodeAllowed = !!d.code_mode_allowed; window.__jvlOperatorLive = !!d.operator_live; window.__jvlOperatorConsent = !!d.operator_consent; if (typeof syncModeUI === "function") syncModeUI();
       } catch (_) {}
     })();
   }
@@ -4524,6 +5226,7 @@
   function _sessionRow(s, act) {
     const row = document.createElement("div");
     row.className = "session-row" + (s.key === act ? " active" : "");
+    row.dataset.key = s.key;
     row.draggable = !!(window.matchMedia && matchMedia("(pointer: fine)").matches);
     row.addEventListener("dragstart", (e) => {
       row.classList.add("dragging");
@@ -4532,8 +5235,8 @@
     row.addEventListener("dragend", () => row.classList.remove("dragging"));
     const t = document.createElement("button");
     t.className = "session-title";
-    const _badge = s.mode === "code" ? '<span class="sbadge code">code</span>'
-                 : s.mode === "work" ? '<span class="sbadge">work</span>' : "";
+    const _badge = s.mode === "code" ? '<span class="sbadge code">' + (twoModes() ? "operator" : "code") + '</span>'
+                 : (s.mode === "work" && !twoModes()) ? '<span class="sbadge">work</span>' : "";
     t.innerHTML = '<span class="stitle-text">' + escapeHtml(s.title) + '</span>' + _badge
                 + (s.unseen ? '<span class="udot">●</span>' : "");
     t.onclick = () => switchSession(s.key);
@@ -4853,6 +5556,8 @@
     renderSessions();
     updateReplayBtn();
     refreshStopBtn();   // stop button belongs to the chat you're LOOKING at
+    OpUI.mount();       // so does the Operator live console
+    SlashMenu.hide();
   }
 
   // Switching is allowed mid-turn now — the turn keeps running and delivers to its
@@ -4933,12 +5638,38 @@
   function syncComposerActive() {
     composer.classList.toggle("has-text", composerInput.value.trim().length > 0);
   }
-  composerInput.addEventListener("input", () => { autoGrowComposer(); syncComposerActive(); });
+  composerInput.addEventListener("input", () => { autoGrowComposer(); syncComposerActive(); SlashMenu.update(); });
+
+  // While this chat's Operator turn is running, a typed message doesn't wait: it
+  // answers the open question if there is one, otherwise it steers the turn (Claude
+  // reads it at its next step). It shows in the chat as your line either way.
+  async function sendToRunningOperator(text) {
+    const key = Sessions.activeKey();
+    const answering = !!OpUI.openAsk(key);
+    const ok = answering ? OpUI.answerText(key, text) : await OpUI.steer(key, text);
+    if (!ok) { showErr("That turn just finished — send it again as a new message."); return false; }
+    transcript.insertAdjacentHTML("beforeend",
+      `<div class="you">${answering ? "" : "↪ "}“${escapeHtml(text)}”</div>`);
+    transcript.scrollTop = transcript.scrollHeight;
+    Sessions.saveTx(transcript.innerHTML);
+    return true;
+  }
 
   async function submitTyped() {
     const text = composerInput.value.trim();
     if (!text && !pendingFiles.length) return;
     if (!LS.url || !LS.token) { openSettings(); return; }
+    if (busy && opLive() && OpUI.running(Sessions.activeKey())) {
+      if (!text) { showErr("Attachments go with a new message, after this turn finishes."); return; }
+      unlockAudio();
+      sfx("send");
+      composerInput.value = "";
+      autoGrowComposer();
+      syncComposerActive();
+      SlashMenu.hide();
+      if (!(await sendToRunningOperator(text))) composerInput.value = text;
+      return;
+    }
     if (busy || speaking) { showErr("One moment — still on the last one."); return; }
     // Unlock + prime audio inside this gesture so the spoken reply plays even when
     // the mic loop was never activated (iOS needs a gesture to start AudioContext,
@@ -4956,7 +5687,8 @@
   // Enter sends; Shift+Enter inserts a newline (desktop). On mobile the SEND
   // button is the path — the on-screen return key keeps its newline behavior.
   composerInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitTyped(); }
+    if (SlashMenu.key(e)) return;   // the slash menu took this key (arrows / Tab / Enter-to-pick / Esc)
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); SlashMenu.hide(); submitTyped(); }
   });
 
   // Bridge for the Help Hub / first-run starter chips: drop a phrase into the composer
@@ -5049,6 +5781,7 @@
       // worker can still be active against this new page for one load.
       const t = e.data && e.data.type;
       if (t === "adam-open-play" || t === "jarvis-open-play") promptPendingPlay();
+      if (t === "adam-open-ask") reattachOperatorTurns((e.data && e.data.chat) || null);
     });
   }
 
@@ -5133,6 +5866,7 @@
     if (document.visibilityState === "hidden") { releaseMicForBackground(); return; }
     recoverForeground();
     refreshPushSilently();
+    reattachOperatorTurns();   // an Operator turn may still be working (or asking) — pick it back up
   });
   window.addEventListener("focus", recoverForeground);     // iOS standalone: often unreliable
   window.addEventListener("pageshow", recoverForeground);  // …so don't depend on any one event
@@ -5583,7 +6317,7 @@ window.JVLVoice = (function () {
         { t: "Your whole life on one live board", d: "A personal “operating system” that tracks goals as bosses, tasks as quests, XP on your skills, and a rank — across work, health, money and more.", tap: "the ◆ Operating System button (view menu)", k: "dashboard hunter bosses quests xp rank stats levels" },
         { t: "Turn it on with your own Google Sheet", d: "The live board is backed by a Google Sheet in your own Drive — so you can pull your dashboard up on your desk or your phone.", tap: "Gear ⚙ → Add-ons → Operating System", k: "setup google sheet hunter" },
         { t: "No fake leveling", d: "XP needs real evidence and ranks need review — nothing inflates on its own, so the numbers actually mean something.", say: "Give me credit", k: "honesty xp evidence" },
-        { t: "Not the same as “Operator Mode”", d: "Operator Mode is a chat mode (full on-screen replies) — not the dashboard. See “Control & privacy.”", note: true },
+        { t: "Not the same as “Operator Mode”", d: "Operator Mode is a chat mode (your full Claude Code in that chat) — not the dashboard. See “Control & privacy.”", note: true },
         { t: "Not the same as the “Operator Console”", d: "The Operator Console is the approvals & audit panel at /console — not the dashboard. See “Control & privacy.”", note: true },
         { t: "Not the same as “Capability”", d: "The ⚡ Capability setting controls how much Adam does on its own — it isn’t the dashboard. See “Control & privacy.”", note: true }
       ]},
@@ -5617,8 +6351,8 @@ window.JVLVoice = (function () {
       ]},
       { icon: "◉", title: "Control & privacy", sub: "You’re in charge; nothing phones home", cards: [
         { t: "You decide how much Adam does", d: "One setting sets the autonomy: Safe (Adam proposes, you approve each change — the default), Powerful (auto-applies safe changes), or Unrestricted (full power).", tap: "Gear ⚙ → ⚡ Capability", k: "safe powerful unrestricted tier autonomy capability" },
-        { t: "Assistant vs Operator Mode", d: "Assistant is spoken and concise; Operator Mode shows the full reply on screen and reads only the summary aloud — flip it on when you want to see everything.", tap: "the OPERATOR MODE button", k: "operator mode chat" },
-        { t: "Claude Code mode (power users)", d: "An opt-in escalation of one chat to raw Claude Code with full tools — off by default, for technical users.", tap: "press & hold OPERATOR MODE (if enabled)", k: "claude code developer power agent" },
+        { t: "Normal vs Operator Mode", d: "Normal is your everyday assistant: spoken, concise, and every change follows your Capability setting. Operator turns that chat into your full Claude Code — it edits files and runs commands directly (no approval step), shows its full output, and can ask you questions while it works. Switching keeps the conversation.", tap: "the OPERATOR MODE button", k: "operator mode normal chat claude code developer power agent terminal" },
+        { t: "Working with Operator", d: "While Operator works you can type a follow-up to change direction, answer its questions on the card that appears, or hit STOP — the chat keeps its context. Type / for your Claude Code commands (like /model or /compact). Tap “view full output” on any finished turn to see every command and result.", tap: "type while it works · / for commands", k: "operator steer question answer slash command full output stop" },
         { t: "Let Adam change itself", d: "On the Unrestricted tier Adam can edit its own name, wake word, look or code — every change reviewed, backed up, and auto-rolled-back if it breaks.", tap: "Gear ⚙ → ⚡ Capability → Unrestricted", k: "self edit customize name wake word appearance" },
         { t: "Adam proposes, you approve", d: "Adam never changes a file or your calendar on its own — every action waits for your yes, with automatic backups and a plain audit log.", tap: "the Operator Console (Gear ⚙)", k: "approve audit console safety backup" },
         { t: "Nothing phones home", d: "Zero telemetry, no crash reporting, no account required — it runs on your PC and answers only to you.", tap: "it’s the default", k: "privacy telemetry private local" },

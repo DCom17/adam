@@ -18,10 +18,11 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, 
 import config
 import job_store
 import permissions
-from models import AskRequest, ProjectSyncPush, SessionSyncPush
+from models import AskRequest, OperatorAnswer, OperatorSteer, ProjectSyncPush, SessionSyncPush
 from rate_limit import limiter
 from security import require_token
 
+import operator_session
 import server
 
 router = APIRouter()
@@ -174,6 +175,7 @@ async def ask(request: Request, response: Response, body: AskRequest):
     return await server.run_claude(
         message, body.session_id, mode=body.mode or "voice",
         attachments=body.attachments, project=body.project,
+        mode_switch=bool(body.mode_switch),
     )
 
 
@@ -194,6 +196,13 @@ async def ask_async(request: Request, response: Response, body: AskRequest):
                             detail="Adam is restarting — try again in a moment.")
     job_store.sweep(config.JOB_HISTORY_TTL_SECONDS)
     mode = server._normalize_mode(body.mode or "voice")
+    if mode == "code" and operator_session.is_busy(body.session_id):
+        # The chat's live Operator session is mid-turn (e.g. started on another
+        # device). Refuse up front — the app shows this calmly and keeps the chat's
+        # context, instead of a failed job that would make it start over.
+        raise HTTPException(status_code=409, detail=(
+            "Operator is still working on the last message — send this as a "
+            "follow-up while it runs, or stop it first."))
     job_id = uuid.uuid4().hex
     # Persist only a short, truncated summary of the user's input (never the full
     # prompt) so job history is readable without storing private text wholesale.
@@ -202,9 +211,12 @@ async def ask_async(request: Request, response: Response, body: AskRequest):
         job_id, mode=mode, session_id=body.session_id,
         input_summary=summary, pid=os.getpid(),
     )
+    if mode == "code" and body.chat:
+        operator_session.JOB_CHAT[job_id] = str(body.chat)[:200]
     server.keep_task(asyncio.create_task(
         server._run_job(job_id, message, body.session_id, mode, body.attachments,
-                        project=body.project, chat=body.chat)
+                        project=body.project, chat=body.chat,
+                        mode_switch=bool(body.mode_switch))
     ))
     return {"job_id": job_id}
 
@@ -227,6 +239,18 @@ async def poll(job_id: str):
         if prog:
             out["steps"] = len(prog)
             out["progress"] = prog[-8:]
+        # Operator turns: a question/plan waiting on the user, and how many
+        # full-output events exist (the app fetches new ones from /events).
+        ask = operator_session.pending_ask(job_id)
+        if ask:
+            out["ask"] = ask
+        n = operator_session.event_count(job_id)
+        if n:
+            out["events_n"] = n
+    else:
+        evs = operator_session.events_since(job_id, 0)
+        if evs:
+            out["events_n"] = evs[-1]["n"]
     if out["status"] in ("done", "error"):
         job_store.mark_delivered(job_id)
     return out
@@ -269,13 +293,87 @@ async def stop_job(job_id: str):
     # Order matters: flag first, then kill — the reader must see the flag when
     # the process dies, or a stop would be reported as a crash.
     server.CANCELLED_JOBS.add(job_id)
-    await server._kill_proc_tree(proc)
+    if operator_session.session_for_job(job_id) is not None:
+        # Operator: interrupt the turn, keep the live session (and its context).
+        await operator_session.interrupt(job_id)
+    else:
+        await server._kill_proc_tree(proc)
     permissions.record_audit_event({
         "action_type": "job_stopped", "target": job_id,
         "allowed": True, "requires_approval": False, "approved": True,
         "risk": "low", "reason": "user stopped a running turn",
     })
     return {"ok": True, "job_id": job_id}
+
+
+# --- Operator mode: questions, steering, full output, slash commands ---------
+
+@router.post("/jobs/{job_id}/answer", dependencies=[Depends(require_token)])
+async def answer_job(job_id: str, body: OperatorAnswer):
+    """Answer the question (or plan) an Operator turn is waiting on. 409 when that
+    question is no longer open (answered elsewhere, timed out, or the turn ended)."""
+    if body.answers is None and body.approve is None:
+        raise HTTPException(status_code=400, detail="Nothing to answer with")
+    payload = {"answers": {str(k)[:2000]: str(v)[:4000] for k, v in (body.answers or {}).items()},
+               "approve": body.approve, "feedback": (body.feedback or "")[:4000]}
+    if not operator_session.answer(job_id, body.ask_id, payload):
+        raise HTTPException(status_code=409, detail="That question is no longer open")
+    return {"ok": True}
+
+
+@router.post("/jobs/{job_id}/steer", dependencies=[Depends(require_token)])
+@limiter.limit("30/minute")
+async def steer_job(request: Request, response: Response, job_id: str, body: OperatorSteer):
+    """Send a message into an Operator turn while it works. Claude reads it at its
+    next step. 409 when the turn is no longer running (send it as a new message)."""
+    text = body.message.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Empty message")
+    if not await operator_session.steer(job_id, text):
+        raise HTTPException(status_code=409, detail="That turn is no longer running")
+    return {"ok": True}
+
+
+@router.get("/jobs/{job_id}/events", dependencies=[Depends(require_token)])
+async def job_events(job_id: str, since: int = 0):
+    """The Operator turn's full transcript: text, every tool call with its input,
+    tool output (capped per result), questions, answers, steers. `since` = the last
+    event number the app already has."""
+    evs = operator_session.events_since(job_id, max(0, since))
+    if evs is None:
+        raise HTTPException(status_code=404, detail="No transcript for that job")
+    return {"events": evs}
+
+
+@router.post("/operator/consent", dependencies=[Depends(require_token)])
+async def operator_consent():
+    """Record the user's one-time consent to Operator mode (full Claude Code power).
+    Stored server-side so the phone and the PC ask only once between them."""
+    prefs = server._load_ui_prefs()
+    if not prefs.get("operator_consent"):
+        prefs["operator_consent"] = True
+        server._save_ui_prefs(prefs)
+        permissions.record_audit_event({
+            "action_type": "operator_mode_consent", "allowed": True,
+            "requires_approval": False, "approved": True, "risk": "high",
+            "reason": "user accepted Operator mode (full Claude Code power)",
+        })
+    return {"ok": True}
+
+
+@router.get("/operator/running", dependencies=[Depends(require_token)])
+async def operator_running():
+    """Operator turns still working right now — the app re-attaches to them after a
+    reload (iOS suspends and reloads backgrounded web apps), so a question asked
+    while the phone was away is still answerable when the user comes back."""
+    return {"running": operator_session.running_jobs()}
+
+
+@router.get("/operator/commands", dependencies=[Depends(require_token)])
+async def operator_commands():
+    """Slash commands the user's Claude Code offers (built-ins, custom commands,
+    skills) — learned from the last Operator session's handshake."""
+    return {"commands": operator_session.commands()}
 
 
 # --- Cross-device chat sync -------------------------------------------------

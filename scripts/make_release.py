@@ -35,7 +35,7 @@ _ROOT_FILES = [
     "health_store.py", "health_metrics.py", "health_import.py",  # Health Tracker (H1/H2)
     "checklist_store.py",  # Checklists view (user-written + Adam-built step lists)
     "garmin.py",  # Garmin health-sync add-on (Phase H3; garminconnect is optional/lazy)
-    "approvals.py", "diffs.py", "job_store.py", "session_store.py", "onboarding.py", "agent_write_probe.py",
+    "approvals.py", "diffs.py", "job_store.py", "operator_session.py", "session_store.py", "onboarding.py", "agent_write_probe.py",
     "google_calendar.py", "integration_registry.py", "twilio_sms.py",
     "twilio_voicemail.py", "voicemail_provision.py", "voicemail_store.py",
     "voicemail_contacts.py",
@@ -98,6 +98,9 @@ _ROUTERS_FILES = [  # the routers/ package server.py imports at boot
     "integrations.py", "reviews.py", "system.py", "voice_push.py",
 ]
 _TEST_GLOB = "test_*.py"   # F&F beta ships the test suites for self-verification
+# Helpers a shipped root test needs at run time (not tests themselves). Without the
+# fake CLI, the bundled test_code_mode.py failed on every install (v0.9.79).
+_TEST_SUPPORT_FILES = ["tests/fake_claude_operator.py"]
 _DATA_KEEP = "data/.gitkeep"
 
 # The de-personalized brain vault ships as a whole folder (walked, not hand-listed).
@@ -202,6 +205,9 @@ def staged_files() -> list[str]:
     for p in sorted(ROOT.glob(_TEST_GLOB)):
         if p.is_file():
             rels.append(p.name)
+    for f in _TEST_SUPPORT_FILES:
+        if (ROOT / f).is_file():
+            rels.append(f)
     if (ROOT / _DATA_KEEP).is_file():
         rels.append(_DATA_KEEP)
     rels.extend(_brain_files())
@@ -238,6 +244,28 @@ def check_brain_clean(rels: list[str]) -> None:
             "brain bundle guard tripped (Morrow/personal content, refusing to ship): "
             + "; ".join(bad)
         )
+
+
+def check_test_support_ships(rels: list[str]) -> None:
+    """Fail closed: a shipped root test that points at a file under tests/ (the fake
+    Claude CLI, fixtures) needs that file in the ZIP too, or the bundled self-test
+    breaks on every install — exactly what shipped in v0.9.79."""
+    import re as _re
+    shipped = set(rels)
+    missing = []
+    for rel in rels:
+        if "/" in rel or not rel.startswith("test_") or not rel.endswith(".py"):
+            continue
+        text = (ROOT / rel).read_text("utf-8", errors="ignore")
+        refs = set(_re.findall(r'"tests"\s*/\s*"([\w.-]+)"', text))
+        refs |= set(_re.findall(r"[\"']tests/([\w.-]+\.\w+)[\"']", text))
+        for name in refs:
+            if f"tests/{name}" not in shipped:
+                missing.append(f"{rel} -> tests/{name}")
+    if missing:
+        raise RuntimeError(
+            "release test-support guard tripped (a shipped test needs a file that "
+            "would NOT ship — add it to _TEST_SUPPORT_FILES): " + "; ".join(sorted(missing)))
 
 
 def check_imports_ship(rels: list[str]) -> None:
@@ -439,6 +467,7 @@ def build_zip(out_dir: Path | str | None = None, version: str | None = None) -> 
     check_brain_clean(rels)  # brain bundle must carry no Morrow/owner content
     check_tree_clean(rels)   # NO shipped file may carry an owner-identifying term
     check_imports_ship(rels)  # staged code must not import files that don't ship
+    check_test_support_ships(rels)  # shipped tests must find their helpers
     if version is None:
         version = _version()
         # An explicit --version override is a deliberate act (tests use it);
@@ -470,6 +499,7 @@ def main(argv=None) -> int:
         check_brain_clean(rels)
         check_tree_clean(rels)
         check_imports_ship(rels)
+        check_test_support_ships(rels)
     except RuntimeError as e:
         print(f"[FAIL] {e}", file=sys.stderr)
         return 2

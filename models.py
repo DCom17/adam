@@ -78,13 +78,30 @@ class StrictModel(BaseModel):
 class AskRequest(StrictModel):
     message: str
     session_id: str | None = None
-    mode: str | None = None  # "voice" (default) | "work" | "code" (needs allow_code_mode)
+    mode: str | None = None  # "voice" = Normal (default) | "code" = Operator (needs agent_safety.operator_mode); legacy "work" folds to Normal
     attachments: list[str] | None = None  # server-side upload paths from /upload
     project: str | None = None  # project-folder key; its instructions ride the turn
     # The client's chat key for this turn. Echoed back on /push/last so ANY device
     # surfacing the reply routes it to the chat it came from, instead of minting a
     # duplicate "srv-" chat when it can't match the (not yet known) session id.
     chat: str | None = None
+    # True when the user deliberately switched this chat's mode (button / voice)
+    # since its last turn: the server then carries the conversation into the new
+    # mode's workspace instead of treating the mismatch as a stale device.
+    mode_switch: bool | None = None
+
+
+class OperatorAnswer(StrictModel):
+    """The user's reply to an Operator question or plan card."""
+    ask_id: str
+    answers: dict[str, str] | None = None   # question text -> chosen label(s) / typed answer
+    approve: bool | None = None             # plan card: True = go, False = keep planning
+    feedback: str | None = None             # plan card: what to change
+
+
+class OperatorSteer(StrictModel):
+    """A message sent to an Operator turn while it is still working."""
+    message: str
 
 
 class SpeakRequest(StrictModel):
