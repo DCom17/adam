@@ -620,6 +620,30 @@ table.data tr:hover td { background: rgba(33, 230, 255, .03); }
 .trunc { display: block; max-width: 42ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ============================================================================
+   Switch — an on/off control (Notifications panel). A real checkbox under the
+   hood, so keyboard, screen readers and form semantics all come for free; the
+   knob is pure CSS. The track says ON/OFF with position AND fill, never color
+   alone.
+   ========================================================================= */
+
+.switch { position: relative; display: inline-flex; flex: none; width: 46px; height: 26px; cursor: pointer; }
+.switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.switch .track {
+  position: absolute; inset: 0; border-radius: var(--r-pill);
+  background: rgba(93, 136, 148, .18); border: 1px solid rgba(93, 136, 148, .45);
+  transition: background-color .16s ease, border-color .16s ease;
+}
+.switch .track::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+  border-radius: 50%; background: var(--dim);
+  transition: transform .18s ease, background-color .16s ease;
+}
+.switch input:checked + .track { background: rgba(33, 230, 255, .2); border-color: var(--edge-hi); }
+.switch input:checked + .track::after { transform: translateX(20px); background: var(--cyan); box-shadow: 0 0 8px rgba(33, 230, 255, .55); }
+.switch input:focus-visible + .track { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.switch input:disabled + .track { opacity: .45; }
+
+/* ============================================================================
    Print — an operator occasionally prints an audit log
    ========================================================================= */
 

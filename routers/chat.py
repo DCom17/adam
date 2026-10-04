@@ -23,6 +23,7 @@ from rate_limit import limiter
 from security import require_token
 
 import operator_session
+import plus_gate
 import server
 
 router = APIRouter()
@@ -196,6 +197,11 @@ async def ask_async(request: Request, response: Response, body: AskRequest):
                             detail="Adam is restarting — try again in a moment.")
     job_store.sweep(config.JOB_HISTORY_TTL_SECONDS)
     mode = server._normalize_mode(body.mode or "voice")
+    if (mode == "code" and config.AGENT_ALLOW_CODE_MODE
+            and not plus_gate.operator_available(True)):
+        # Operator is Adam Plus. Refuse before a job exists so the app can show the
+        # Plus prompt and drop the chat back to Normal, instead of a failed turn.
+        raise HTTPException(status_code=402, detail=plus_gate.lock_detail("operator"))
     if mode == "code" and operator_session.is_busy(body.session_id):
         # The chat's live Operator session is mid-turn (e.g. started on another
         # device). Refuse up front — the app shows this calmly and keeps the chat's

@@ -18,12 +18,32 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 os.environ.setdefault("ADAM_TOKEN", "test-token-operator-000000000000000000")
 
+import pytest  # noqa: E402
+
 import config  # noqa: E402
 import operator_session as ops  # noqa: E402
+import server  # noqa: E402,F401 — imported FIRST: its module code points ops.LOG_DIR at the
+               # real data dir, which the fixture below must then override
 
 FAKE = str(Path(__file__).with_name("fake_claude_operator.py"))
 TMP = Path(tempfile.mkdtemp(prefix="adam-operator-test-"))
-ops.LOG_DIR = TMP / "operator_logs"
+LIVE_LOG_DIR = Path(config.DATA_DIR) / "operator_logs"
+
+
+def _live_snapshot():
+    return sorted(p.name for p in LIVE_LOG_DIR.glob("*")) if LIVE_LOG_DIR.exists() else []
+
+
+@pytest.fixture(autouse=True)
+def _isolated_operator_logs(monkeypatch):
+    """Every test writes event logs + the slash-command cache to a temp dir, never the
+    install's real data/operator_logs (v0.9.79 test runs polluted it with the fake
+    CLI's commands) — and each test proves it left the real dir untouched."""
+    before = _live_snapshot()
+    monkeypatch.setattr(ops, "LOG_DIR", TMP / "operator_logs")
+    monkeypatch.setattr(ops, "_COMMANDS", [])
+    yield
+    assert _live_snapshot() == before, "a test wrote into the real data/operator_logs"
 
 
 def _argv():
@@ -262,6 +282,7 @@ def test_http_operator_flow(monkeypatch):
     monkeypatch.setattr(permissions, "record_audit_event", lambda ev: None)
     monkeypatch.setattr(server, "_store_last_result", lambda *a, **k: None)
     monkeypatch.setattr(server, "_send_push", lambda *a, **k: None)
+    monkeypatch.setattr(server, "_proposal_outcome_note", lambda: "")   # writes ui_prefs
     pushes = []
     monkeypatch.setattr(server, "_send_ask_push", lambda q, chat: pushes.append((q, chat)))
     monkeypatch.setattr(server, "_last_seen", 0.0)   # app "in the background" -> question push fires

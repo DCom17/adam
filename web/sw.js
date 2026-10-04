@@ -14,7 +14,7 @@
  * fall back to cache only when the network fails), so a redeploy is picked up on
  * the next online launch. Only the static icon/manifest are served cache-first.
  */
-const CACHE = "adam-shell-v24";   // v24: Operator mode — live console, question cards, steering, slash menu, question pushes. v23: push subscription re-checked against the server key on open/foreground. v22: replies route by chat key (no srv- duplicates / no undelete). v21: orb self-heals a canvas context reset (desktop off-center). v20: per-project icons + icon picker. v19: section-heading icons (PROJECTS/SESSIONS), none per row. v18: folder/session icons + SESSIONS section. v17: project folders in the sessions drawer (new modals + sync). v16: Checklists view added to the ADAM menu (new overlay + /checklists-view page in index.html). Bump forces a clean SW re-activate + refreshes the offline shell copy
+const CACHE = "adam-shell-v26";   // v26: offline copy only ever stores a 200 shell (never the Adam Plus paywall page); Operator locks open the Plus sheet. v25: proactive reminders (kind "reminder" pushes + tap routing) and the Notifications panel. v24: Operator mode — live console, question cards, steering, slash menu, question pushes. v23: push subscription re-checked against the server key on open/foreground. v22: replies route by chat key (no srv- duplicates / no undelete). v21: orb self-heals a canvas context reset (desktop off-center). v20: per-project icons + icon picker. v19: section-heading icons (PROJECTS/SESSIONS), none per row. v18: folder/session icons + SESSIONS section. v17: project folders in the sessions drawer (new modals + sync). v16: Checklists view added to the ADAM menu (new overlay + /checklists-view page in index.html). Bump forces a clean SW re-activate + refreshes the offline shell copy
 // (v15: desktop three-pane layout (sessions rail | conversation panel | orb stage) at ≥1100px; mobile unchanged (index.html))
 // (v14: accessibility phase 1 — orb is a real keyboard-reachable <button>, state/error/transcript are live regions, composer is labelled, global :focus-visible ring)
 // (v13: code-mode long-turn fix — a mid-task server restart now shows "restarted mid-task — ask again" instead of "Connection error, sir." (index.html fail() handles the JVL_INTERRUPTED tag))
@@ -49,8 +49,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith((async () => {
       try {
         const fresh = await fetch(req);
-        const c = await caches.open(CACHE);
-        c.put("/", fresh.clone());                  // keep the offline copy current
+        if (fresh.ok) {                             // never cache the Plus paywall (402) as the shell
+          const c = await caches.open(CACHE);
+          c.put("/", fresh.clone());                // keep the offline copy current
+        }
         return fresh;
       } catch (_) {
         return (await caches.match("/")) || Response.error();
@@ -85,6 +87,22 @@ self.addEventListener("push", (event) => {
   // Always show — iOS requires a notification per push, and the SERVER already
   // decided to send this only because the app wasn't on-screen (foreground
   // heartbeat). Trying to suppress here would just make iOS show a generic one.
+  if (data.kind === "reminder") {
+    // A proactive reminder. Title = the whole ask (survives lock-screen
+    // truncation), body = the one-line why. Tagged per reminder so a second
+    // water nudge replaces the first instead of stacking.
+    event.waitUntil(
+      self.registration.showNotification(data.title || "A reminder, sir", {
+        body: data.body || "",
+        icon: "/icon.png",
+        badge: "/icon.png",
+        tag: "adam-remind-" + (data.rid || "x"),
+        renotify: true,
+        data: { kind: "reminder", action: data.action || "open", rid: data.rid || "" },
+      })
+    );
+    return;
+  }
   if (data.kind === "ask") {
     // An Operator turn is waiting on the user's answer. Its own tag, so it never
     // collapses into (or replays as) a finished-reply notification.
@@ -113,6 +131,21 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const nd = event.notification.data || {};
+  if (nd.kind === "reminder") {
+    // Open (or focus) the app where the job gets done: Health, Finance, or a
+    // chat with the composer primed. Never replays a reply.
+    event.waitUntil((async () => {
+      const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const c of wins) {
+        if ("focus" in c) {
+          c.postMessage({ type: "adam-open-reminder", action: nd.action || "open" });
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow("/?remind=" + encodeURIComponent(nd.action || "open"));
+    })());
+    return;
+  }
   if (nd.kind === "ask") {
     // Open (or focus) the app on the chat whose Operator turn is asking; the page
     // re-attaches to the running turn and shows the question card.

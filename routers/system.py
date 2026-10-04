@@ -21,6 +21,7 @@ import config
 import integration_registry
 import job_store
 import licensing
+import plus_gate
 import merge
 import permissions
 import updater
@@ -37,12 +38,7 @@ def _require_entitlement() -> None:
     render a clean 'licensed feature' prompt. Enforcement policy: trial → feature-limit."""
     if licensing.is_entitled():
         return
-    raise HTTPException(status_code=402, detail={
-        "locked": True,
-        "feature": "phone",
-        "message": "Taking Adam to your phone is a licensed feature after your free trial.",
-        "buy_url": licensing.BUY_URL,
-    })
+    raise HTTPException(status_code=402, detail=plus_gate.lock_detail("phone"))
 
 
 @router.get("/ping")

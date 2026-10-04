@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Auth bootstrap: same #token= fragment handling as every operator page. -->
+<script>
+(function(){try{var h=(location.hash||"").replace(/^#/,"");if(h){var t=new URLSearchParams(h).get("token");if(t&&t.trim()){localStorage.setItem("jarvis_token",t.trim());localStorage.setItem("jarvis_url",location.origin);}}}catch(e){}try{if(location.hash){history.replaceState(null,document.title,location.pathname+location.search);}}catch(e){try{location.hash="";}catch(e2){}}})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#04060b">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex, nofollow">
+<title>Adam — Notifications</title>
+<link rel="icon" href="/icon.png" type="image/png" />
+<!-- Shared design language for every operator page. See web/adam-ui.css. -->
+<link rel="stylesheet" href="/adam-ui.css">
+<style>
+  /* Page-local only. Anything reusable belongs in adam-ui.css, not here. */
+  .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+  /* Master card: the one switch that silences everything, plus this device. */
+  #masterCard { border-color: var(--edge-hi); background: var(--panel-hi); }
+  .mrow { display: flex; align-items: center; gap: var(--s3); }
+  .mrow + .mrow { margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--edge); }
+  .mrow .grow { flex: 1; min-width: 0; }
+  .mrow .t { color: var(--ink); font-weight: 600; }
+  .mrow .s { font-size: 12.5px; color: var(--dim); }
+
+  /* Inside the app's overlay the overlay bar already names the page; the
+     page's own app bar would be a second header. */
+  body.inframe .appbar { display: none; }
+  body.inframe main { padding-top: var(--s4); }
+
+  /* One reminder = one row. Collapsed it is a scannable line (name, when,
+     status, switch); tapping it opens the details: time, test, preview. */
+  .group > .body { padding: 0 var(--s4); }
+  .rem + .rem { border-top: 1px solid var(--edge); }
+  .rem-top { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) 0; }
+  .rem-open { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: flex-start;
+    gap: var(--s3); background: none; border: none; padding: 0; text-align: left; color: inherit;
+    cursor: pointer; border-radius: var(--r-sm); font-size: inherit; }
+  .rem-open:hover { background: none; }
+  .rem-open:hover .rem-name { color: var(--cyan-soft); }
+  .rem-open .grow { flex: 1; min-width: 0; display: block; }
+  .rem-name { color: var(--ink); font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .rem-name .chev { width: 13px; height: 13px; color: var(--faint); transition: transform .18s ease; flex: none; }
+  .rem.open .rem-name .chev { transform: rotate(90deg); }
+  .rem-state { display: block; font-size: 12.5px; color: var(--dim); margin-top: 1px; }
+  .rem-state.sent { color: var(--ok); }
+  .rem-state.quiet { color: var(--amber); }
+  .rem.off .rem-state { color: var(--faint); }
+  .rem.off .addon-icon { opacity: .5; }
+  /* Master switch off: the list keeps each reminder's own setting (it comes
+     back as it was) but reads as clearly paused, not half-on. */
+  #groups.masteroff { opacity: .4; filter: saturate(.2); pointer-events: none; }
+  .rem-detail { display: none; padding: 0 0 var(--s4) 42px; }
+  .rem.open .rem-detail { display: block; }
+  .rem-desc { font-size: 12.5px; color: var(--dim); margin: 0 0 var(--s2); }
+  .rem-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+  .rem-ctl label { font-size: 12px; color: var(--faint); }
+  .rem-ctl .test { margin-left: auto; }
+  .lock-cap { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--faint); margin: var(--s3) 0 6px; }
+
+  input[type="time"], select.inl {
+    background: #060d16; color: var(--ink); border: 1px solid var(--edge);
+    border-radius: var(--r-sm); padding: 5px 8px; font-size: 13px; color-scheme: dark;
+  }
+  input[type="time"]:focus, select.inl:focus { outline: none; border-color: var(--edge-hi); }
+
+  /* Lock-screen preview: what the banner will actually say. */
+  .lock {
+    margin: 0; max-width: 380px; display: flex; gap: 10px; align-items: flex-start;
+    padding: 10px 12px; border-radius: 16px;
+    background: rgba(28, 40, 52, .72); border: 1px solid rgba(255,255,255,.07);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  }
+  .lock img { width: 30px; height: 30px; border-radius: 7px; flex: none; }
+  .lock .lb { min-width: 0; flex: 1; }
+  .lock .lh { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); letter-spacing: .3px; }
+  .lock .lt { color: #fff; font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lock .lx { color: #d7e6ec; font-size: 13px; line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  .recent { list-style: none; margin: 0; padding: 0; }
+  .recent li { display: flex; gap: var(--s3); padding: 8px 0; font-size: 13px; }
+  .recent li + li { border-top: 1px solid var(--edge); }
+  .recent .when { color: var(--faint); font-variant-numeric: tabular-nums; flex: none; width: 92px; }
+  .recent .what { color: var(--text); min-width: 0; }
+
+  #toast { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+    background: var(--panel-solid); border: 1px solid var(--edge-hi); color: var(--ink); font-size: 13px;
+    padding: 8px 14px; border-radius: var(--r-pill); box-shadow: var(--shadow-pop); opacity: 0; pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease; z-index: 50; }
+  #toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 560px) {
+    .rem-detail { padding-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>
+  </symbol>
+  <symbol id="ic-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>
+  </symbol>
+  <symbol id="ic-plan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4.5" y="4" width="15" height="17" rx="2"/><path d="M9 3v2.5M15 3v2.5M8 11l1.6 1.6L12.5 9.7M8 16.5h8"/>
+  </symbol>
+  <symbol id="ic-water" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3.5s6 6.4 6 10.8A6 6 0 0 1 6 14.3C6 9.9 12 3.5 12 3.5z"/><path d="M9.2 14.8a2.9 2.9 0 0 0 2.6 2.7"/>
+  </symbol>
+  <symbol id="ic-meal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 3v7a2 2 0 0 0 4 0V3M9 12v9M17 21V3c-2 1.5-3 4-3 7v3h3"/>
+  </symbol>
+  <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z"/>
+  </symbol>
+  <symbol id="ic-scale" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8.5 9a5 5 0 0 1 7 0M12 9l1.3-1.8"/>
+  </symbol>
+  <symbol id="ic-bank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3.5 9.5 12 4l8.5 5.5M5 9.5v8M9.7 9.5v8M14.3 9.5v8M19 9.5v8M3.5 20h17"/>
+  </symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>
+  </symbol>
+  <symbol id="ic-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m9 6 6 6-6 6"/>
+  </symbol>
+  <symbol id="ic-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.5 7h11M8.5 12h11M8.5 17h11"/><circle cx="4.8" cy="7" r=".9" fill="currentColor"/><circle cx="4.8" cy="12" r=".9" fill="currentColor"/><circle cx="4.8" cy="17" r=".9" fill="currentColor"/>
+  </symbol>
+</svg>
+
+<header class="appbar">
+  <h1>
+    <img src="/logo.png" alt="" class="brand-logo">
+    <span class="wordmark">ADAM</span>
+    <span class="pagename">Notifications</span>
+  </h1>
+  <span class="spacer"></span>
+  <nav aria-label="Adam sections">
+    <a href="/settings">Add-ons</a>
+    <button id="signOut" class="hidden" type="button">Sign out</button>
+  </nav>
+</header>
+
+<main id="gateView" class="hidden">
+  <section class="gate">
+    <div class="head">Sign in</div>
+    <div class="body">
+      <p class="muted">This page talks to your local server with your access token. It is stored on this device only.</p>
+      <div class="field">
+        <label class="block" for="tokenInput">Access token</label>
+        <input id="tokenInput" type="password" class="block" placeholder="Paste ADAM_TOKEN" autocomplete="off">
+      </div>
+      <div class="actions"><button class="primary" id="signIn" type="button">Sign in</button></div>
+      <div class="errbox hidden" id="gateErr" role="alert"></div>
+    </div>
+  </section>
+</main>
+
+<main id="mainView" class="narrow hidden">
+  <p class="lede">Adam keeps an eye on the easy-to-miss things and nudges you only when one actually slipped.
+    Each reminder checks your real logs first, and stays quiet for anything you don't track.</p>
+
+  <section id="masterCard">
+    <div class="body">
+      <div class="mrow">
+        <span class="addon-icon"><svg aria-hidden="true"><use href="#ic-bell"/></svg></span>
+        <div class="grow">
+          <div class="t">Reminders from Adam</div>
+          <div class="s" id="masterSub">—</div>
+        </div>
+        <label class="switch" title="All reminders on or off">
+          <input type="checkbox" id="masterOn" aria-label="Reminders from Adam">
+          <span class="track"></span>
+        </label>
+      </div>
+      <div class="mrow">
+        <span class="addon-icon"><svg aria-hidden="true"><use href="#ic-phone"/></svg></span>
+        <div class="grow">
+          <div class="t">This device</div>
+          <div class="s" id="deviceSub">Checking…</div>
+        </div>
+        <button type="button" class="sm hidden" id="deviceBtn">Turn on</button>
+      </div>
+      <div class="actions">
+        <button type="button" class="sm" id="pauseBtn">Pause until tomorrow</button>
+        <span class="status" id="pauseState"></span>
+      </div>
+    </div>
+  </section>
+
+  <div id="groups"></div>
+
+  <div class="grouphead"><span>Schedule</span></div>
+  <section>
+    <div class="body">
+      <div class="mrow">
+        <div class="grow">
+          <div class="t">Quiet hours</div>
+          <div class="s">Nothing is sent in this window. The end time is also when Adam starts counting your water pace.</div>
+        </div>
+      </div>
+      <div class="row">
+        <label for="quietStart" class="faint">From</label>
+        <input type="time" id="quietStart">
+        <label for="quietEnd" class="faint">to</label>
+        <input type="time" id="quietEnd">
+      </div>
+      <div class="mrow">
+        <div class="grow">
+          <div class="t">Hold during calendar events</div>
+          <div class="s" id="calSub">If Google Calendar is connected, a reminder waits until your current event ends.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="holdCal" aria-label="Hold reminders during calendar events">
+          <span class="track"></span>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <div class="grouphead"><span>Recently sent</span></div>
+  <section>
+    <div class="body">
+      <ul class="recent" id="recent"></ul>
+    </div>
+  </section>
+
+  <div class="errbox hidden" id="loadErr" role="alert" aria-live="polite"></div>
+</main>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+var LS = {
+  get token() { return localStorage.getItem("jarvis_token") || ""; },
+  set token(v) { localStorage.setItem("jarvis_token", v); },
+  clearToken() { localStorage.removeItem("jarvis_token"); },
+  get url() { return (localStorage.getItem("jarvis_url") || location.origin).replace(/\/$/, ""); }
+};
+var SVGNS = "http://www.w3.org/2000/svg";
+function $(id) { return document.getElementById(id); }
+function show(el) { el.classList.remove("hidden"); }
+function hide(el) { el.classList.add("hidden"); }
+function makeEl(tag, cls, text) {
+  var el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text != null) el.textContent = text;
+  return el;
+}
+function makeIcon(id) {
+  var svg = document.createElementNS(SVGNS, "svg");
+  svg.setAttribute("aria-hidden", "true");
+  var use = document.createElementNS(SVGNS, "use");
+  use.setAttribute("href", "#" + id);
+  svg.appendChild(use);
+  return svg;
+}
+async function api(path, body) {
+  var opt = { headers: { "Authorization": "Bearer " + LS.token } };
+  if (body !== undefined) {
+    opt.method = "POST";
+    opt.headers["Content-Type"] = "application/json";
+    opt.body = JSON.stringify(body);
+  }
+  var r = await fetch(LS.url + path, opt);
+  var d = null;
+  try { d = await r.json(); } catch (_) {}
+  if (!r.ok) {
+    var e = new Error((d && d.detail) || ("HTTP " + r.status));
+    e.status = r.status;
+    throw e;
+  }
+  return d;
+}
+var toastT = null;
+function toast(msg) {
+  var t = $("toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(toastT);
+  toastT = setTimeout(function () { t.classList.remove("on"); }, 2200);
+}
+function fmt12(hm) {
+  var p = String(hm || "0:0").split(":"), h = +p[0], m = +p[1];
+  return ((h % 12) || 12) + ":" + (m < 10 ? "0" : "") + m + " " + (h < 12 ? "AM" : "PM");
+}
+
+var ICON = { plan: "ic-plan", water: "ic-water", meal_am: "ic-meal", meal_pm: "ic-moon", weigh_in: "ic-scale", finance_csv: "ic-bank" };
+var QUIET_NOTE = {
+  plan: "Quiet until you plan a day with Adam.",
+  water: "Quiet until you start logging water.",
+  meal_am: "Quiet until you start logging meals.",
+  meal_pm: "Quiet until you start logging meals.",
+  weigh_in: "Quiet until you log a weigh-in.",
+  finance_csv: "Quiet until your first bank import."
+};
+var GROUP_ORDER = ["Day", "Health", "Money"];
+var DATA = null;
+
+// --- This device (push permission lives in the app window, not this frame) ---
+function inFrame() { try { return window.parent && window.parent !== window; } catch (_) { return false; } }
+function parentPush() { try { return inFrame() ? window.parent.JVLPush : null; } catch (_) { return null; } }
+var DEVICE_TEXT = {
+  on: "Notifications are on for this device.",
+  off: "Off on this device — turn on to get reminders here.",
+  denied: "Blocked in this browser's settings. Re-allow notifications for Adam there.",
+  "needs-homescreen": "On iPhone, add Adam to your Home Screen first, then open it from the icon.",
+  unsupported: "This browser can't receive notifications.",
+  disabled: "Notifications are switched off on the server.",
+  error: "Couldn't reach the notification service. Try again."
+};
+function deviceStatusLocal() {
+  var jp = parentPush();
+  if (jp && jp.status) return jp.status();
+  if (!("Notification" in window) || !("PushManager" in window)) return "unsupported";
+  return Notification.permission === "granted" ? "on" : (Notification.permission === "denied" ? "denied" : "off");
+}
+function paintDevice(status, push) {
+  var sub = $("deviceSub"), btn = $("deviceBtn");
+  var txt = DEVICE_TEXT[status] || DEVICE_TEXT.off;
+  if (status === "on" && push && push.devices) {
+    txt += " " + push.devices + " device" + (push.devices === 1 ? "" : "s") + " signed up in total.";
+  }
+  if (push && push.state === "failing") txt = "Delivery is failing right now. Open Adam on your phone to re-register it.";
+  sub.textContent = txt;
+  var canAct = (status === "off" || status === "error") && !!parentPush();
+  btn.classList.toggle("hidden", !canAct);
+}
+$("deviceBtn").addEventListener("click", function () {
+  var jp = parentPush();
+  if (!jp) return;
+  $("deviceBtn").disabled = true;
+  // Called synchronously from this click so the permission prompt keeps the gesture.
+  jp.enable({ ask: true }).then(function (st) {
+    $("deviceBtn").disabled = false;
+    paintDevice(st, DATA && DATA.push);
+    if (st === "on") toast("Notifications on for this device");
+  });
+});
+
+// --- Render ---
+function renderMaster() {
+  var p = DATA.prefs;
+  $("masterOn").checked = !!p.enabled;
+  var on = DATA.kinds.filter(function (k) { return k.on; }).length;
+  var sub;
+  if (!p.enabled) sub = "Off. Adam won't send any reminders.";
+  else if (DATA.paused) sub = "Paused until " + new Date(p.paused_until * 1000).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" }) + ".";
+  else sub = on + " of " + DATA.kinds.length + " reminders on." + (DATA.quiet_now ? " Quiet hours right now." : "");
+  $("masterSub").textContent = sub;
+  $("pauseBtn").textContent = DATA.paused ? "Resume now" : "Pause until tomorrow";
+  $("pauseBtn").disabled = !p.enabled;
+  $("quietStart").value = p.quiet_start;
+  $("quietEnd").value = p.quiet_end;
+  $("holdCal").checked = !!p.hold_for_calendar;
+  document.querySelectorAll("#groups input, #groups select, #groups button").forEach(function (el) { el.disabled = !p.enabled; });
+  $("groups").classList.toggle("masteroff", !p.enabled);
+}
+
+// The one-line status under a reminder's name: when it checks, or why it's quiet.
+function stateLine(k) {
+  var el = makeEl("span", "rem-state");
+  if (!k.on) { el.textContent = "Off"; return el; }
+  if (!k.tracking) { el.className += " quiet"; el.textContent = QUIET_NOTE[k.id] || "Quiet until there's something to check."; return el; }
+  if (k.id === "water") {
+    el.textContent = k.sent_today ? ("Sent " + k.sent_today + " of 3 today")
+      : (fmt12(k.time) + " – " + fmt12(k.until) + " · when behind");
+    if (k.sent_today) el.className += " sent";
+    return el;
+  }
+  if (k.sent_today) { el.className += " sent"; el.textContent = "Sent today"; return el; }
+  el.textContent = (k.id === "finance_csv" ? (DATA.weekdays[DATA.prefs.finance_day] + "s, " + fmt12(k.time)) : fmt12(k.time))
+    + " · only if it hasn't happened";
+  return el;
+}
+
+function lockPreview(k) {
+  var box = makeEl("div", "lock");
+  box.setAttribute("aria-label", "Preview of the notification");
+  var img = document.createElement("img"); img.src = "/icon.png"; img.alt = "";
+  box.appendChild(img);
+  var b = makeEl("div", "lb");
+  var h = makeEl("div", "lh");
+  h.appendChild(makeEl("span", null, "ADAM"));
+  h.appendChild(makeEl("span", null, "now"));
+  b.appendChild(h);
+  b.appendChild(makeEl("div", "lt", k.preview.title));
+  b.appendChild(makeEl("div", "lx", k.preview.body));
+  box.appendChild(b);
+  return box;
+}
+
+var OPEN = {};   // which rows are expanded; survives the re-render after each save
+
+function renderKind(k) {
+  var row = makeEl("div", "rem" + (k.on ? "" : " off") + (OPEN[k.id] ? " open" : ""));
+  var top = makeEl("div", "rem-top");
+  var opener = makeEl("button", "rem-open");
+  opener.type = "button";
+  opener.setAttribute("aria-expanded", OPEN[k.id] ? "true" : "false");
+  var ic = makeEl("span", "addon-icon"); ic.appendChild(makeIcon(ICON[k.id] || "ic-bell"));
+  opener.appendChild(ic);
+  var g = makeEl("span", "grow");
+  var nm = makeEl("span", "rem-name", k.label);
+  var chev = makeIcon("ic-chev"); chev.setAttribute("class", "chev");
+  nm.appendChild(chev);
+  g.appendChild(nm);
+  g.appendChild(stateLine(k));
+  opener.appendChild(g);
+  opener.addEventListener("click", function () {
+    OPEN[k.id] = !OPEN[k.id];
+    row.classList.toggle("open", !!OPEN[k.id]);
+    opener.setAttribute("aria-expanded", OPEN[k.id] ? "true" : "false");
+  });
+  top.appendChild(opener);
+  var sw = makeEl("label", "switch");
+  var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!k.on;
+  cb.setAttribute("aria-label", k.label);
+  cb.addEventListener("change", function () {
+    var patch = { kinds: {} }; patch.kinds[k.id] = { on: cb.checked };
+    save(patch, k.label + (cb.checked ? " on" : " off"));
+  });
+  sw.appendChild(cb); sw.appendChild(makeEl("span", "track"));
+  top.appendChild(sw);
+  row.appendChild(top);
+
+  var det = makeEl("div", "rem-detail");
+  var desc = k.desc;
+  if (k.id === "water" && !DATA.water_goal_set) desc += " Using a 2,000 ml goal until you set yours in Health Tracker.";
+  det.appendChild(makeEl("p", "rem-desc", desc));
+  var ctl = makeEl("div", "rem-ctl");
+  var tid = "t_" + k.id;
+  var tl = makeEl("label", null, k.id === "water" ? "Starting" : "At"); tl.setAttribute("for", tid);
+  ctl.appendChild(tl);
+  var ti = document.createElement("input"); ti.type = "time"; ti.id = tid; ti.value = k.time;
+  ti.addEventListener("change", function () {
+    if (!ti.value) return;
+    var patch = { kinds: {} }; patch.kinds[k.id] = { time: ti.value };
+    save(patch, k.label + " set to " + fmt12(ti.value));
+  });
+  ctl.appendChild(ti);
+  if (k.id === "finance_csv") {
+    var sl = makeEl("label", null, "on"); sl.setAttribute("for", "finDay");
+    ctl.appendChild(sl);
+    var sel = document.createElement("select"); sel.className = "inl"; sel.id = "finDay";
+    DATA.weekdays.forEach(function (d, i) {
+      var o = document.createElement("option"); o.value = String(i); o.textContent = d;
+      if (i === DATA.prefs.finance_day) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener("change", function () { save({ finance_day: +sel.value }, "Bank reminder moved to " + DATA.weekdays[+sel.value]); });
+    ctl.appendChild(sel);
+  }
+  var tb = makeEl("button", "sm test", "Send test");
+  tb.type = "button";
+  tb.title = "Send this reminder to your devices right now";
+  tb.addEventListener("click", function () { sendTest(k, tb); });
+  ctl.appendChild(tb);
+  det.appendChild(ctl);
+  det.appendChild(makeEl("div", "lock-cap", "On your lock screen"));
+  det.appendChild(lockPreview(k));
+  row.appendChild(det);
+  return row;
+}
+
+function renderGroups() {
+  var box = $("groups");
+  box.textContent = "";
+  GROUP_ORDER.forEach(function (gname) {
+    var members = DATA.kinds.filter(function (k) { return k.group === gname; });
+    if (!members.length) return;
+    var gh = makeEl("div", "grouphead");
+    gh.appendChild(makeEl("span", null, gname));
+    var on = members.filter(function (k) { return k.on; }).length;
+    if (members.length > 1) gh.appendChild(makeEl("span", "count", on + " of " + members.length + " on"));
+    box.appendChild(gh);
+    var sec = makeEl("section", "group");
+    var body = makeEl("div", "body");
+    members.forEach(function (k) { body.appendChild(renderKind(k)); });
+    sec.appendChild(body);
+    box.appendChild(sec);
+  });
+}
+
+function renderRecent() {
+  var ul = $("recent");
+  ul.textContent = "";
+  var log = DATA.log || [];
+  if (!log.length) { ul.appendChild(makeEl("li", "faint", "Nothing sent yet.")); return; }
+  log.forEach(function (e) {
+    var li = makeEl("li");
+    var d = new Date(e.ts * 1000);
+    li.appendChild(makeEl("span", "when", d.toLocaleDateString([], { weekday: "short" }) + " " + d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })));
+    li.appendChild(makeEl("span", "what", e.title + (e.test ? "  (test)" : "")));
+    ul.appendChild(li);
+  });
+}
+
+function render() {
+  renderGroups();
+  renderMaster();
+  renderRecent();
+  paintDevice(deviceStatusLocal(), DATA.push);
+}
+
+async function load() {
+  hide($("loadErr"));
+  try {
+    DATA = await api("/reminders");
+    render();
+  } catch (e) {
+    if (e.status === 403 || e.status === 401) { enterGate(); return; }
+    $("loadErr").textContent = "Could not load notification settings (" + e.message + ").";
+    show($("loadErr"));
+  }
+}
+
+async function save(patch, msg) {
+  try {
+    await api("/reminders/prefs", patch);
+    await load();
+    if (msg) toast(msg);
+  } catch (e) {
+    toast("Couldn't save: " + e.message);
+    load();
+  }
+}
+
+async function sendTest(k, btn) {
+  btn.disabled = true;
+  try {
+    await api("/reminders/test", { kind: k.id });
+    toast("Sent. Check your phone.");
+    load();
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// --- wire up ---
+$("masterOn").addEventListener("change", function () {
+  save({ enabled: $("masterOn").checked }, $("masterOn").checked ? "Reminders on" : "All reminders off");
+});
+$("holdCal").addEventListener("change", function () {
+  save({ hold_for_calendar: $("holdCal").checked }, $("holdCal").checked ? "Will wait out calendar events" : "Calendar hold off");
+});
+$("quietStart").addEventListener("change", function () { if ($("quietStart").value) save({ quiet_start: $("quietStart").value }, "Quiet hours updated"); });
+$("quietEnd").addEventListener("change", function () { if ($("quietEnd").value) save({ quiet_end: $("quietEnd").value }, "Quiet hours updated"); });
+$("pauseBtn").addEventListener("click", async function () {
+  try {
+    await api("/reminders/pause", { mode: DATA && DATA.paused ? "resume" : "until_tomorrow" });
+    await load();
+    toast(DATA.paused ? "Paused until tomorrow morning" : "Reminders resumed");
+  } catch (e) { toast(e.message); }
+});
+
+function enterMain() { hide($("gateView")); show($("mainView")); show($("signOut")); load(); }
+function enterGate() { show($("gateView")); hide($("mainView")); hide($("signOut")); }
+$("signIn").addEventListener("click", async function () {
+  var t = $("tokenInput").value.trim();
+  if (!t) { $("gateErr").textContent = "Paste your ADAM_TOKEN."; show($("gateErr")); return; }
+  LS.token = t;
+  enterMain();
+});
+$("signOut").addEventListener("click", function () { LS.clearToken(); enterGate(); });
+document.addEventListener("visibilitychange", function () { if (!document.hidden && LS.token && DATA) load(); });
+
+if (inFrame()) document.body.classList.add("inframe");
+if (LS.token) enterMain(); else enterGate();
+</script>
+</body>
+</html>

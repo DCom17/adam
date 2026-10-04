@@ -29,7 +29,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # --- Size ceilings ----------------------------------------------------------
 # Backstop for every string field. 64 KB is orders of magnitude above any
@@ -619,3 +619,30 @@ class ChecklistReorderBody(StrictModel):
 class ChecklistBulkDoneBody(StrictModel):
     """Check or clear every step in a checklist at once."""
     done: bool
+
+
+# --- Reminders (proactive notifications) -------------------------------------
+
+class ReminderKindPref(StrictModel):
+    on: bool | None = None
+    time: str | None = Field(default=None, max_length=5)
+
+
+class ReminderPrefsBody(StrictModel):
+    """Partial update of the reminder prefs. Omitted fields are left as-is;
+    invalid times/days are dropped by reminders.save_prefs."""
+    enabled: bool | None = None
+    hold_for_calendar: bool | None = None
+    quiet_start: str | None = Field(default=None, max_length=5)
+    quiet_end: str | None = Field(default=None, max_length=5)
+    finance_day: int | None = Field(default=None, ge=0, le=6)
+    kinds: dict[str, ReminderKindPref] | None = None
+
+
+class ReminderTestBody(StrictModel):
+    kind: str = Field(max_length=32)
+
+
+class ReminderPauseBody(StrictModel):
+    """`until_tomorrow` pauses until quiet hours end tomorrow; `resume` clears it."""
+    mode: str = Field(max_length=20)

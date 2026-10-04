@@ -162,6 +162,10 @@ async def get_ui_prefs():
             # Read-only capability fact (set in settings.json, not togglable here):
             # tells the PWA whether Operator mode exists on this install.
             "code_mode_allowed": config.AGENT_ALLOW_CODE_MODE,
+            # Operator exists here but needs Adam Plus (trial over, no license): the
+            # button stays visible and opens the Plus prompt instead of switching.
+            "operator_locked": (config.AGENT_ALLOW_CODE_MODE
+                                and not licensing.is_entitled()),
             # This server runs Operator chats as LIVE sessions (questions, steering,
             # full output, slash commands). The PWA turns those features on only when
             # it sees this — an older server keeps the older client behavior.

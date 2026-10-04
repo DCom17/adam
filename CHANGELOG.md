@@ -3,6 +3,32 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.81 - Reminders, and Adam Plus covers your phone
+
+- **Adam reminds you about the things that are easy to miss.** Water when
+  you're behind pace for your daily goal. A meal check around lunch and
+  dinner. An evening weigh-in. Your daily plan, if the morning got away
+  from you. And on the day you choose each week, a reminder to bring in your
+  bank statements. Adam checks your actual logs first, so a reminder only
+  comes when something really slipped. It stays quiet for anything you don't
+  track.
+- **Short enough to read on your lock screen.** The question is the whole
+  title, like "Log dinner, sir?" or "Water check, sir: 40 of 80 oz." Tap it
+  and Adam opens the right place: Health for water and weigh-ins, Finance for
+  bank statements, or a chat ready for you to say what you ate or what's on
+  the plan.
+- **It respects your day.** Nothing during quiet hours (10 PM to 7 AM unless
+  you change them). If Google Calendar is connected, a reminder waits until
+  your current event ends. Reminders come one at a time, never in a burst.
+- **A new Notifications panel.** Gear menu, then Notifications. Turn each
+  reminder on or off, set its time, pause everything until tomorrow, see how
+  each one will look on your lock screen, and send yourself a test.
+- **After the free trial, Adam Plus covers using Adam from your phone or any
+  other device, and Operator mode.**
+- **A phone without Plus sees a clear Adam Plus screen** where a key can be
+  pasted and activated right there.
+- **Adam on the PC itself is unchanged and stays free in full.**
+
 ## 0.9.80 - Self-test fix
 
 - **The bundled self-tests pass again.** In 0.9.79 one of the optional tests you

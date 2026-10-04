@@ -41,6 +41,8 @@ try:
 except Exception:  # pragma: no cover — push just stays disabled if missing
     webpush = None
     WebPushException = Exception
+# The real sender, kept so _deliver_push can tell it apart from a test's fake.
+_REAL_WEBPUSH = webpush
 
 import config
 import permissions
@@ -68,6 +70,8 @@ import external_actions
 import merge
 import updater
 import operator_session
+import licensing
+import plus_gate
 
 # Shared pieces split out of this module. Every name is re-exported here for
 # back-compat: tests (and the routers) reach them as server.<name>.
@@ -919,7 +923,7 @@ def _chat_control_note() -> str:
     chat / switch modes). Used in EVERY mode — organizing the conversation is a UI
     relay, not a file write, so it isn't tied to the safe-write posture. The switch
     into Operator is only offered when agent_safety.operator_mode is on."""
-    if config.AGENT_ALLOW_CODE_MODE:
+    if plus_gate.operator_available(config.AGENT_ALLOW_CODE_MODE):
         mode_line = (
             "- SWITCH MODE: Adam has two modes. Normal is the everyday assistant; "
             "Operator is full Claude Code (real file edits and shell, no approval step). "
@@ -927,6 +931,13 @@ def _chat_control_note() -> str:
             "user asks to change modes (e.g. 'go into operator mode', 'back to normal'). "
             "The conversation carries over either way. Confirm what you're switching to "
             "before the marker, and only switch into Operator when the user actually asks."
+        )
+    elif config.AGENT_ALLOW_CODE_MODE:
+        mode_line = (
+            "- SWITCH MODE: Operator mode is part of Adam Plus and this install's free "
+            "trial has ended, so this chat stays in Normal mode. If the user asks for "
+            "Operator, say plainly that it unlocks with Adam Plus (gear menu, Adam Plus) "
+            "and don't emit a SET_MODE marker."
         )
     else:
         mode_line = (
@@ -976,7 +987,7 @@ def _extract_chat_control(text: str) -> tuple[str, dict | None]:
     modes = [m.lower() for m in _SET_MODE_RE.findall(cleaned)]
     if modes:
         target = _MODE_ALIASES[modes[-1]]  # last SET_MODE wins
-        if target == "code" and not config.AGENT_ALLOW_CODE_MODE:
+        if target == "code" and not plus_gate.operator_available(config.AGENT_ALLOW_CODE_MODE):
             target = None   # never relay a switch into a mode this install can't run
         if target:
             control["set_mode"] = target
@@ -1650,6 +1661,17 @@ async def _security_headers(request, call_next):
     return resp
 
 
+@app.middleware("http")
+async def _plus_remote_gate(request, call_next):
+    """Phone / remote access is Adam Plus: after the free trial, an unlicensed install
+    refuses every request that didn't come from the PC itself (402 + a paywall page for
+    navigations). Loopback is never gated. See plus_gate.py for what counts as remote."""
+    locked = plus_gate.remote_lock_response(request)
+    if locked is not None:
+        return locked
+    return await call_next(request)
+
+
 @app.exception_handler(Exception)
 async def _unhandled_exception(request, exc):
     """Last-resort crash catcher. HTTPException and rate-limit errors have their
@@ -1676,6 +1698,15 @@ async def _start_voicemail_poller():
     never raises. Pulls new recordings from Twilio, transcribes, and pushes the
     message to the phone — same private outbound-poll posture as the SMS poller."""
     keep_task(asyncio.create_task(twilio_voicemail.run_poller(_run_voicemail_job, log=log)))
+
+
+@app.on_event("startup")
+async def _start_reminders():
+    """Proactive reminders (water pace, meals, weigh-in, daily plan, weekly bank
+    CSVs). A once-a-minute loop; each check reads the real tracker data, so it
+    only nudges about something that genuinely hasn't happened. Never raises."""
+    import reminders
+    keep_task(asyncio.create_task(reminders.run_loop(_send_reminder_push, log=log)))
 
 
 @app.on_event("startup")
@@ -2208,7 +2239,8 @@ async def run_claude(
         if origin and _cwd_bucket(origin) != _cwd_bucket(mode):
             # Don't resurrect code mode on an install where it's since been disabled —
             # there we can't honor a code origin anyway, so fall through as requested.
-            if not (origin == "code" and not config.AGENT_ALLOW_CODE_MODE):
+            if not (origin == "code"
+                    and not plus_gate.operator_available(config.AGENT_ALLOW_CODE_MODE)):
                 log.info(
                     "mode-authority: session %s lives in %s mode; client asked %s — "
                     "resuming as %s to preserve context",
@@ -2225,6 +2257,9 @@ async def run_claude(
             detail="Operator mode is turned off on this install "
                    "(agent_safety.operator_mode is false in settings.json).",
         )
+    if mode == "code" and not licensing.is_entitled():
+        # Operator is part of Adam Plus. 402 (not 403) so the app shows the Plus prompt.
+        raise HTTPException(status_code=402, detail=plus_gate.lock_detail("operator"))
 
     # Budget governor (pay-as-you-go installs only). Checked BEFORE spawning so a
     # capped install refuses cleanly instead of billing one more turn. 402 keeps
@@ -3055,6 +3090,25 @@ def _send_ask_push(question: str, chat_key: str | None) -> None:
     }), subs)
 
 
+def _send_reminder_push(msg: dict) -> None:
+    """A proactive reminder (reminders.py). Its own `kind` and a per-reminder tag,
+    so it never collapses into a reply notification or replays as one; a tap
+    opens the place that finishes the job (`action`). Raises when nothing could
+    be delivered, so the reminder loop doesn't mark it sent."""
+    if webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_PEM.exists():
+        raise RuntimeError("push unavailable")
+    subs = _load_subs()
+    if not subs:
+        raise RuntimeError("no subscribed devices")
+    _deliver_push(json.dumps({
+        "kind": "reminder",
+        "rid": str(msg.get("kind") or "")[:32],
+        "title": str(msg.get("title") or "Adam")[:80],
+        "body": str(msg.get("body") or "")[:240],
+        "action": str(msg.get("action") or "open")[:20],
+    }), subs)
+
+
 def _operator_ask_hook(job_id: str, ask: dict) -> None:
     """operator_session calls this when a question/plan arrives. Push only when the
     user isn't looking (same foreground heartbeat the reply banner uses)."""
@@ -3071,6 +3125,15 @@ def _operator_ask_hook(job_id: str, ask: dict) -> None:
 
 def _deliver_push(payload: str, subs: list[dict]) -> None:
     """Send one payload to every stored subscription, prune dead ones, record health."""
+    # Test mode: never reach a real push service. A temp ADAM_CONFIG_ROOT without
+    # a settings.json still resolves STATE_DIR to the install's real data/state,
+    # so a test process holds the owner's real subscriptions + VAPID key — and the
+    # Operator tests' fake "Red or blue?" questions were landing on the owner's
+    # phone (2026-10-04). tests/conftest.py sets ADAM_NO_PUSH for every test and
+    # every legacy-suite subprocess. A test's own fake sender still runs.
+    if os.environ.get("ADAM_NO_PUSH") and webpush is _REAL_WEBPUSH:
+        log.info("push suppressed (ADAM_NO_PUSH): %d device(s)", len(subs))
+        return
     # pywebpush wants a PEM *file path* here — handing it the PEM contents makes
     # it try to parse the string as a raw base64 key and fail to deserialize.
     pem_path = str(VAPID_PRIVATE_PEM)
@@ -3216,7 +3279,8 @@ def _voice_pkg_installed() -> bool:
 # is already defined. Each router reads server.<name> at request time, so a
 # test that monkeypatches an attribute on this module patches every route.
 from routers import (  # noqa: E402
-    chat, checklists, finance, health, integrations, reviews, system, voice_push,
+    chat, checklists, finance, health, integrations, notifications, reviews, system,
+    voice_push,
 )
 
 app.include_router(system.router)
@@ -3227,6 +3291,7 @@ app.include_router(integrations.router)
 app.include_router(finance.router)
 app.include_router(health.router)
 app.include_router(checklists.router)
+app.include_router(notifications.router)
 
 
 if __name__ == "__main__":
