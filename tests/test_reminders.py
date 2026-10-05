@@ -137,9 +137,12 @@ def test_meals_am_and_pm_snapshot():
 
 def test_weigh_in():
     f = dict(ALL_ACTIVE)
-    assert "weigh_in" in rm.evaluate(at(21), P(), {}, f)
-    assert "weigh_in" not in rm.evaluate(at(21), P(), {}, dict(f, weighed_today=True))
-    assert "weigh_in" not in rm.evaluate(at(20), P(), {}, f)
+    assert "weigh_in" in rm.evaluate(at(8), P(), {}, f)
+    assert "weigh_in" not in rm.evaluate(at(8), P(), {}, dict(f, weighed_today=True))
+    assert "weigh_in" not in rm.evaluate(at(7, 15), P(), {}, f)
+    # a morning weight only: missed by 11:00 = skipped, never nagged at night
+    assert "weigh_in" not in rm.evaluate(at(11), P(), {}, f)
+    assert "weigh_in" not in rm.evaluate(at(20, 30), P(), {}, f)
 
 
 def test_finance_only_on_chosen_day_and_when_stale():
@@ -193,7 +196,7 @@ def test_water_copy_names_the_numbers():
 
 def test_tick_sends_once_and_respects_calendar_hold():
     sent = []
-    f = dict(ALL_ACTIVE)
+    f = dict(ALL_ACTIVE, weighed_today=True)              # morning weigh-in would close first
     out = rm.tick(sent.append, now=at(9, 5), facts=f, blocks=[{"start": 0, "end": 1440, "label": "Call", "out": False, "busy": True, "source": "calendar"}])
     assert out == [] and sent == []                      # in a meeting: waits
     out = rm.tick(sent.append, now=at(9, 6), facts=f, blocks=[])
@@ -322,14 +325,14 @@ def test_one_banner_per_tick_soonest_window_first_then_spaced():
     assert len(got) == 1
     rm.tick(send, now=sunday(19, 56), facts=f, blocks=[])
     rm.tick(send, now=sunday(20, 17), facts=f, blocks=[])
-    rm.tick(send, now=sunday(20, 38), facts=f, blocks=[])
-    assert [m["kind"] for m in got] == ["water", "meal_pm", "finance_csv", "weigh_in"]
+    rm.tick(send, now=sunday(20, 38), facts=f, blocks=[])     # weigh-in is morning-only now
+    assert [m["kind"] for m in got] == ["water", "meal_pm", "finance_csv"]
 
 
 def test_test_send_does_not_delay_real_reminders(monkeypatch):
     rm.send_test("plan", lambda m: None, now=at(9, 0))
     got = []
-    rm.tick(got.append, now=at(9, 1), facts=dict(ALL_ACTIVE), blocks=[])
+    rm.tick(got.append, now=at(9, 1), facts=dict(ALL_ACTIVE, weighed_today=True), blocks=[])
     assert [m["kind"] for m in got] == ["plan"]
 
 
@@ -347,10 +350,10 @@ def test_gather_facts_counts_a_lapsed_tracker_as_used(tmp_path):
     hs.init(db)
     try:
         hs.add_weight("2026-07-29", 181.0)        # last weigh-in two months ago
-        f = rm.gather_facts(at(20, 45))
+        f = rm.gather_facts(at(8, 45))
         assert f["weight_active"] is True and f["weighed_today"] is False
         assert f["water_active"] is False and f["meal_active"] is False
-        assert "weigh_in" in rm.evaluate(at(20, 45), P(), {}, f)
+        assert "weigh_in" in rm.evaluate(at(8, 45), P(), {}, f)
     finally:
         hs.close()
     vault = Path(config.VAULT_PATH) / "06_calendar"
@@ -462,16 +465,19 @@ def test_calendar_blocks_all_day_vacation_only():
 
 def test_weigh_in_waits_until_home_then_says_so():
     f = dict(ALL_ACTIVE)
-    work = [blk(810, 1290)]                     # Mon 1:30–9:30 PM shift
-    assert "weigh_in" not in rm.evaluate(at(20, 45), P(), {}, f, work)   # still at work
-    assert "weigh_in" not in rm.evaluate(at(21, 40), P(), {}, f, work)   # 10 min after: in the buffer
-    assert "weigh_in" in rm.evaluate(at(21, 46), P(), {}, f, work)       # home
-    m = rm.build_message("weigh_in", f, P(), at(21, 46), work)
+    gym = [blk(420, 540, "Gym")]                # Mon 7–9 AM
+    assert "weigh_in" not in rm.evaluate(at(8, 45), P(), {}, f, gym)    # still out
+    assert "weigh_in" not in rm.evaluate(at(9, 10), P(), {}, f, gym)    # 10 min after: in the buffer
+    assert "weigh_in" in rm.evaluate(at(9, 16), P(), {}, f, gym)        # home
+    m = rm.build_message("weigh_in", f, P(), at(9, 16), gym)
     assert m["title"] == "You're home, sir. Weigh-in?"
 
 
-def test_out_past_quiet_hours_skips_weigh_in():
-    assert "weigh_in" not in rm.evaluate(at(21, 59), P(), {}, dict(ALL_ACTIVE), [blk(1080, 1350)])
+def test_out_past_window_skips_weigh_in():
+    # out all morning: the weigh-in is dropped, not carried into the evening
+    shift = [blk(420, 690)]                     # 7:00–11:30 AM
+    for h, m in ((10, 59), (11, 50), (21, 46)):
+        assert "weigh_in" not in rm.evaluate(at(h, m), P(), {}, dict(ALL_ACTIVE), shift)
 
 
 def test_water_and_meals_still_come_at_work():
@@ -490,8 +496,8 @@ def test_busy_event_holds_everything_until_it_ends():
 
 def test_plan_around_off_restores_clock_only_behavior():
     f = dict(ALL_ACTIVE)
-    work = [blk(810, 1290)]
-    assert "weigh_in" in rm.evaluate(at(20, 45), P(hold_for_calendar=False), {}, f, work)
+    gym = [blk(420, 540, "Gym")]
+    assert "weigh_in" in rm.evaluate(at(8, 45), P(hold_for_calendar=False), {}, f, gym)
 
 
 def test_plan_nudge_moves_before_an_early_departure():

@@ -3,6 +3,16 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.84 - The weigh-in reminder moves to the morning
+
+- **Weigh in when it counts.** The weigh-in reminder now comes in the
+  morning (7:30 to 11:00 AM) instead of late evening. A weight taken soon
+  after waking, before eating or drinking, is the most consistent one; by
+  night food, salt, and water can add 2 to 4 lb that isn't real.
+- **No more weigh-in nudges at night.** If you haven't weighed in by 11 AM,
+  or you're out all morning, Adam lets it go for the day instead of asking
+  when you get home that night.
+
 ## 0.9.83 - Notifications reach Windows, and hold for a moment offline
 
 - **Adam's notifications now reach Windows computers.** Edge and Chrome on

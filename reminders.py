@@ -1,6 +1,6 @@
 """Proactive reminders — Adam notices what slipped and nudges, in character.
 
-The easy-to-miss chores of the day (water, meals, the evening weigh-in, the
+The easy-to-miss chores of the day (water, meals, the morning weigh-in, the
 morning plan, the weekly bank CSVs) each get a check that looks at the REAL
 data, not the clock alone: a reminder only goes out when the thing genuinely
 hasn't happened yet. Each one fires at most once a day (water: a few spaced
@@ -65,9 +65,11 @@ CATALOG: list[dict] = [
     {"id": "meal_pm", "label": "Dinner check",
      "desc": "If nothing's been logged since mid-afternoon, Adam asks about dinner.",
      "time": "19:30", "until": "22:00", "action": "meal", "group": "Health"},
-    {"id": "weigh_in", "label": "End-of-day weigh-in",
-     "desc": "If no weight is logged today by this time.",
-     "time": "20:30", "until": "23:30", "action": "health", "group": "Health"},
+    # Morning, not evening: a waking weight is the consistent one (food, salt and
+    # water swing it 2-4 lb by night). Missed by 11:00 = skipped, never sent at night.
+    {"id": "weigh_in", "label": "Morning weigh-in",
+     "desc": "If no weight is logged today by this time. Weigh after waking, before eating or drinking.",
+     "time": "07:30", "until": "11:00", "action": "health", "group": "Health"},
     {"id": "finance_csv", "label": "Weekly bank statements",
      "desc": "On your chosen day, if no bank CSV has been imported in the last 5 days.",
      "time": "17:00", "until": "22:00", "action": "finance", "group": "Money"},
