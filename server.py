@@ -3069,7 +3069,7 @@ def _send_push(
         "spoken": banner[:1500],      # what the page speaks on tap
         "session_id": session_id,
         "ts": ts,
-    }), subs)
+    }), subs, ttl=PUSH_TTL_REPLY)
 
 
 def _send_ask_push(question: str, chat_key: str | None) -> None:
@@ -3087,7 +3087,7 @@ def _send_ask_push(question: str, chat_key: str | None) -> None:
         "title": "Adam",
         "body": ("Operator is asking: " + q)[:400],
         "chat": chat_key or "",
-    }), subs)
+    }), subs, ttl=PUSH_TTL_ASK)
 
 
 def _send_reminder_push(msg: dict) -> None:
@@ -3106,7 +3106,7 @@ def _send_reminder_push(msg: dict) -> None:
         "title": str(msg.get("title") or "Adam")[:80],
         "body": str(msg.get("body") or "")[:240],
         "action": str(msg.get("action") or "open")[:20],
-    }), subs)
+    }), subs, ttl=PUSH_TTL_REMINDER)
 
 
 def _operator_ask_hook(job_id: str, ask: dict) -> None:
@@ -3123,7 +3123,17 @@ def _operator_ask_hook(job_id: str, ask: dict) -> None:
         asyncio.to_thread(_send_ask_push, text, chat)))
 
 
-def _deliver_push(payload: str, subs: list[dict]) -> None:
+# How long a push service may hold a notification for an unreachable device.
+# NEVER 0 (pywebpush's default): Windows' push service (WNS) rejects TTL 0 outright
+# ("Ttl value conflicts with X-WNS-Cache-Policy", HTTP 400, found 2026-10-04 — no
+# Adam push had ever reached a Windows browser), and Apple drops a TTL-0 push the
+# moment the phone is briefly offline instead of holding it.
+PUSH_TTL_REPLY = 24 * 3600      # a finished reply is still worth reading tomorrow
+PUSH_TTL_ASK = 12 * 3600        # an Operator question waits for its answer
+PUSH_TTL_REMINDER = 2 * 3600    # "drink water" hours late would be wrong
+
+
+def _deliver_push(payload: str, subs: list[dict], ttl: int = PUSH_TTL_REPLY) -> None:
     """Send one payload to every stored subscription, prune dead ones, record health."""
     # Test mode: never reach a real push service. A temp ADAM_CONFIG_ROOT without
     # a settings.json still resolves STATE_DIR to the install's real data/state,
@@ -3147,6 +3157,7 @@ def _deliver_push(payload: str, subs: list[dict]) -> None:
                 data=payload,
                 vapid_private_key=pem_path,
                 vapid_claims={"sub": VAPID_SUBJECT},
+                ttl=max(60, int(ttl)),
                 timeout=10,
             )
             alive.append(sub)

@@ -414,7 +414,7 @@ def test_question_push_payload_is_its_own_kind(monkeypatch):
     monkeypatch.setattr(server, "VAPID_PUBLIC_KEY", "k")
     monkeypatch.setattr(server, "VAPID_PRIVATE_PEM", Path(__file__))   # any existing file
     monkeypatch.setattr(server, "_load_subs", lambda: [{"endpoint": "https://x"}])
-    monkeypatch.setattr(server, "_deliver_push", lambda payload, subs: payloads.append(json.loads(payload)))
+    monkeypatch.setattr(server, "_deliver_push", lambda payload, subs, **kw: payloads.append(json.loads(payload)))
     server._send_ask_push("Ship   it" + chr(10) + "now?", "chat-9")
     assert payloads == [{"kind": "ask", "title": "Adam",
                          "body": "Operator is asking: Ship it now?", "chat": "chat-9"}]

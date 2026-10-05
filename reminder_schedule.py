@@ -54,6 +54,25 @@ _BUSY_WORDS = ["call", "meeting", "interview", "zoom", "teams", "appointment",
 BUSY_MAX_MIN = 180      # an out-of-the-house event this short = busy (hold all)
 
 
+LABEL_MAX = 40
+
+
+def short_label(text: str, limit: int = LABEL_MAX) -> str:
+    """Fit a name in `limit` chars at a WORD boundary: 'Church, White Mountain
+    Bible Church (fixed time)' -> 'Church, White Mountain Bible Church…', never
+    '…Church (fix'. An unclosed bracket and trailing punctuation are dropped."""
+    t = " ".join(str(text or "").split())
+    if len(t) <= limit:
+        return t
+    cut = t[: limit - 1]
+    if " " in cut:
+        cut = cut.rsplit(" ", 1)[0]
+    if cut.count("(") > cut.count(")"):
+        cut = cut[: cut.rfind("(")]
+    cut = cut.rstrip(" ,;:-–—(")
+    return (cut or t[: limit - 1]) + "…"
+
+
 def _has(text: str, words: list[str]) -> bool:
     return any(re.search(r"(?<![a-z])" + re.escape(w) + r"(?![a-z])", text) for w in words)
 
@@ -90,7 +109,7 @@ def routine_blocks(routine: list[dict], weekday: int) -> list[dict]:
         s, e = _hm_min(r.get("start")), _hm_min(r.get("end"))
         if s is None or e is None or e <= s:
             continue
-        out.append({"start": s, "end": e, "label": str(r.get("label") or "Away")[:40],
+        out.append({"start": s, "end": e, "label": short_label(r.get("label") or "Away"),
                     "out": True, "busy": False, "source": "routine"})
     return out
 
@@ -129,7 +148,7 @@ def calendar_blocks(events: list[dict], now: datetime) -> list[dict]:
             # all-day reminder note like "Fam meeting 8pm" doesn't empty the day.
             if o and _has(title.lower(), ["vacation", "trip", "travel", "out of town",
                                           "camping", "away"]):
-                out.append({"start": 0, "end": 1440, "label": title[:40] or "Away",
+                out.append({"start": 0, "end": 1440, "label": short_label(title) or "Away",
                             "out": True, "busy": False, "source": "calendar"})
             continue
         try:
@@ -144,7 +163,7 @@ def calendar_blocks(events: list[dict], now: datetime) -> list[dict]:
         o, b = classify(title, str(e.get("location") or ""), em - sm)
         if not (o or b):
             continue
-        out.append({"start": sm, "end": em, "label": title[:40] or "Event",
+        out.append({"start": sm, "end": em, "label": short_label(title) or "Event",
                     "out": o, "busy": b, "source": "calendar"})
     return out
 
@@ -185,7 +204,7 @@ def parse_range(text: str) -> tuple[int, int, str] | None:
     rest = text[m.end():]
     rest = re.sub(r"^[\s*_|:—–-]+", "", rest)
     label = re.split(r"\s[|—–]\s|\.\s", rest.replace("**", "").strip())[0].strip()
-    return start, end, label[:40]
+    return start, end, short_label(label)
 
 
 def _today_section(text: str, now: datetime) -> str:

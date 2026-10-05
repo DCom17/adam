@@ -3,6 +3,19 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.83 - Notifications reach Windows, and hold for a moment offline
+
+- **Adam's notifications now reach Windows computers.** Edge and Chrome on
+  Windows had been turning every Adam notification away, because of how long
+  each one was set to wait for delivery. If you turned notifications on for
+  Adam on your PC, they now arrive.
+- **Notifications hold while your phone is briefly offline.** Before, a
+  notification sent during a dead spot was simply lost. Now replies wait up
+  to a day for your phone to reconnect, Operator questions up to 12 hours,
+  and reminders up to 2 hours (a late reminder would be wrong).
+- **Long plan names read cleanly.** Today's schedule in Notifications cuts a
+  long name at a whole word instead of mid-word.
+
 ## 0.9.82 - Reminders that plan around your day
 
 - **Adam knows when you're out.** Tell it your usual week (work shifts, say)

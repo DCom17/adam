@@ -511,9 +511,22 @@ def _headless_qr_checks() -> None:
             # uses the same enterWizard() name as every other setup wizard.
             pg.evaluate("() => enterWizard()")
             def decode(canvas_sel):
-                png = pg.locator(canvas_sel).screenshot()
-                img = Image.open(io.BytesIO(png)).convert("L")
+                # Decode the canvas's OWN pixels (toDataURL), composited on white
+                # with a quiet zone and an integer nearest-neighbour upscale. A
+                # 1x element screenshot resamples the modules and zxing misread it
+                # about 1 run in 6 (2026-10-04) — the payload was always right.
+                import base64
+                b64 = pg.evaluate("(sel) => document.querySelector(sel).toDataURL('image/png')",
+                                  canvas_sel).split(",", 1)[1]
+                raw = Image.open(io.BytesIO(base64.b64decode(b64))).convert("RGBA")
+                pad = max(16, raw.width // 8)
+                bg = Image.new("RGBA", (raw.width + 2 * pad, raw.height + 2 * pad), "white")
+                bg.alpha_composite(raw, (pad, pad))
+                img = bg.convert("L").resize((bg.width * 3, bg.height * 3), Image.NEAREST)
                 res = zxingcpp.read_barcodes(img)
+                if not res:  # fallback: the old element screenshot
+                    png = pg.locator(canvas_sel).screenshot()
+                    res = zxingcpp.read_barcodes(Image.open(io.BytesIO(png)).convert("L"))
                 return res[0].text if res else None
 
             def dark(canvas_id):

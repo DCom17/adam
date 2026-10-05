@@ -297,7 +297,7 @@ def test_reminder_push_payload(monkeypatch):
     monkeypatch.setattr(server, "VAPID_PUBLIC_KEY", "k")
     monkeypatch.setattr(server, "VAPID_PRIVATE_PEM", Path(__file__))   # any existing file
     monkeypatch.setattr(server, "_load_subs", lambda: [{"endpoint": "x"}])
-    monkeypatch.setattr(server, "_deliver_push", lambda payload, subs: captured.update(p=payload))
+    monkeypatch.setattr(server, "_deliver_push", lambda payload, subs, **kw: captured.update(p=payload, **kw))
     server._send_reminder_push({"kind": "water", "title": "Water check, sir", "body": "b", "action": "health"})
     import json
     p = json.loads(captured["p"])
@@ -537,3 +537,38 @@ def test_routine_over_the_api():
     r = client.post("/reminders/prefs", headers=AUTH, json={"routine": [
         {"label": "Work", "days": [4], "start": "08:00", "end": "17:00"}]})
     assert r.status_code == 200 and r.json()["prefs"]["routine"][0]["days"] == [4]
+
+
+# --- fixes 2026-10-04: word-boundary labels, nonzero push TTL -----------------------------
+
+@pytest.mark.parametrize("text,expect", [
+    ("Church, White Mountain Bible Church (fixed time, 10:30)", "Church, White Mountain Bible Church…"),
+    ("Pick up Cadence from practice at the high school gym", "Pick up Cadence from practice at the…"),
+    ("Short one", "Short one"),
+])
+def test_short_label_cuts_at_a_word(text, expect):
+    got = rs.short_label(text)
+    assert got == expect and len(got) <= rs.LABEL_MAX
+
+
+def test_plan_label_never_ends_mid_word():
+    r = rs.parse_range("- **10:30 AM–12:00 PM** — Church, White Mountain Bible Church (fixed time, arrive early)")
+    assert r == (630, 720, "Church, White Mountain Bible Church…")
+
+
+@pytest.mark.parametrize("sender,args,ttl_name", [
+    ("_send_push", ("done", "sess", 1), "PUSH_TTL_REPLY"),
+    ("_send_ask_push", ("Red or blue?", "chat-1"), "PUSH_TTL_ASK"),
+    ("_send_reminder_push", ({"kind": "water", "title": "t", "body": "b", "action": "health"},), "PUSH_TTL_REMINDER"),
+])
+def test_every_push_carries_a_nonzero_ttl(monkeypatch, sender, args, ttl_name):
+    """Windows' push service rejects TTL 0 ("Ttl value conflicts with
+    X-WNS-Cache-Policy") — no Adam push had ever reached a Windows browser."""
+    seen = []
+    monkeypatch.setattr(server, "webpush", lambda **kw: seen.append(kw))
+    monkeypatch.setattr(server, "VAPID_PUBLIC_KEY", "k")
+    monkeypatch.setattr(server, "VAPID_PRIVATE_PEM", Path(__file__))
+    monkeypatch.setattr(server, "_load_subs", lambda: [{"endpoint": "https://wns2.notify.windows.com/x"}])
+    monkeypatch.setattr(server, "_record_push_health", lambda *a, **k: None)
+    getattr(server, sender)(*args)
+    assert seen and seen[0]["ttl"] == getattr(server, ttl_name) and seen[0]["ttl"] >= 60
