@@ -81,6 +81,35 @@
   .lock .lx { color: #d7e6ec; font-size: 13px; line-height: 1.35;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
+  /* Today, as Adam sees it: a compact timeline of out/busy blocks. */
+  .tl { list-style: none; margin: 0; padding: 0; }
+  .tl li { padding: 9px 0; font-size: 13px; }
+  .tl li + li { border-top: 1px solid var(--edge); }
+  .tl .top { display: flex; align-items: center; gap: var(--s2); }
+  .tl .when { color: var(--text); font-variant-numeric: tabular-nums; flex: 1; }
+  .tl .what { color: var(--ink); font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; }
+  .tl .src { color: var(--faint); font-weight: 400; font-size: 12px; }
+  .tl li.now .when { color: var(--cyan-soft); font-weight: 600; }
+  .tl-empty { font-size: 13px; color: var(--dim); }
+  .pill.out  { color: var(--amber); border-color: rgba(255, 170, 60, .4); background: rgba(255, 170, 60, .07); }
+  .pill.busy { color: var(--danger); border-color: rgba(255, 77, 109, .4); background: rgba(255, 77, 109, .06); }
+  .rem-state.wait { color: var(--cyan-soft); }
+
+  /* Your usual week: one row per recurring block + an add form. */
+  .wk { list-style: none; margin: var(--s2) 0 0; padding: 0; }
+  .wk li { display: flex; align-items: center; gap: var(--s2); padding: 8px 0; font-size: 13px; }
+  .wk li + li { border-top: 1px solid var(--edge); }
+  .wk .what { flex: 1; min-width: 0; color: var(--ink); }
+  .wk .what span { color: var(--dim); }
+  .wkadd { margin-top: var(--s3); padding-top: var(--s3); border-top: 1px dashed var(--edge); }
+  .wkadd input[type="text"] { background: #060d16; color: var(--ink); border: 1px solid var(--edge);
+    border-radius: var(--r-sm); padding: 6px 9px; font-size: 13px; width: 140px; }
+  .wkadd input[type="text"]:focus { outline: none; border-color: var(--edge-hi); }
+  .days { display: flex; gap: 4px; flex-wrap: wrap; }
+  .days button { padding: 4px 0; width: 38px; font-size: 12px; border-radius: var(--r-pill); }
+  .days button[aria-pressed="true"] { color: #03222a; background: var(--cyan); border-color: var(--cyan); font-weight: 700; }
+  .wkadd .row { gap: var(--s2); }
+
   .recent { list-style: none; margin: 0; padding: 0; }
   .recent li { display: flex; gap: var(--s3); padding: 8px 0; font-size: 13px; }
   .recent li + li { border-top: 1px solid var(--edge); }
@@ -196,11 +225,51 @@
     </div>
   </section>
 
+  <div class="grouphead"><span>Today, as Adam sees it</span></div>
+  <section>
+    <div class="body">
+      <ul class="tl" id="today"></ul>
+      <p class="hint" id="todayHint">From your usual week, Google Calendar and the plans you make with Adam.
+        Out = away from home: weigh-ins and bank statements wait until you're back. Busy = a call or
+        appointment: every reminder waits it out.</p>
+    </div>
+  </section>
+
   <div id="groups"></div>
 
   <div class="grouphead"><span>Schedule</span></div>
   <section>
     <div class="body">
+      <div class="mrow">
+        <div class="grow">
+          <div class="t">Plan around my schedule</div>
+          <div class="s" id="calSub">Adam times reminders around where you'll be. Off = reminders go out on the clock alone.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="holdCal" aria-label="Plan reminders around my schedule">
+          <span class="track"></span>
+        </label>
+      </div>
+      <div class="mrow" id="weekRow">
+        <div class="grow">
+          <div class="t">Your usual week</div>
+          <div class="s">Regular times you're out, like work shifts. Adam treats them as away every week.</div>
+          <ul class="wk" id="week"></ul>
+          <div class="wkadd">
+            <div class="row">
+              <input type="text" id="wkLabel" maxlength="40" placeholder="Work" aria-label="What it is">
+              <div class="days" id="wkDays" role="group" aria-label="Days"></div>
+            </div>
+            <div class="row">
+              <label for="wkStart" class="faint">From</label>
+              <input type="time" id="wkStart" value="09:00">
+              <label for="wkEnd" class="faint">to</label>
+              <input type="time" id="wkEnd" value="17:00">
+              <button type="button" class="sm" id="wkAdd">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="mrow">
         <div class="grow">
           <div class="t">Quiet hours</div>
@@ -212,16 +281,6 @@
         <input type="time" id="quietStart">
         <label for="quietEnd" class="faint">to</label>
         <input type="time" id="quietEnd">
-      </div>
-      <div class="mrow">
-        <div class="grow">
-          <div class="t">Hold during calendar events</div>
-          <div class="s" id="calSub">If Google Calendar is connected, a reminder waits until your current event ends.</div>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="holdCal" aria-label="Hold reminders during calendar events">
-          <span class="track"></span>
-        </label>
       </div>
     </div>
   </section>
@@ -370,6 +429,7 @@ function stateLine(k) {
   var el = makeEl("span", "rem-state");
   if (!k.on) { el.textContent = "Off"; return el; }
   if (!k.tracking) { el.className += " quiet"; el.textContent = QUIET_NOTE[k.id] || "Quiet until there's something to check."; return el; }
+  if (k.note && !k.sent_today) { el.className += " wait"; el.textContent = k.note; return el; }
   if (k.id === "water") {
     el.textContent = k.sent_today ? ("Sent " + k.sent_today + " of 3 today")
       : (fmt12(k.time) + " – " + fmt12(k.until) + " · when behind");
@@ -435,6 +495,7 @@ function renderKind(k) {
   var det = makeEl("div", "rem-detail");
   var desc = k.desc;
   if (k.id === "water" && !DATA.water_goal_set) desc += " Using a 2,000 ml goal until you set yours in Health Tracker.";
+  if (k.needs_home) desc += " Needs you home, so it waits while you're out.";
   det.appendChild(makeEl("p", "rem-desc", desc));
   var ctl = makeEl("div", "rem-ctl");
   var tid = "t_" + k.id;
@@ -504,10 +565,92 @@ function renderRecent() {
   });
 }
 
+var DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+var SOURCE = { routine: "Usual week", calendar: "Calendar", plan: "Adam's plan" };
+
+function renderToday() {
+  var ul = $("today");
+  ul.textContent = "";
+  var items = DATA.today || [];
+  if (!items.length) {
+    ul.appendChild(makeEl("li", "tl-empty", "Nothing on the schedule, so Adam assumes you're home today."));
+    return;
+  }
+  var nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  items.forEach(function (b) {
+    var li = makeEl("li");
+    var top = makeEl("div", "top");
+    top.appendChild(makeEl("span", "when", b.start === "12:00 AM" && b.end === "end of day" ? "All day" : (b.start + " – " + b.end)));
+    top.appendChild(makeEl("span", "pill " + (b.busy ? "busy" : "out"), b.busy ? (b.out ? "Out · busy" : "Busy") : "Out"));
+    li.appendChild(top);
+    var what = makeEl("div", "what", b.label + "  ");
+    what.appendChild(makeEl("span", "src", "· " + (SOURCE[b.source] || b.source)));
+    li.appendChild(what);
+    ul.appendChild(li);
+  });
+}
+
+function routineText(r) {
+  return r.days.map(function (d) { return DAY_SHORT[d]; }).join(", ") + " · " + fmt12(r.start) + " – " + fmt12(r.end);
+}
+
+function renderWeek() {
+  var ul = $("week");
+  ul.textContent = "";
+  (DATA.prefs.routine || []).forEach(function (r, i) {
+    var li = makeEl("li");
+    var w = makeEl("span", "what", r.label + "  ");
+    w.appendChild(makeEl("span", null, routineText(r)));
+    li.appendChild(w);
+    var x = makeEl("button", "sm ghost", "Remove");
+    x.type = "button";
+    x.setAttribute("aria-label", "Remove " + r.label + " " + routineText(r));
+    x.addEventListener("click", function () {
+      var next = DATA.prefs.routine.filter(function (_, j) { return j !== i; });
+      save({ routine: next }, r.label + " removed");
+    });
+    li.appendChild(x);
+    ul.appendChild(li);
+  });
+  if (!(DATA.prefs.routine || []).length) ul.appendChild(makeEl("li", "faint", "Nothing yet."));
+}
+
+var PICKED = {};
+function buildDayPicker() {
+  var box = $("wkDays");
+  box.textContent = "";
+  DAY_SHORT.forEach(function (d, i) {
+    var b = makeEl("button", null, d.charAt(0) + d.charAt(1));
+    b.type = "button";
+    b.title = d;
+    b.setAttribute("aria-pressed", PICKED[i] ? "true" : "false");
+    b.setAttribute("aria-label", d);
+    b.addEventListener("click", function () {
+      PICKED[i] = !PICKED[i];
+      b.setAttribute("aria-pressed", PICKED[i] ? "true" : "false");
+    });
+    box.appendChild(b);
+  });
+}
+buildDayPicker();
+$("wkAdd").addEventListener("click", function () {
+  var days = Object.keys(PICKED).filter(function (k) { return PICKED[k]; }).map(Number).sort();
+  var st = $("wkStart").value, en = $("wkEnd").value;
+  var label = $("wkLabel").value.trim() || "Work";
+  if (!days.length) { toast("Pick at least one day"); return; }
+  if (!st || !en || en <= st) { toast("The end time has to be after the start"); return; }
+  var next = (DATA.prefs.routine || []).concat([{ label: label, days: days, start: st, end: en }]);
+  save({ routine: next }, label + " added").then(function () {
+    PICKED = {}; buildDayPicker(); $("wkLabel").value = "";
+  });
+});
+
 function render() {
   renderGroups();
   renderMaster();
   renderRecent();
+  renderToday();
+  renderWeek();
   paintDevice(deviceStatusLocal(), DATA.push);
 }
 
@@ -552,7 +695,7 @@ $("masterOn").addEventListener("change", function () {
   save({ enabled: $("masterOn").checked }, $("masterOn").checked ? "Reminders on" : "All reminders off");
 });
 $("holdCal").addEventListener("change", function () {
-  save({ hold_for_calendar: $("holdCal").checked }, $("holdCal").checked ? "Will wait out calendar events" : "Calendar hold off");
+  save({ hold_for_calendar: $("holdCal").checked }, $("holdCal").checked ? "Planning around your schedule" : "Reminders on the clock only");
 });
 $("quietStart").addEventListener("change", function () { if ($("quietStart").value) save({ quiet_start: $("quietStart").value }, "Quiet hours updated"); });
 $("quietEnd").addEventListener("change", function () { if ($("quietEnd").value) save({ quiet_end: $("quietEnd").value }, "Quiet hours updated"); });

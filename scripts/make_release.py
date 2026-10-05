@@ -34,6 +34,7 @@ _ROOT_FILES = [
     "finance_store.py", "finance_metrics.py", "finance_import.py",  # Finance Tracker (F1/F2)
     "health_store.py", "health_metrics.py", "health_import.py",  # Health Tracker (H1/H2)
     "checklist_store.py",  # Checklists view (user-written + Adam-built step lists)
+    "reminder_schedule.py",  # where the user is today (usual week + calendar + Adam's plan) for reminders
     "reminders.py",  # proactive reminders (water/meals/weigh-in/plan/bank CSVs) behind Notifications
     "garmin.py",  # Garmin health-sync add-on (Phase H3; garminconnect is optional/lazy)
     "approvals.py", "diffs.py", "job_store.py", "operator_session.py", "session_store.py", "onboarding.py", "agent_write_probe.py",

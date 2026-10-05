@@ -8,6 +8,14 @@ nudges), one banner at a time at least 20 minutes apart, never inside quiet
 hours, and — when Google Calendar is connected — never while a calendar event
 is in progress (it waits for the event to end).
 
+It plans around the user's day (reminder_schedule.py): their usual week,
+today's Google Calendar and Adam's own daily plan. Weigh-ins and bank CSVs need
+the user HOME, so they wait until an "out" block ends (+15 min to get in the
+door) and say "You're home" when they land; a short busy event (a call, an
+appointment) holds every reminder until it ends; the morning plan nudge moves
+earlier when the user leaves early. Water and meals still come while the user
+is out (at work, say) — they can be done anywhere.
+
 A reminder for a tracker the user has never touched stays silent: a new user
 who doesn't log meals is never asked about meals. That is the "active" gate in
 `gather_facts`. It is deliberately "ever used", not "used recently": a lapsed
@@ -38,6 +46,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import config
+import reminder_schedule
 
 # --- Catalog -----------------------------------------------------------------
 # `time` is the default "from" time (local, HH:MM). `until` bounds the window:
@@ -75,6 +84,9 @@ DEFAULT_PREFS: dict = {
     "hold_for_calendar": True,
     "paused_until": 0,          # epoch seconds; 0 = not paused
     "finance_day": 6,           # 0=Mon .. 6=Sun
+    # "Your usual week": recurring OUT blocks, e.g.
+    # {"label": "Work", "days": [0, 2], "start": "13:30", "end": "21:30"}
+    "routine": [],
     "kinds": {k["id"]: {"on": True, "time": k["time"]} for k in CATALOG},
 }
 
@@ -84,6 +96,10 @@ GLOBAL_GAP_S = 20 * 60          # at least 20 min between ANY two reminders
 WATER_DEFAULT_TARGET_ML = 2000  # used only when the user never set a goal
 FINANCE_STALE_DAYS = 5
 MEAL_SNAPSHOT_AT = "15:00"      # dinner check compares against this count
+HOME_ONLY = ("weigh_in", "finance_csv")   # need the user at home (scale, computer)
+HOME_BUFFER_MIN = 15            # after an "out" block ends: time to get in the door
+PLAN_LEAD_MIN = 30              # plan nudge this long before leaving early
+ROUTINE_MAX = 12
 
 TITLE_MAX = 40
 BODY_MAX = 110
@@ -149,7 +165,7 @@ def _merge_prefs(raw: dict | None) -> dict:
     p = json.loads(json.dumps(DEFAULT_PREFS))
     if not isinstance(raw, dict):
         return p
-    for k in ("enabled", "hold_for_calendar"):
+    for k in ("enabled", "hold_for_calendar"):  # hold_for_calendar = "Plan around my schedule"
         if isinstance(raw.get(k), bool):
             p[k] = raw[k]
     for k in ("quiet_start", "quiet_end"):
@@ -159,6 +175,18 @@ def _merge_prefs(raw: dict | None) -> dict:
         p["paused_until"] = float(raw["paused_until"])
     if isinstance(raw.get("finance_day"), int) and 0 <= raw["finance_day"] <= 6:
         p["finance_day"] = raw["finance_day"]
+    if isinstance(raw.get("routine"), list):
+        clean = []
+        for r in raw["routine"][:ROUTINE_MAX]:
+            if not isinstance(r, dict):
+                continue
+            days = sorted({d for d in (r.get("days") or []) if isinstance(d, int) and 0 <= d <= 6})
+            st, en = r.get("start"), r.get("end")
+            if not days or not _valid_hm(st) or not _valid_hm(en) or _mins(en) <= _mins(st):
+                continue
+            label = " ".join(str(r.get("label") or "").split())[:40] or "Away"
+            clean.append({"label": label, "days": days, "start": st, "end": en})
+        p["routine"] = clean
     kinds = raw.get("kinds")
     if isinstance(kinds, dict):
         for kid, v in kinds.items():
@@ -287,40 +315,54 @@ def gather_facts(now: datetime) -> dict:
     return f
 
 
-# --- Calendar hold -------------------------------------------------------------------
+# --- Schedule (where the user is) ------------------------------------------------------
 
-_CAL_CACHE: dict = {"ts": 0.0, "events": None}
-_CAL_TTL_S = 600
-
-
-def calendar_busy(now: datetime) -> bool:
-    """True while a timed Google Calendar event is in progress. False when the
-    calendar isn't connected or can't be read — a calendar hiccup never blocks
-    a reminder for the whole day."""
+def gather_blocks(now: datetime, prefs: dict) -> list[dict]:
+    """Today's out/busy blocks from the usual week, Google Calendar and Adam's
+    plan. Never raises."""
     try:
-        import google_calendar
-        if not google_calendar.is_configured():
-            return False
-        if _CAL_CACHE["events"] is None or time.monotonic() - _CAL_CACHE["ts"] > _CAL_TTL_S:
-            loc = now.astimezone()
-            start = loc.replace(hour=0, minute=0, second=0, microsecond=0)
-            _CAL_CACHE["events"] = google_calendar.list_events(
-                start.isoformat(), (start + timedelta(days=1)).isoformat(), timeout=8)
-            _CAL_CACHE["ts"] = time.monotonic()
-        loc = now.astimezone()
-        for e in _CAL_CACHE["events"] or []:
-            if e.get("all_day"):
-                continue
-            try:
-                s = datetime.fromisoformat(str(e.get("start")).replace("Z", "+00:00"))
-                en = datetime.fromisoformat(str(e.get("end")).replace("Z", "+00:00"))
-            except ValueError:
-                continue
-            if s <= loc < en:
-                return True
+        return reminder_schedule.gather(now, prefs.get("routine") or [])
     except Exception:
-        return False
-    return False
+        return []
+
+
+def _cur(now: datetime) -> int:
+    return now.hour * 60 + now.minute
+
+
+def busy_block(now: datetime, blocks: list[dict]) -> dict | None:
+    cur = _cur(now)
+    return next((b for b in blocks if b.get("busy") and b["start"] <= cur < b["end"]), None)
+
+
+def away_block(now: datetime, blocks: list[dict]) -> dict | None:
+    """The out block the user is in — or just left, still inside the
+    get-in-the-door buffer. The one ending last wins (back-to-back errands)."""
+    cur = _cur(now)
+    hits = [b for b in blocks if b.get("out") and b["start"] <= cur < b["end"] + HOME_BUFFER_MIN]
+    return max(hits, key=lambda b: b["end"]) if hits else None
+
+
+def just_home_from(now: datetime, blocks: list[dict], within: int = 120) -> dict | None:
+    """The out block that ended in the last `within` minutes (for "You're home")."""
+    cur = _cur(now)
+    hits = [b for b in blocks if b.get("out") and b["end"] < 1440
+            and b["end"] + HOME_BUFFER_MIN <= cur <= b["end"] + within]
+    return max(hits, key=lambda b: b["end"]) if hits else None
+
+
+def plan_departure(prefs: dict, blocks: list[dict]) -> dict | None:
+    """The first out block that starts before the plan reminder's time (and
+    after waking), so the nudge can come before the user leaves."""
+    wake = _mins(prefs.get("quiet_end", "07:00"))
+    t0 = _mins(prefs["kinds"]["plan"]["time"])
+    cands = [b for b in blocks if b.get("out") and b["start"] < 1440 and b["start"] > 0
+             and b["start"] < t0 + PLAN_LEAD_MIN and b["start"] - PLAN_LEAD_MIN >= wake - PLAN_LEAD_MIN]
+    return min(cands, key=lambda b: b["start"]) if cands else None
+
+
+def _fmt_min(m: int) -> str:
+    return fmt_time(f"{(m // 60) % 24:02d}:{m % 60:02d}")
 
 
 # --- Evaluation (pure) ---------------------------------------------------------------
@@ -343,16 +385,23 @@ def _water_behind(now: datetime, prefs: dict, facts: dict) -> tuple[float, float
     return None
 
 
-def evaluate(now: datetime, prefs: dict, state: dict, facts: dict) -> list[str]:
+def evaluate(now: datetime, prefs: dict, state: dict, facts: dict,
+             blocks: list[dict] | None = None) -> list[str]:
     """Which reminder kinds are due right now. Pure — no I/O, no clock reads.
-    Gates, in order: master switch, pause, quiet hours, then each kind's own
-    toggle / window / already-sent / still-not-done check."""
+    Gates, in order: master switch, pause, quiet hours, a busy event in
+    progress, then each kind's own toggle / window / where-the-user-is /
+    already-sent / still-not-done check."""
+    blocks = blocks or []
+    plan_around = prefs.get("hold_for_calendar", True)
     if not prefs.get("enabled", True):
         return []
     if float(prefs.get("paused_until") or 0) > now.timestamp():
         return []
     if in_quiet_hours(now, prefs):
         return []
+    if plan_around and busy_block(now, blocks):
+        return []  # on a call / at an appointment: everything waits for it to end
+    away = away_block(now, blocks) if plan_around else None
     date = now.strftime("%Y-%m-%d")
     day = (state.get("days") or {}).get(date) or {"fired": {}, "water_ts": []}
     fired = day.get("fired") or {}
@@ -365,6 +414,12 @@ def evaluate(now: datetime, prefs: dict, state: dict, facts: dict) -> list[str]:
             continue
         t0 = _mins(kp.get("time", k["time"]))
         t1 = max(_mins(k["until"]), t0 + 60)  # a user time past `until` still gets an hour
+        if kid == "plan" and plan_around:
+            dep = plan_departure(prefs, blocks)
+            if dep:  # leaving early: ask before they go
+                t0 = max(_mins(prefs.get("quiet_end", "07:00")), dep["start"] - PLAN_LEAD_MIN)
+        if kid in HOME_ONLY and away:
+            continue  # out of the house: waits until they're back
         if not (t0 <= cur < t1):
             continue
         if kid == "water":
@@ -400,7 +455,13 @@ def evaluate(now: datetime, prefs: dict, state: dict, facts: dict) -> list[str]:
             if facts.get("weight_active") and not facts.get("weighed_today"):
                 due.append(kid)
         elif kid == "finance_csv":
-            if now.weekday() != int(prefs.get("finance_day", 6)):
+            fday = int(prefs.get("finance_day", 6))
+            # The chosen day — or the day after, when it didn't go out on the
+            # chosen day (the user was out all evening, say).
+            last_fired = float(state.get("finance_fired_ts") or 0)
+            carry = (now.weekday() == (fday + 1) % 7
+                     and now.timestamp() - last_fired > 36 * 3600)
+            if now.weekday() != fday and not carry:
                 continue
             if not facts.get("finance_active"):
                 continue
@@ -429,14 +490,23 @@ def _amount_pair(logged: float, target: float, unit: str) -> str:
 
 
 def build_message(kind: str, facts: dict, prefs: dict | None = None,
-                  now: datetime | None = None) -> dict:
+                  now: datetime | None = None, blocks: list[dict] | None = None) -> dict:
     """Title = the whole ask (survives lock-screen truncation); body = one line
     of why. Always returns something sendable — a test send with no data still
     reads naturally."""
     prefs = prefs or load_prefs()
     now = now or datetime.now()
     unit = facts.get("water_unit") or "oz"
-    if kind == "plan":
+    blocks = blocks or []
+    home = just_home_from(now, blocks)
+    dep = plan_departure(prefs, blocks) if kind == "plan" else None
+    if kind == "plan" and dep and _cur(now) < dep["start"]:
+        title = f"Before {dep['label']}, sir: what's the plan?"
+        if len(title) > TITLE_MAX:
+            title = "Before you head out, sir: the plan?"
+        body = (f"You're out from {_fmt_min(dep['start'])}. "
+                "Tap and tell me what we're getting done today.")
+    elif kind == "plan":
         title, body = "What's the plan today, sir?", "Nothing's planned for today yet. Tap and tell me what we're getting done."
     elif kind == "water":
         wb = _water_behind(now, prefs, facts)
@@ -451,10 +521,11 @@ def build_message(kind: str, facts: dict, prefs: dict | None = None,
     elif kind == "meal_pm":
         title, body = "Log dinner, sir?", "Nothing's logged since this afternoon. Tap and tell me what you had."
     elif kind == "weigh_in":
-        title, body = "Weigh-in, sir?", "No weight logged today. Step on the scale, then tap to log it."
+        title = "You're home, sir. Weigh-in?" if home else "Weigh-in, sir?"
+        body = "No weight logged today. Step on the scale, then tap to log it."
     elif kind == "finance_csv":
         last = float(facts.get("finance_last_import_ts") or 0)
-        title = "Bank statements are due, sir"
+        title = "You're home, sir. Bank CSVs?" if home else "Bank statements are due, sir"
         if last:
             days = max(1, int((now.timestamp() - last) // 86400))
             body = f"Last import was {days} day{'s' if days != 1 else ''} ago. Tap to drop in this week's CSVs."
@@ -478,6 +549,8 @@ def _record_sent(state: dict, now: datetime, msg: dict, test: bool = False) -> N
             day.setdefault("water_ts", []).append(now.timestamp())
         else:
             day.setdefault("fired", {})[msg["kind"]] = now.timestamp()
+            if msg["kind"] == "finance_csv":
+                state["finance_fired_ts"] = now.timestamp()
     log = state.setdefault("log", [])
     log.insert(0, {"ts": now.timestamp(), "kind": msg["kind"], "title": msg["title"],
                    "body": msg["body"], "test": bool(test)})
@@ -485,34 +558,33 @@ def _record_sent(state: dict, now: datetime, msg: dict, test: bool = False) -> N
 
 
 def tick(send: Callable[[dict], None], now: datetime | None = None,
-         facts: dict | None = None, busy: Callable[[datetime], bool] | None = None) -> list[dict]:
+         facts: dict | None = None, blocks: list[dict] | None = None) -> list[dict]:
     """One pass: record the afternoon meal snapshot, evaluate, and send what's
     due. `send` delivers one message (server passes the Web Push sender).
-    Returns the messages sent. Tests inject now/facts/busy."""
+    Returns the messages sent. Tests inject now/facts/blocks."""
     now = now or datetime.now()
     prefs = load_prefs()
     facts = facts if facts is not None else gather_facts(now)
+    blocks = blocks if blocks is not None else gather_blocks(now, prefs)
     with _STATE_LOCK:
-        return _tick_locked(send, now, prefs, facts, busy)
+        return _tick_locked(send, now, prefs, facts, blocks)
 
 
-def _tick_locked(send, now, prefs, facts, busy) -> list[dict]:
+def _tick_locked(send, now, prefs, facts, blocks) -> list[dict]:
     state = load_state()
     day = _day(state, now.strftime("%Y-%m-%d"))
     if "meals_at_snapshot" not in day and now.hour * 60 + now.minute >= _mins(MEAL_SNAPSHOT_AT) \
             and "meals_today" in facts:
         day["meals_at_snapshot"] = int(facts.get("meals_today") or 0)
-    due = evaluate(now, prefs, state, facts)
+    due = evaluate(now, prefs, state, facts, blocks)
     sent: list[dict] = []
     if due and now.timestamp() - float(state.get("last_sent_ts") or 0) < GLOBAL_GAP_S:
         due = []  # spaced out: the rest wait their turn
-    if due and prefs.get("hold_for_calendar", True) and (busy or calendar_busy)(now):
-        due = []  # in a meeting — every due reminder simply waits for the next tick
     # One banner per tick, never a burst. Whichever window closes soonest goes
     # first, so the rest still have time left when their turn comes.
     due = sorted(due, key=lambda k: _mins(_BY_ID[k]["until"]))[:1]
     for kid in due:
-        msg = build_message(kid, facts, prefs, now)
+        msg = build_message(kid, facts, prefs, now, blocks)
         try:
             send(msg)
         except Exception:
@@ -528,7 +600,8 @@ def send_test(kind: str, send: Callable[[dict], None], now: datetime | None = No
     """Send one reminder right now regardless of its conditions (the panel's
     'Send test'). Logged as a test; never counts toward the daily limit."""
     now = now or datetime.now()
-    msg = build_message(kind, gather_facts(now), load_prefs(), now)
+    prefs = load_prefs()
+    msg = build_message(kind, gather_facts(now), prefs, now, gather_blocks(now, prefs))
     send(msg)
     with _STATE_LOCK:
         state = load_state()
@@ -543,6 +616,11 @@ def overview(now: datetime | None = None) -> dict:
     prefs = load_prefs()
     state = load_state()
     facts = gather_facts(now)
+    blocks = gather_blocks(now, prefs)
+    plan_around = prefs.get("hold_for_calendar", True)
+    away = away_block(now, blocks) if plan_around else None
+    busy = busy_block(now, blocks) if plan_around else None
+    dep = plan_departure(prefs, blocks) if plan_around else None
     day = (state.get("days") or {}).get(now.strftime("%Y-%m-%d")) or {}
     kinds = []
     for k in CATALOG:
@@ -552,18 +630,29 @@ def overview(now: datetime | None = None) -> dict:
                       "finance_csv": "finance_active"}[kid]
         sent_today = (len(day.get("water_ts") or []) if kid == "water"
                       else (1 if (day.get("fired") or {}).get(kid) else 0))
+        note = ""
+        if busy:
+            note = f"Waiting: {busy['label']} until {_fmt_min(busy['end'])}"
+        elif kid in HOME_ONLY and away:
+            note = f"Waits until you're home ({away['label']} until {_fmt_min(away['end'])})"
+        elif kid == "plan" and dep:
+            note = f"Today it comes at {_fmt_min(max(_mins(prefs.get('quiet_end', '07:00')), dep['start'] - PLAN_LEAD_MIN))}, before {dep['label']}"
         kinds.append({
             "id": kid, "label": k["label"], "desc": k["desc"], "group": k["group"],
+            "needs_home": kid in HOME_ONLY, "note": note,
             "on": prefs["kinds"][kid]["on"], "time": prefs["kinds"][kid]["time"],
             "default_time": k["time"], "until": k["until"],
             "tracking": bool(facts.get(active_key)), "sent_today": sent_today,
-            "preview": build_message(kid, facts, prefs, now),
+            "preview": build_message(kid, facts, prefs, now, blocks),
         })
     return {
         "prefs": prefs, "kinds": kinds, "weekdays": WEEKDAYS,
         "quiet_now": in_quiet_hours(now, prefs),
         "paused": float(prefs.get("paused_until") or 0) > now.timestamp(),
         "water_goal_set": bool(facts.get("water_target_ml")),
+        "today": [{"start": _fmt_min(b["start"]), "end": _fmt_min(b["end"]) if b["end"] < 1440 else "end of day",
+                   "label": b["label"], "out": b["out"], "busy": b["busy"], "source": b["source"]}
+                  for b in blocks],
         "log": (state.get("log") or [])[:8],
     }
 

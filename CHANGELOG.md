@@ -3,6 +3,25 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.82 - Reminders that plan around your day
+
+- **Adam knows when you're out.** Tell it your usual week (work shifts, say)
+  in Gear, then Notifications. It also reads today's Google Calendar and the
+  plans you make with Adam. Something with a location, or that sounds like
+  leaving the house (work, an appointment, a trip, dinner out), counts as
+  out. A call or a meeting counts as busy.
+- **Weigh-ins and bank statements wait until you're home.** They come about
+  15 minutes after you're back: "You're home, sir. Weigh-in?" If you're out
+  until bedtime, the weigh-in skips the day and the bank reminder moves to
+  the next day.
+- **Water and meal reminders still come while you're out,** since you can do
+  those anywhere. A call or appointment holds every reminder until it ends.
+- **Leaving early? The plan reminder comes first.** On a morning you head out
+  at 8, Adam asks about the day before you go.
+- **See it for yourself.** The Notifications panel shows today as Adam sees
+  it, and each reminder says why it's waiting. Turn off "Plan around my
+  schedule" to go back to reminders on the clock alone.
+
 ## 0.9.81 - Reminders, and Adam Plus covers your phone
 
 - **Adam reminds you about the things that are easy to miss.** Water when

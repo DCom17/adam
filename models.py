@@ -628,6 +628,14 @@ class ReminderKindPref(StrictModel):
     time: str | None = Field(default=None, max_length=5)
 
 
+class ReminderRoutineBlock(StrictModel):
+    """One "usual week" block: e.g. Work, Mon+Wed, 13:30-21:30. days: 0=Mon..6=Sun."""
+    label: str = Field(default="", max_length=40)
+    days: list[int] = Field(default_factory=list, max_length=7)
+    start: str = Field(max_length=5)
+    end: str = Field(max_length=5)
+
+
 class ReminderPrefsBody(StrictModel):
     """Partial update of the reminder prefs. Omitted fields are left as-is;
     invalid times/days are dropped by reminders.save_prefs."""
@@ -637,6 +645,7 @@ class ReminderPrefsBody(StrictModel):
     quiet_end: str | None = Field(default=None, max_length=5)
     finance_day: int | None = Field(default=None, ge=0, le=6)
     kinds: dict[str, ReminderKindPref] | None = None
+    routine: list[ReminderRoutineBlock] | None = Field(default=None, max_length=12)
 
 
 class ReminderTestBody(StrictModel):

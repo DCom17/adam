@@ -46,6 +46,8 @@ def isolated_state(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "HEALTH_DB", tmp_path / "none-health.db", raising=False)
     monkeypatch.setattr(config, "FINANCE_DB", tmp_path / "none-finance.db", raising=False)
     monkeypatch.setattr(config, "VAULT_PATH", str(tmp_path / "vault"), raising=False)
+    import reminder_schedule
+    monkeypatch.setattr(reminder_schedule, "_calendar_events", lambda now: [])  # never the real bridge
     assert rm._prefs_file().parent == tmp_path
     yield
 
@@ -192,11 +194,11 @@ def test_water_copy_names_the_numbers():
 def test_tick_sends_once_and_respects_calendar_hold():
     sent = []
     f = dict(ALL_ACTIVE)
-    out = rm.tick(sent.append, now=at(9, 5), facts=f, busy=lambda n: True)
+    out = rm.tick(sent.append, now=at(9, 5), facts=f, blocks=[{"start": 0, "end": 1440, "label": "Call", "out": False, "busy": True, "source": "calendar"}])
     assert out == [] and sent == []                      # in a meeting: waits
-    out = rm.tick(sent.append, now=at(9, 6), facts=f, busy=lambda n: False)
+    out = rm.tick(sent.append, now=at(9, 6), facts=f, blocks=[])
     assert [m["kind"] for m in out] == ["plan"]
-    out = rm.tick(sent.append, now=at(9, 7), facts=f, busy=lambda n: False)
+    out = rm.tick(sent.append, now=at(9, 7), facts=f, blocks=[])
     assert out == []                                      # already sent today
     assert rm.load_state()["log"][0]["kind"] == "plan"
 
@@ -205,13 +207,13 @@ def test_tick_failed_send_is_retried():
     def boom(_m):
         raise RuntimeError("no devices")
     f = dict(ALL_ACTIVE)
-    assert rm.tick(boom, now=at(9, 5), facts=f, busy=lambda n: False) == []
+    assert rm.tick(boom, now=at(9, 5), facts=f, blocks=[]) == []
     got = []
-    assert rm.tick(got.append, now=at(9, 6), facts=f, busy=lambda n: False)
+    assert rm.tick(got.append, now=at(9, 6), facts=f, blocks=[])
 
 
 def test_tick_records_meal_snapshot_after_three():
-    rm.tick(lambda m: None, now=at(15, 1), facts=dict(ALL_ACTIVE, meals_today=2), busy=lambda n: False)
+    rm.tick(lambda m: None, now=at(15, 1), facts=dict(ALL_ACTIVE, meals_today=2), blocks=[])
     assert rm.load_state()["days"]["2026-10-05"]["meals_at_snapshot"] == 2
 
 
@@ -314,20 +316,20 @@ def test_one_banner_per_tick_soonest_window_first_then_spaced():
     send = got.append
     no = lambda n: False
     # 19:35 Sunday: water (closes 20:30), dinner (22:00), bank (22:00) all due
-    rm.tick(send, now=sunday(19, 35), facts=f, busy=no)
+    rm.tick(send, now=sunday(19, 35), facts=f, blocks=[])
     assert [m["kind"] for m in got] == ["water"]
-    rm.tick(send, now=sunday(19, 45), facts=f, busy=no)     # inside the 20-min gap
+    rm.tick(send, now=sunday(19, 45), facts=f, blocks=[])     # inside the 20-min gap
     assert len(got) == 1
-    rm.tick(send, now=sunday(19, 56), facts=f, busy=no)
-    rm.tick(send, now=sunday(20, 17), facts=f, busy=no)
-    rm.tick(send, now=sunday(20, 38), facts=f, busy=no)
+    rm.tick(send, now=sunday(19, 56), facts=f, blocks=[])
+    rm.tick(send, now=sunday(20, 17), facts=f, blocks=[])
+    rm.tick(send, now=sunday(20, 38), facts=f, blocks=[])
     assert [m["kind"] for m in got] == ["water", "meal_pm", "finance_csv", "weigh_in"]
 
 
 def test_test_send_does_not_delay_real_reminders(monkeypatch):
     rm.send_test("plan", lambda m: None, now=at(9, 0))
     got = []
-    rm.tick(got.append, now=at(9, 1), facts=dict(ALL_ACTIVE), busy=lambda n: False)
+    rm.tick(got.append, now=at(9, 1), facts=dict(ALL_ACTIVE), blocks=[])
     assert [m["kind"] for m in got] == ["plan"]
 
 
@@ -386,3 +388,152 @@ def test_a_fake_sender_still_runs_in_test_mode(monkeypatch):
 def test_reminder_loop_does_not_start_in_test_mode():
     import asyncio
     asyncio.run(asyncio.wait_for(rm.run_loop(lambda m: None), timeout=2))   # returns at once
+
+
+# --- schedule-aware (reminder_schedule) -------------------------------------------------
+
+import reminder_schedule as rs  # noqa: E402
+
+
+def blk(s, e, label="Work", out=True, busy=False, source="routine"):
+    return {"start": s, "end": e, "label": label, "out": out, "busy": busy, "source": source}
+
+
+@pytest.mark.parametrize("title,loc,mins,expect", [
+    # the owner's real calendar titles: at-home task blocks are neither
+    ("Front yard: cat poop + start laundry", "", 15, (False, False)),
+    ("Highlander — polish & wax", "", 120, (False, False)),
+    ("Cadence 4Runner — head unit gain/power diagnosis", "", 90, (False, False)),
+    ("184 Loan Call — First Tribal Lending", "", 30, (False, True)),
+    ("Family meeting — Halloween (trail + lunch)", "", 45, (False, True)),
+    ("Pool shift", "", 480, (True, False)),            # long out block: reachable
+    ("Work", "", 540, (True, False)),
+    ("Work on the Highlander", "", 120, (False, False)),
+    ("Dentist", "", 60, (True, True)),                  # short + out: busy
+    ("Dinner at Grandma's", "", 120, (True, True)),
+    ("Haircut", "123 Main St", 30, (True, True)),
+    ("Anything", "Home", 60, (False, False)),
+])
+def test_classify(title, loc, mins, expect):
+    assert rs.classify(title, loc, mins) == expect
+
+
+@pytest.mark.parametrize("text,expect", [
+    ("- **2:30–2:45 PM** — Front yard: clean cat poop", (870, 885, "Front yard: clean cat poop")),
+    ("- 11–1 PM | Drive to Phoenix | 30m | notes", (660, 780, "Drive to Phoenix")),
+    ("- 14:30-15:00 | Dentist", (870, 900, "Dentist")),
+    ("- 7:00 PM - 8:30 PM — Church", (1140, 1230, "Church")),
+    ("- do 3-4 sets of squats", None),
+])
+def test_parse_range(text, expect):
+    assert rs.parse_range(text) == expect
+
+
+def test_plan_blocks_reads_only_todays_section():
+    packet = """# Latest Calendar Packet
+_Rebuilt 2026-10-02 (Fri)._
+
+## Friday, Oct 2 — car day
+- **9:00–11:00 AM** — Dentist downtown
+
+## Monday, Oct 5 — workday
+- **8:00–9:00 AM** — Gym
+- **2:30–2:45 PM** — Front yard cleanup
+- **6:00–8:00 PM** — Dinner at Grandma's
+"""
+    got = rs.plan_blocks(packet, datetime(2026, 10, 5, 7, 0))
+    assert [(b["label"], b["out"], b["busy"]) for b in got] == [
+        ("Gym", True, True), ("Dinner at Grandma's", True, True)]
+
+
+def test_routine_blocks_by_weekday():
+    routine = [{"label": "Work", "days": [0, 2], "start": "13:30", "end": "21:30"}]
+    assert rs.routine_blocks(routine, 0)[0]["start"] == 810
+    assert rs.routine_blocks(routine, 1) == []
+
+
+def test_calendar_blocks_all_day_vacation_only():
+    now = datetime(2026, 10, 5, 12).astimezone()
+    evs = [{"title": "Fam meeting 8pm", "all_day": True},
+           {"title": "Vacation — Rocky Point", "all_day": True}]
+    got = rs.calendar_blocks(evs, now)
+    assert len(got) == 1 and got[0]["start"] == 0 and got[0]["end"] == 1440
+
+
+def test_weigh_in_waits_until_home_then_says_so():
+    f = dict(ALL_ACTIVE)
+    work = [blk(810, 1290)]                     # Mon 1:30–9:30 PM shift
+    assert "weigh_in" not in rm.evaluate(at(20, 45), P(), {}, f, work)   # still at work
+    assert "weigh_in" not in rm.evaluate(at(21, 40), P(), {}, f, work)   # 10 min after: in the buffer
+    assert "weigh_in" in rm.evaluate(at(21, 46), P(), {}, f, work)       # home
+    m = rm.build_message("weigh_in", f, P(), at(21, 46), work)
+    assert m["title"] == "You're home, sir. Weigh-in?"
+
+
+def test_out_past_quiet_hours_skips_weigh_in():
+    assert "weigh_in" not in rm.evaluate(at(21, 59), P(), {}, dict(ALL_ACTIVE), [blk(1080, 1350)])
+
+
+def test_water_and_meals_still_come_at_work():
+    f = dict(ALL_ACTIVE)
+    shift = [blk(690, 1170)]                    # Tue 11:30 AM–7:30 PM
+    assert "water" in rm.evaluate(at(14), P(), {}, f, shift)
+    assert "meal_am" in rm.evaluate(at(12), P(), {}, f, shift)
+
+
+def test_busy_event_holds_everything_until_it_ends():
+    f = dict(ALL_ACTIVE)
+    call = [blk(840, 870, "Loan call", out=False, busy=True, source="calendar")]
+    assert rm.evaluate(at(14, 10), P(), {}, f, call) == []
+    assert "water" in rm.evaluate(at(14, 31), P(), {}, f, call)
+
+
+def test_plan_around_off_restores_clock_only_behavior():
+    f = dict(ALL_ACTIVE)
+    work = [blk(810, 1290)]
+    assert "weigh_in" in rm.evaluate(at(20, 45), P(hold_for_calendar=False), {}, f, work)
+
+
+def test_plan_nudge_moves_before_an_early_departure():
+    f = dict(ALL_ACTIVE)
+    friday = [blk(480, 1020)]                   # Fri 8 AM–5 PM
+    fri = lambda h, m: datetime(2026, 10, 9, h, m)
+    assert "plan" not in rm.evaluate(fri(7, 15), P(), {}, f, friday)
+    assert "plan" in rm.evaluate(fri(7, 30), P(), {}, f, friday)
+    m = rm.build_message("plan", f, P(), fri(7, 30), friday)
+    assert m["title"] == "Before Work, sir: what's the plan?" and "8:00 AM" in m["body"]
+    # a later shift (1:30 PM) doesn't move the 9 AM nudge
+    assert "plan" not in rm.evaluate(at(8, 30), P(), {}, f, [blk(810, 1290)])
+    assert "plan" in rm.evaluate(at(9, 0), P(), {}, f, [blk(810, 1290)])
+
+
+def test_bank_reminder_rolls_to_next_day_when_missed():
+    f = dict(ALL_ACTIVE)
+    sun_out = [blk(900, 1380, "Family trip")]
+    assert "finance_csv" not in rm.evaluate(at(18, day=11), P(), {}, f, sun_out)   # out all Sunday evening
+    assert "finance_csv" in rm.evaluate(at(17, day=12), P(), {}, f, [])            # Monday: carried over
+    sent_sunday = {"finance_fired_ts": at(17, day=11).timestamp()}
+    assert "finance_csv" not in rm.evaluate(at(17, day=12), P(), sent_sunday, f, [])
+
+
+def test_routine_prefs_validate():
+    out = rm.save_prefs({"routine": [
+        {"label": "Work", "days": [0, 2, 9], "start": "13:30", "end": "21:30"},
+        {"label": "bad", "days": [1], "start": "18:00", "end": "09:00"},
+        {"label": "", "days": [], "start": "08:00", "end": "09:00"},
+    ]})
+    assert out["routine"] == [{"label": "Work", "days": [0, 2], "start": "13:30", "end": "21:30"}]
+
+
+def test_overview_explains_waiting(monkeypatch):
+    rm.save_prefs({"routine": [{"label": "Work", "days": list(range(7)), "start": "00:00", "end": "23:59"}]})
+    d = client.get("/reminders", headers=AUTH).json()
+    assert d["today"] and d["today"][0]["label"] == "Work" and d["today"][0]["source"] == "routine"
+    w = next(k for k in d["kinds"] if k["id"] == "weigh_in")
+    assert w["needs_home"] and "until you're home" in w["note"]
+
+
+def test_routine_over_the_api():
+    r = client.post("/reminders/prefs", headers=AUTH, json={"routine": [
+        {"label": "Work", "days": [4], "start": "08:00", "end": "17:00"}]})
+    assert r.status_code == 200 and r.json()["prefs"]["routine"][0]["days"] == [4]
