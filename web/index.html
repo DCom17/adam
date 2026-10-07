@@ -3831,6 +3831,22 @@
     try { const d = await fetchLastResult(); if (d) surfaceResult(d); } catch (_) {}
   }
 
+  // The service worker drops a marker when a reply notification is tapped (sw.js
+  // notificationclick). Read-and-delete: returns {ts, at} for a tap in the last two
+  // minutes, else null. This is what lets a foreground pull know the user TAPPED —
+  // iOS often loses the SW's "adam-open-play" message on a frozen PWA.
+  async function takeTapMarker() {
+    try {
+      if (!("caches" in window)) return null;
+      const c = await caches.open("adam-tap");
+      const r = await c.match("/__adam-tap");
+      if (!r) return null;
+      await c.delete("/__adam-tap");
+      const m = await r.json();
+      return (m && Date.now() - (m.at || 0) < 120000) ? m : null;
+    } catch (_) { return null; }
+  }
+
   // Proactively pull the latest server-initiated reply (SMS/push) and surface it if
   // this device hasn't shown it yet. The iOS notification-tap handoff is unreliable —
   // a frozen/killed PWA can drop the service-worker message and the openWindow — so
@@ -3842,9 +3858,14 @@
     if (now - _lastResultSync < 3000) return;   // throttle bursty foreground events
     _lastResultSync = now;
     try {
+      const tap = await takeTapMarker();
       const d = await fetchLastResult();
       if (!d) return;
       const ts = d.ts || 0;
+      // The user tapped THIS reply's notification (and the SW message may never
+      // arrive): take them to its chat. surfaceResult is idempotent per ts, so this is
+      // safe even if the reply was already delivered passively. (2026-10-06)
+      if (tap && (!tap.ts || tap.ts === ts)) { surfaceResult(d); return; }
       if (ts && ts <= seenResultTs()) return;   // already shown on this device
       // Passive pull: deliver into the reply's own chat + flag it unseen, but never
       // switch the active chat out from under the user (that was the "activating Claude
@@ -6004,6 +6025,7 @@
   // one-tap prompt; that tap unlocks the AudioContext and plays the reply. If a
   // session is already active, audio is already unlocked — just play.
   function promptPendingPlay() {
+    takeTapMarker();   // this tap is handled here — don't let a later foreground pull re-switch
     // Auto-play only if a live session's AudioContext is actually running. If the
     // app was backgrounded iOS may have suspended it, and a notification tap isn't
     // a reliable in-page gesture to resume — so fall through to the tap prompt,

@@ -21,8 +21,13 @@ import config
 import finance_import as fimport
 import finance_store as fs
 import finance_metrics as fm
+import finance_history as fh
 from models import (
     FinanceAccountBody,
+    FinanceAckBody,
+    FinanceBulkCategoryBody,
+    FinanceReassignBody,
+    FinanceRuleBody,
     FinanceBalancePhotoBody,
     FinanceCategoryBody,
     FinanceImportBody,
@@ -59,6 +64,14 @@ def _read_upload_text(path: str) -> str:
         raise HTTPException(status_code=400, detail="Could not read that file.")
 
 
+def _upload_display_name(path: str) -> str:
+    name = Path(path).name
+    head, sep, rest = name.partition("_")
+    if sep and len(head) == 12 and all(c in "0123456789abcdef" for c in head):
+        return rest
+    return name
+
+
 # --- Import + review --------------------------------------------------------
 
 @router.post("/finance/import", dependencies=[Depends(require_token)])
@@ -70,10 +83,16 @@ async def finance_import(body: FinanceImportBody):
     together. Nothing hits the ledger — returns a staging summary; the user
     approves the batch afterward."""
     rows = body.rows
+    source = body.source or ""
     if rows is None:
         paths = list(body.file_paths or [])
         if body.file_path:
             paths.append(body.file_path)
+        if paths and not source:
+            # Remember which statement(s) an import came from (minus the /upload
+            # id prefix) so the Review tab can say "the card-activity file", not just
+            # a batch timestamp.
+            source = ", ".join(_upload_display_name(p) for p in paths)[:200]
         if paths:
             accounts = [a["name"] for a in fs.get_accounts()]
             categories = [c["name"] for c in fs.get_categories()]
@@ -105,7 +124,7 @@ async def finance_import(body: FinanceImportBody):
                 raise HTTPException(status_code=422,
                                     detail="Could not parse any transactions from that input.")
     summary = fimport.stage_rows(
-        rows, batch_id=body.batch_id, source=(body.source or ""),
+        rows, batch_id=body.batch_id, source=source,
         default_account=(body.account or ""),
     )
     return summary
@@ -208,10 +227,191 @@ async def finance_discard_batch(batch_id: str):
 
 # --- Dashboard reads (the payloads Phase F3's HTML renders) -----------------
 
+def _iso_or_400(v: str | None, name: str) -> str | None:
+    if v is None or v == "":
+        return None
+    from datetime import date as _d
+    try:
+        return _d.fromisoformat(v[:10]).isoformat()
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"{name} must be YYYY-MM-DD.")
+
+
 @router.get("/finance/summary", dependencies=[Depends(require_token)])
-async def finance_summary(month: str | None = None):
-    """The whole dashboard payload — every tile — computed deterministically."""
-    return fm.summary(fs, month=month)
+async def finance_summary(month: str | None = None, start: str | None = None,
+                          end: str | None = None):
+    """The whole dashboard payload for a month (?month=YYYY-MM, default newest) or
+    a date range (?start=&end=) — balances at the period's end (snapshot or
+    reconstructed), spending/income over the period, every tile. Deterministic."""
+    s, e = _iso_or_400(start, "start"), _iso_or_400(end, "end")
+    if (s is None) != (e is None):
+        raise HTTPException(status_code=400, detail="Give both start and end.")
+    if month is not None and month and not (len(month) == 7 and month[4] == "-"):
+        raise HTTPException(status_code=400, detail="month must be YYYY-MM.")
+    return await asyncio.to_thread(fm.summary, fs, month=month or None, start=s, end=e)
+
+
+@router.get("/finance/history", dependencies=[Depends(require_token)])
+async def finance_history():
+    """Daily net worth / cash / debt / investments from the first day of data to
+    the last: snapshots exact, days between them reconstructed from transactions.
+    Each point carries kind = actual | bridged | projected."""
+    return await asyncio.to_thread(fh.series, fs)
+
+
+@router.get("/finance/months", dependencies=[Depends(require_token)])
+async def finance_months():
+    """Every month that has data, with transaction counts, plus the data's span —
+    what the period picker offers."""
+    counts: dict[str, int] = {}
+    for t in fs.list_transactions():
+        counts[t["date"][:7]] = counts.get(t["date"][:7], 0) + 1
+    snaps = fs.snapshot_dates()
+    for d in snaps:
+        counts.setdefault(d[:7], 0)
+    months = [{"month": m, "transactions": counts[m]} for m in sorted(counts)]
+    dates = [t["date"] for t in fs.list_transactions(limit=1)] + snaps
+    first = fs.list_transactions()
+    start = min([first[-1]["date"]] + snaps) if first else (min(snaps) if snaps else None)
+    return {"months": months, "start": start, "end": max(dates) if dates else None,
+            "snapshots": snaps}
+
+
+@router.get("/finance/checks", dependencies=[Depends(require_token)])
+async def finance_checks(include_dismissed: bool = False):
+    """Every data-health finding as an actionable review item — the list the
+    Review tab renders and the Data Health status is computed from."""
+    return await asyncio.to_thread(fh.checks, fs, include_dismissed=include_dismissed)
+
+
+@router.post("/finance/checks/ack", dependencies=[Depends(require_token)])
+async def finance_ack(body: FinanceAckBody):
+    """Dismiss (or restore, with undo) findings. Calculations honour duplicate
+    resolutions immediately."""
+    ids = [i for i in body.ids if isinstance(i, str) and 0 < len(i) <= 400][:500]
+    if not ids:
+        raise HTTPException(status_code=400, detail="No ids.")
+    for i in ids:
+        if body.undo:
+            fs.unack_flag(i)
+        else:
+            fs.ack_flag(i, body.kind)
+    return {"ok": True, "count": len(ids), "undo": body.undo}
+
+
+@router.post("/finance/reassign-account", dependencies=[Depends(require_token)])
+async def finance_reassign_account(body: FinanceReassignBody):
+    """Fix the account on an import made with the Account field blank (or wrong),
+    then re-run transfer matching since pairing depends on accounts."""
+    if body.from_account is None and not body.batch_id:
+        raise HTTPException(status_code=400, detail="Give batch_id and/or from_account.")
+    if fs.get_account(body.to_account) is None:
+        raise HTTPException(status_code=400, detail="Unknown account — add it in Setup first.")
+    changed = fs.reassign_account(body.to_account, from_account=body.from_account,
+                                  batch_id=body.batch_id or None)
+    rm = fimport.rematch_transfers(fs) if changed else {"paired": 0}
+    return {"changed": changed, "transfers_paired": rm.get("paired", 0)}
+
+
+def _matching(pattern: str) -> list[dict]:
+    pat = pattern.upper().strip()
+    return [t for t in fs.list_transactions() if pat and pat in (t["raw_desc"] or "").upper()]
+
+
+@router.get("/finance/transaction", dependencies=[Depends(require_token)])
+async def finance_transaction_detail(txn_key: str):
+    """One transaction with its context (source, transfer partner, rule, merchant
+    history) — what the tap-to-open window shows."""
+    d = await asyncio.to_thread(fh.transaction_detail, fs, txn_key)
+    if d is None:
+        raise HTTPException(status_code=404, detail="Unknown transaction.")
+    return d
+
+
+@router.get("/finance/rules", dependencies=[Depends(require_token)])
+async def finance_rules():
+    """Every merchant rule Adam has learned, with how many ledger rows each matches."""
+    txns = fs.list_transactions()
+    out = []
+    for r in fs.get_merchant_rules():
+        n = sum(1 for t in txns if r["pattern"] in (t["raw_desc"] or "").upper())
+        out.append({**r, "matches": n})
+    return {"rules": out}
+
+
+@router.get("/finance/rules/preview", dependencies=[Depends(require_token)])
+async def finance_rule_preview(pattern: str | None = None, txn_key: str | None = None):
+    """What a rule would touch. Give a pattern, or a txn_key to get the suggested
+    pattern for that transaction's description (reference numbers stripped so it
+    matches next month's statement too)."""
+    if not pattern and txn_key:
+        t = fs.get_transaction(txn_key)
+        if t is None:
+            raise HTTPException(status_code=404, detail="Unknown transaction.")
+        pattern = fs.rule_pattern(t["raw_desc"])
+    pattern = (pattern or "").upper().strip()
+    if len(pattern) < 3:
+        raise HTTPException(status_code=400, detail="Pattern must be at least 3 characters.")
+    rows = _matching(pattern)
+    cats: dict[str, int] = {}
+    for t in rows:
+        cats[t["category"]] = cats.get(t["category"], 0) + 1
+    existing = next((r for r in fs.get_merchant_rules() if r["pattern"] == pattern), None)
+    return {"pattern": pattern, "matches": len(rows), "by_category": cats,
+            "existing_rule": existing,
+            "sample": [{"date": t["date"], "desc": t["raw_desc"], "amount": t["amount"],
+                        "category": t["category"]} for t in rows[:6]]}
+
+
+@router.post("/finance/rules", dependencies=[Depends(require_token)])
+async def finance_set_rule(body: FinanceRuleBody):
+    """Teach a rule; optionally apply it to every matching transaction already in
+    the ledger, then re-run transfer matching (a row that just became a Transfer
+    can now pair with its other leg)."""
+    pattern = body.pattern.upper().strip()
+    if len(pattern) < 3:
+        raise HTTPException(status_code=400, detail="Pattern must be at least 3 characters.")
+    if fs.get_category(body.category) is None:
+        raise HTTPException(status_code=400, detail="Unknown category.")
+    fs.upsert_merchant_rule(pattern, body.merchant or "", body.category)
+    changed = 0
+    paired = 0
+    if body.apply_existing:
+        for t in _matching(pattern):
+            if t["category"] != body.category and fs.update_transaction(t["txn_key"], category=body.category):
+                changed += 1
+        if changed:
+            paired = fimport.rematch_transfers(fs).get("paired", 0)
+    return {"pattern": pattern, "category": body.category, "changed": changed,
+            "transfers_paired": paired}
+
+
+@router.delete("/finance/rules", dependencies=[Depends(require_token)])
+async def finance_delete_rule(pattern: str):
+    """Forget a rule. Transactions it already categorized keep their category."""
+    if not fs.delete_merchant_rule(pattern):
+        raise HTTPException(status_code=404, detail="No such rule.")
+    return {"deleted": pattern.upper().strip()}
+
+
+@router.post("/finance/recategorize", dependencies=[Depends(require_token)])
+async def finance_recategorize(body: FinanceBulkCategoryBody):
+    """Move several committed transactions to one category."""
+    if fs.get_category(body.category) is None:
+        raise HTTPException(status_code=400, detail="Unknown category.")
+    changed = 0
+    for k in body.txn_keys[:1000]:
+        existing = fs.get_transaction(k)
+        if existing is None:
+            continue
+        if fs.update_transaction(k, category=body.category):
+            changed += 1
+        if body.teach_rule and body.category != fs.REVIEW_CATEGORY:
+            raw = (existing.get("raw_desc") or "").strip()
+            if raw:
+                fs.upsert_merchant_rule(raw.upper()[:40].strip(),
+                                        existing.get("merchant") or "", body.category)
+    return {"changed": changed}
 
 
 @router.get("/finance/needs-review", dependencies=[Depends(require_token)])

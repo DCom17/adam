@@ -32,6 +32,7 @@ _ROOT_FILES = [
     "self_edit_guard.py", "security.py", "licensing.py", "plus_gate.py", "models.py", "rate_limit.py",
     "usage_store.py", "tts_supervisor.py",
     "finance_store.py", "finance_metrics.py", "finance_import.py",  # Finance Tracker (F1/F2)
+    "finance_history.py",  # Finance: balances for any date, period reports, data checks
     "health_store.py", "health_metrics.py", "health_import.py",  # Health Tracker (H1/H2)
     "checklist_store.py",  # Checklists view (user-written + Adam-built step lists)
     "reminder_schedule.py",  # where the user is today (usual week + calendar + Adam's plan) for reminders

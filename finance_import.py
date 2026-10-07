@@ -100,14 +100,22 @@ def normalize_row(raw: dict, default_account: str = "") -> dict:
 # --- Auto-categorization ----------------------------------------------------
 
 def apply_merchant_rule(row: dict) -> dict:
-    """If the row has no confident category, try the merchant-rule memory against
-    its raw description. Mutates and returns the row. A rule fills in BOTH the
-    clean merchant name and the category; a row that already names a real category
-    is left alone."""
+    """Apply the merchant-rule memory to a parsed row. Mutates and returns it.
+
+    A rule is something the USER taught ("MY CREDIT UNION is a
+    transfer"), so it wins over the parser's category, which is only the model's
+    guess (or the bank's own label). It used to apply only to rows the model left
+    uncategorized — so a wrong guess silently beat the correction every import.
+    A rule fills in the clean merchant name too."""
     cat = row.get("category") or ""
+    hit = fs.match_merchant_rule(row.get("raw_desc", ""))
+    if hit and hit.get("category"):
+        if hit.get("merchant") and not row.get("merchant"):
+            row["merchant"] = hit["merchant"]
+        row["category"] = hit["category"]
+        return row
     if cat and cat != fs.REVIEW_CATEGORY:
         return row
-    hit = fs.match_merchant_rule(row.get("raw_desc", ""))
     if hit:
         if hit.get("merchant") and not row.get("merchant"):
             row["merchant"] = hit["merchant"]

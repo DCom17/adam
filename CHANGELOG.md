@@ -3,6 +3,38 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.85 - Finance looks back in time, and tells you what's off
+
+- **Every month has its own numbers.** Pick any month and net worth, cash,
+  and debt are shown for the end of that month. Between the balances you
+  enter, Adam works them out from your transactions and marks them
+  Estimated; before your first balance or after your last, Projected.
+- **Look at any stretch of time.** Month, the last 3, 6, 9, or 12 months,
+  year to date, everything, or your own dates. Every card follows along.
+- **Tap a card for more.** Spending opens a month-by-month chart and every
+  category; tap a category for its transactions. Largest transactions,
+  Debt & Income, and Cash Safety each open into the full detail and math.
+- **A net worth chart you can drag through.** Tap Net Worth for its history.
+  Drag the two handles to pick dates, hover or touch for any day, and add
+  your cash and debt lines.
+- **Tap any transaction to see everything about it:** the full statement
+  text, account, which file it came from, the transfer it pairs with, and
+  your history at that merchant. Change its category right there, for just
+  that one or for every matching transaction and future imports.
+- **Category rules you control.** Setup lists what Adam has learned and lets
+  you change or remove it. A rule you set now always beats Adam's own guess.
+- **Data Health finds real problems, and the Review tab lists every one:**
+  transactions imported twice, accounts missing from your latest balances
+  (with a hint when a debt looks paid off), imports with no account, money
+  moved between your own accounts but counted as spending, loan payments
+  counted as spending, and balance changes your transactions don't explain.
+  Each has a one-tap fix or can be dismissed.
+- **Fixed:** Data Health could say "Needs review" while the Review tab was
+  empty.
+- **Fixed:** refunds now reduce spending instead of being ignored, and
+  card-reader names like "SQ *" show the actual store.
+- **Fixed:** tapping a reply notification on iPhone opens that reply's chat.
+
 ## 0.9.84 - The weigh-in reminder moves to the morning
 
 - **Weigh in when it counts.** The weigh-in reminder now comes in the

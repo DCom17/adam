@@ -61,7 +61,15 @@ def main() -> int:
     check("has account entry", 'id="acctName"' in html and "/finance/accounts" in html)
     check("has manage tab", 'id="tabManage"' in html and 'id="manageView"' in html)
     check("has review tab", 'id="tabReview"' in html and 'id="reviewTabView"' in html)
-    check("review tab wired to needs-review API", "/finance/needs-review" in html and "showReviewTab" in html)
+    # The Review tab renders /finance/checks — the same list Data Health's status
+    # is computed from (it used to read needs-review, which omitted findings the
+    # status counted, so "Needs Review" could sit over an empty tab).
+    check("review tab wired to the checks API", "/finance/checks" in html and "showReviewTab" in html)
+    check("review can resolve findings", "/finance/checks/ack" in html and "/finance/reassign-account" in html)
+    check("dashboard reads history + period summary", "/finance/history" in html and "?start=" in html)
+    check("period presets present", "data-preset" in html and '"9M"' in html and '"12M"' in html)
+    check("cards are expandable", "data-toggle" in html and "aria-expanded" in html)
+    check("net worth chart has a date slider", 'id="nwA"' in html and 'id="nwB"' in html)
     check("manage can undo imports", "/finance/imports" in html and "delImport" in html)
     check("manage can delete transactions + snapshots", "delTxn" in html and "delSnap" in html)
     check("import accepts multiple CSV files at once", "multiple" in html and "file_paths" in html)

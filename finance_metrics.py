@@ -183,7 +183,7 @@ def top_flex_transactions(store=_default_store, month: str = "", n: int = 5) -> 
 # --- Cash-safety system + DTI -----------------------------------------------
 
 def cash_safety(store=_default_store, month: str = "", *,
-                balances: dict | None = None) -> dict:
+                balances: dict | None = None, essentials: float | None = None) -> dict:
     """Emergency-fund target, buffer, cash-safety target, card reserve, and the
     resulting investable cash — the sheet's 'Cash Safety System' block.
 
@@ -192,13 +192,18 @@ def cash_safety(store=_default_store, month: str = "", *,
     Card reserve   = setting, else the sum of credit-card balances
     Investable     = liquid cash - EF target - buffer - card reserve
     EF progress    = min(1, liquid cash / EF target)
+
+    `essentials` overrides the one-month figure with a steadier baseline (the
+    dashboard passes finance_history.baseline()'s average of recent complete
+    months, so a half-finished month can't shrink the emergency-fund target).
     """
     bal = balances or balance_figures(store)
     settings = store.get_settings()
     ef_months = float(settings.get("ef_months") or 0)
     buffer = float(settings.get("extra_buffer") or 0)
 
-    essentials = monthly_essentials(store, month)
+    essentials = (_round2(essentials) if essentials is not None
+                  else monthly_essentials(store, month))
     ef_target = _round2(ef_months * essentials)
     cash_safety_target = _round2(ef_target + buffer)
 
@@ -221,7 +226,9 @@ def cash_safety(store=_default_store, month: str = "", *,
     }
 
 
-def dti(store=_default_store, month: str = "", *, balances: dict | None = None) -> dict:
+def dti(store=_default_store, month: str = "", *, balances: dict | None = None,
+        income_fallback: float | None = None,
+        payments_fallback: float | None = None) -> dict:
     """Debt-to-income ratio and a plain-language status label.
 
     Monthly debt payments = setting, else summed Debt-Service spending in `month`.
@@ -230,11 +237,19 @@ def dti(store=_default_store, month: str = "", *, balances: dict | None = None) 
     """
     settings = store.get_settings()
     dp_setting = settings.get("monthly_debt_payments")
-    payments = (_round2(dp_setting) if dp_setting is not None
-                else monthly_debt_payments_from_txns(store, month))
+    if dp_setting is not None:
+        payments = _round2(dp_setting)
+    elif payments_fallback is not None:
+        payments = _round2(payments_fallback)
+    else:
+        payments = monthly_debt_payments_from_txns(store, month)
     inc_setting = settings.get("gross_monthly_income")
-    income = (_round2(inc_setting) if inc_setting is not None
-              else monthly_income(store, month))
+    if inc_setting is not None:
+        income = _round2(inc_setting)
+    elif income_fallback is not None:
+        income = _round2(income_fallback)
+    else:
+        income = monthly_income(store, month)
     ratio = round(payments / income, 4) if income > 0 else None
     if ratio is None:
         status = "Unknown"
@@ -343,8 +358,16 @@ def data_health(store=_default_store) -> dict:
         "missing_snapshot_accounts": missing,
         "unreviewed_import_batches": unreviewed_batches,
     }
-    all_clear = all(v == 0 for v in counters.values())
-    counters["review_status"] = "All Clear" if all_clear else "Needs Review"
+    # The status comes from the SAME list the Review tab renders
+    # (finance_history.checks). It used to be "any counter non-zero", which
+    # counted accounts missing from the snapshot that the Review tab never
+    # listed — the page said "Needs Review" over an empty queue.
+    import finance_history as _fh  # local: finance_history imports this module
+    ck = _fh.checks(store)
+    counters["open_items"] = ck["open"]
+    counters["dismissed_items"] = ck["dismissed"]
+    counters["by_kind"] = ck["by_kind"]
+    counters["review_status"] = ck["status"]
     return counters
 
 
@@ -382,38 +405,116 @@ def _default_month(store) -> str:
     return ""
 
 
-def summary(store=_default_store, month: str | None = None) -> dict:
-    """Assemble the whole Finance dashboard payload — every tile in one dict.
-    This is what routers/finance.py will serve as /finance/summary (Phase F3)."""
-    m = month if month is not None else _default_month(store)
-    bal = balance_figures(store)
-    cs = cash_safety(store, m, balances=bal)
-    d = dti(store, m, balances=bal)
+def _account_balances(store, as_of: str | None) -> dict:
+    """Per-account balances from the newest snapshot on or before `as_of` (else the
+    latest), for the expanded cards. Liabilities reported as positive amounts owed."""
+    dates = store.snapshot_dates()
+    if not dates:
+        return {"date": None, "accounts": []}
+    use = [d for d in dates if not as_of or d <= as_of]
+    d = use[-1] if use else dates[0]
+    types = _account_types(store)
+    out = []
+    for acct, bal in sorted(store.balances_at(d).items()):
+        typ = types.get(acct) or ("credit" if bal < 0 else "cash")
+        owed = typ in ("credit", "loan")
+        out.append({"account": acct, "type": typ,
+                    "balance": _round2(abs(bal) if owed else bal)})
+    return {"date": d, "accounts": out}
+
+
+def summary(store=_default_store, month: str | None = None, *,
+            start: str | None = None, end: str | None = None) -> dict:
+    """Assemble the whole Finance dashboard payload for a month (default: the
+    newest month with data) or an explicit [start, end] date range.
+
+    Balances are for the END of the period: the hand-entered snapshot when one
+    falls on that day, otherwise reconstructed from the transactions between
+    snapshots (finance_history). Spending / income / top transactions cover the
+    whole period. Cash safety and debt-to-income use monthly baselines from recent
+    complete months so a part-month never distorts them."""
+    import finance_history as fh  # local: finance_history imports this module
+    from datetime import date as _dt, timedelta as _td
+
+    if start and end:
+        mode = "range"
+        if start > end:
+            start, end = end, start
+        m = end[:7]
+    else:
+        mode = "month"
+        m = month if month is not None else _default_month(store)
+        if m:
+            start = m + "-01"
+            end = fh._iso(fh._month_end(m))
+    ser = fh.series(store)
+    data_end = ser["end"]
+    as_of = min(end, data_end) if (end and data_end) else (end or data_end)
+
+    if ser["points"]:
+        bal = fh.figures_on(store, as_of, _series=ser)
+        before = (_dt.fromisoformat(start) - _td(days=1)).isoformat() if start else None
+        prev = (fh.figures_on(store, before, _series=ser)
+                if before and before >= ser["start"] else None)
+    else:
+        latest = balance_figures(store)
+        bal = {"date": latest["snapshot_date"], "basis": "actual" if latest["snapshot_date"] else "none",
+               "thin": False, "net_worth": latest["net_worth"], "liquid_cash": latest["liquid_cash"],
+               "total_debt": latest["total_debt"], "card_balances": latest["card_balances"],
+               "total_investments": latest["total_investments"]}
+        prev = None
+    assets = _round2(bal["liquid_cash"] + bal["total_investments"])
+    bal_block = {"liquid_cash": bal["liquid_cash"], "card_balances": bal["card_balances"]}
+
+    base = fh.baseline(store, end)
+    cs = cash_safety(store, m or "", balances=bal_block,
+                     essentials=base["essentials"] if base["essentials_months"] else None)
+    cs["essentials_months"] = base["essentials_months"]
+    d = dti(store, m or "", balances=bal_block,
+            income_fallback=base["income"] if base["income_months"] else None,
+            payments_fallback=base["debt_payments"] if base["debt_months"] else None)
+    d["income_months"] = base["income_months"]
     health = data_health(store)
-    # Balance tiles (net worth / liquid cash / debt) come ONLY from the newest
-    # balance snapshot — importing transactions never moves them. If activity has
-    # been imported past the last snapshot, those tiles are quietly out of date, so
-    # say so rather than presenting a months-old cash figure as current.
+    rep = fh.period_report(store, start, end) if (start and end) else None
+
     newest_txn = store.list_transactions(limit=1)
     newest_txn_date = newest_txn[0]["date"] if newest_txn else None
-    snap = bal["snapshot_date"]
-    balances_stale = bool(snap and newest_txn_date and newest_txn_date > snap)
+    snap = store.latest_snapshot_date()
+    change = None
+    if prev:
+        change = {"from": prev["date"],
+                  **{k: _round2(bal[k] - prev[k]) for k in
+                     ("net_worth", "liquid_cash", "total_debt", "total_investments")}}
     return {
+        "mode": mode,
         "month": m,
-        "snapshot_date": bal["snapshot_date"],
+        "start": start,
+        "end": end,
+        "as_of": bal["date"],
+        "balances_basis": bal["basis"],
+        "balances_thin": bool(bal.get("thin")),
+        "snapshot_date": snap,
         "newest_transaction_date": newest_txn_date,
-        "balances_stale": balances_stale,
+        "data_start": ser["start"],
+        "data_end": data_end,
+        # Past the last snapshot the figures are rolled forward from transactions
+        # alone — say so instead of presenting them as typed-in balances.
+        "balances_stale": bool(snap and bal["date"] and bal["date"] > snap),
         "net_worth": bal["net_worth"],
-        "assets": bal["assets"],
-        "liabilities": bal["liabilities"],
+        "assets": assets,
+        "liabilities": bal["total_debt"],
         "liquid_cash": bal["liquid_cash"],
         "total_debt": bal["total_debt"],
+        "card_balances": bal["card_balances"],
         "total_investments": bal["total_investments"],
-        "investment_share": bal["investment_share"],
+        "investment_share": round(bal["total_investments"] / assets, 4) if assets > 0 else 0.0,
+        "change": change,
+        "account_balances": _account_balances(store, bal["date"]),
         "cash_safety": cs,
         "dti": d,
         "data_health": health,
-        "spending_by_category": monthly_spending_by_category(store, m),
-        "top_flex_transactions": top_flex_transactions(store, m),
+        "spending_by_category": rep["spending_by_category"] if rep else [],
+        "top_flex_transactions": rep["top_transactions"][:5] if rep else [],
+        "report": rep,
         "advice": advice(cs["investable_cash"], cs["ef_progress"]),
     }

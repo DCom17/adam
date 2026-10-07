@@ -431,6 +431,41 @@ class FinanceSnapshotBody(StrictModel):
     balances: dict[str, float]
 
 
+class FinanceAckBody(StrictModel):
+    """Dismiss (or, with undo, restore) data-health findings by their ids, as
+    listed by /finance/checks. A duplicate is resolved by acking one of its two
+    `ack_ids` (confirm = same transaction, separate = two real ones)."""
+    ids: list[str]
+    kind: str = ""
+    undo: bool = False
+
+
+class FinanceReassignBody(StrictModel):
+    """Relabel which account transactions belong to — scoped to an import batch
+    and/or the current account name (blank = rows imported with no account)."""
+    to_account: str
+    from_account: str | None = None
+    batch_id: str | None = None
+
+
+class FinanceBulkCategoryBody(StrictModel):
+    """Recategorize several committed transactions at once (e.g. the loan
+    payments a data-health check found filed as spending)."""
+    txn_keys: list[str]
+    category: str
+    teach_rule: bool = True
+
+
+class FinanceRuleBody(StrictModel):
+    """Teach (or re-teach) a merchant rule: any description containing `pattern`
+    gets `category`. With apply_existing, every matching ledger transaction is
+    recategorized now too (the backfix)."""
+    pattern: str
+    category: str
+    merchant: str = ""
+    apply_existing: bool = False
+
+
 class HealthWeightBody(StrictModel):
     """Log a weigh-in. `date` defaults to today (server-side) when omitted."""
     weight: float

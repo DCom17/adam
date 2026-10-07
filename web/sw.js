@@ -14,11 +14,15 @@
  * fall back to cache only when the network fails), so a redeploy is picked up on
  * the next online launch. Only the static icon/manifest are served cache-first.
  */
-const CACHE = "adam-shell-v26";   // v26: offline copy only ever stores a 200 shell (never the Adam Plus paywall page); Operator locks open the Plus sheet. v25: proactive reminders (kind "reminder" pushes + tap routing) and the Notifications panel. v24: Operator mode — live console, question cards, steering, slash menu, question pushes. v23: push subscription re-checked against the server key on open/foreground. v22: replies route by chat key (no srv- duplicates / no undelete). v21: orb self-heals a canvas context reset (desktop off-center). v20: per-project icons + icon picker. v19: section-heading icons (PROJECTS/SESSIONS), none per row. v18: folder/session icons + SESSIONS section. v17: project folders in the sessions drawer (new modals + sync). v16: Checklists view added to the ADAM menu (new overlay + /checklists-view page in index.html). Bump forces a clean SW re-activate + refreshes the offline shell copy
+const CACHE = "adam-shell-v27";   // v27: a reply-notification tap leaves a durable marker so the page switches to that reply's chat even when iOS drops the postMessage. v26: offline copy only ever stores a 200 shell (never the Adam Plus paywall page); Operator locks open the Plus sheet. v25: proactive reminders (kind "reminder" pushes + tap routing) and the Notifications panel. v24: Operator mode — live console, question cards, steering, slash menu, question pushes. v23: push subscription re-checked against the server key on open/foreground. v22: replies route by chat key (no srv- duplicates / no undelete). v21: orb self-heals a canvas context reset (desktop off-center). v20: per-project icons + icon picker. v19: section-heading icons (PROJECTS/SESSIONS), none per row. v18: folder/session icons + SESSIONS section. v17: project folders in the sessions drawer (new modals + sync). v16: Checklists view added to the ADAM menu (new overlay + /checklists-view page in index.html). Bump forces a clean SW re-activate + refreshes the offline shell copy
 // (v15: desktop three-pane layout (sessions rail | conversation panel | orb stage) at ≥1100px; mobile unchanged (index.html))
 // (v14: accessibility phase 1 — orb is a real keyboard-reachable <button>, state/error/transcript are live regions, composer is labelled, global :focus-visible ring)
 // (v13: code-mode long-turn fix — a mid-task server restart now shows "restarted mid-task — ask again" instead of "Connection error, sir." (index.html fail() handles the JVL_INTERRUPTED tag))
 // (v12: 30-day trial + feature-limit gate — license field shows trial countdown / buy link; phone-setup shows a licensed-feature prompt post-trial)
+// Notification-tap marker (see notificationclick). Its own cache so the shell
+// cleanup in "activate" only ever costs a pending tap, never the offline shell.
+const TAP_CACHE = "adam-tap";
+const TAP_KEY = "/__adam-tap";
 const SHELL = ["/", "/manifest.json", "/icon.png", "/icon-maskable.png", "/logo.png"];
 
 self.addEventListener("install", (event) => {
@@ -32,7 +36,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     // Drop old shell caches so a new version never serves stale assets.
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => k !== CACHE && k !== TAP_CACHE).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
@@ -162,6 +166,14 @@ self.addEventListener("notificationclick", (event) => {
     return;
   }
   event.waitUntil((async () => {
+    // Leave a durable "the user tapped THIS reply" marker before waking the page.
+    // iOS drops the postMessage below when the PWA is frozen, and the page's own
+    // foreground pull deliberately never switches chats — so without the marker a
+    // tap delivered the reply into its chat but left you on the last one.
+    try {
+      const m = await caches.open(TAP_CACHE);
+      await m.put(TAP_KEY, new Response(JSON.stringify({ ts: nd.ts || 0, at: Date.now() })));
+    } catch (_) {}
     const wins = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     for (const c of wins) {
       if ("focus" in c) {

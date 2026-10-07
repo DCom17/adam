@@ -174,6 +174,16 @@ def _create_schema(conn: sqlite3.Connection) -> None:
             review_reason     TEXT NOT NULL DEFAULT ''
         );
         CREATE INDEX IF NOT EXISTS ix_staged_batch ON staged_transactions(batch_id);
+
+        -- Data-health findings the user has looked at and dismissed ("these two
+        -- charges are really separate", "I know about that balance gap"). Keyed by
+        -- the finding's deterministic id (finance_history.checks), so a dismissal
+        -- sticks across reloads but a NEW finding of the same kind still surfaces.
+        CREATE TABLE IF NOT EXISTS review_acks (
+            flag_id  TEXT PRIMARY KEY,
+            kind     TEXT NOT NULL DEFAULT '',
+            acked_at REAL NOT NULL DEFAULT 0
+        );
         """
     )
     # Additive migrations for DBs created before a column existed. `CREATE TABLE
@@ -406,6 +416,34 @@ def upsert_merchant_rule(pattern: str, merchant: str, category: str) -> None:
         c.commit()
 
 
+def delete_merchant_rule(pattern: str) -> bool:
+    with _LOCK:
+        c = _conn()
+        cur = c.execute("DELETE FROM merchant_rules WHERE pattern = ?", (pattern.upper().strip(),))
+        c.commit()
+        return cur.rowcount > 0
+
+
+def rule_pattern(raw_desc: str) -> str:
+    """A rule pattern that will still match NEXT month's version of a description:
+    the leading words, stopping at the first token that looks like a reference
+    number (4+ digits) or a date, since those change on every statement.
+    'ACH Deposit Example Bank 1234567890 TRANSFER' -> 'ACH DEPOSIT EXAMPLE BANK'."""
+    # Matching is a plain substring test, so the pattern must be an exact slice of
+    # the description: keep the original text up to the last kept word.
+    up = (raw_desc or "").upper()
+    end = 0
+    for m in re.finditer(r"\S+", up):
+        w = m.group(0)
+        if sum(ch.isdigit() for ch in w) >= 4 or re.match(r"^\d{1,2}/\d{1,2}", w):
+            break
+        end = m.end()
+        if end >= 40:
+            break
+    pat = up[:end].strip().rstrip(" -#.*:")
+    return pat or (raw_desc or "").upper()[:40].strip()
+
+
 def get_merchant_rules() -> list[dict]:
     with _LOCK:
         rows = _conn().execute("SELECT * FROM merchant_rules ORDER BY pattern").fetchall()
@@ -530,6 +568,30 @@ def update_transaction(txn_key: str, *, category: str | None = None,
         )
         c.commit()
         return cur.rowcount > 0
+
+
+def reassign_account(to_account: str, *, from_account: str | None = None,
+                     batch_id: str | None = None) -> int:
+    """Relabel which account transactions belong to — the fix for an import made
+    with the Account field left blank (or filled in wrong). Scoped by the current
+    account value and/or the import batch; at least one scope is required so this
+    can never relabel the whole ledger. Only the `account` column changes: the
+    txn_key is the row's identity and is deliberately NOT re-derived (re-keying
+    would orphan transfer pairs and acknowledgements). Returns rows changed."""
+    if from_account is None and batch_id is None:
+        raise ValueError("reassign_account needs from_account and/or batch_id")
+    clauses, params = [], [to_account]
+    if from_account is not None:
+        clauses.append("account = ?"); params.append(from_account)
+    if batch_id is not None:
+        clauses.append("source_batch = ?"); params.append(batch_id)
+    with _LOCK:
+        c = _conn()
+        cur = c.execute(
+            f"UPDATE transactions SET account = ? WHERE {' AND '.join(clauses)}", params
+        )
+        c.commit()
+        return cur.rowcount
 
 
 def delete_transaction(txn_key: str) -> bool:
@@ -850,3 +912,33 @@ def get_settings() -> dict:
         except (ValueError, TypeError):
             out[r["key"]] = r["value"]
     return out
+
+
+# --- Review acknowledgements (dismissed data-health findings) ---------------
+
+def ack_flag(flag_id: str, kind: str = "") -> None:
+    with _LOCK:
+        c = _conn()
+        c.execute(
+            """
+            INSERT INTO review_acks (flag_id, kind, acked_at) VALUES (?, ?, ?)
+            ON CONFLICT(flag_id) DO UPDATE SET kind = excluded.kind,
+                                               acked_at = excluded.acked_at
+            """,
+            (flag_id, kind, time.time()),
+        )
+        c.commit()
+
+
+def unack_flag(flag_id: str) -> bool:
+    with _LOCK:
+        c = _conn()
+        cur = c.execute("DELETE FROM review_acks WHERE flag_id = ?", (flag_id,))
+        c.commit()
+        return cur.rowcount > 0
+
+
+def acked_flags() -> set[str]:
+    with _LOCK:
+        rows = _conn().execute("SELECT flag_id FROM review_acks").fetchall()
+    return {r["flag_id"] for r in rows}

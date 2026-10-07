@@ -218,7 +218,20 @@ def main() -> int:
     check("all counters zero", all(h2[k] == 0 for k in (
         "unmapped_categories", "unmatched_transfers",
         "missing_snapshot_accounts", "unreviewed_import_batches")))
-    check("status All Clear", h2["review_status"] == "All Clear")
+    # The fixture's snapshots don't reconcile with its transactions (net worth
+    # -800 -> 5500 while the January activity explains +2420), so the
+    # reconciliation checks rightly keep the status at Needs Review — and the
+    # Review tab lists exactly those items (finance_history.checks is the single
+    # source for both). Dismissing them clears the status.
+    import finance_history as fh
+    ck = fh.checks(fs)
+    kinds = sorted({i["kind"] for i in ck["items"] if i["severity"] == "warn"})
+    check("only reconciliation findings remain", kinds == ["account_gap", "balance_gap"])
+    check("status matches the listed items", h2["review_status"] == "Needs Review"
+          and h2["open_items"] == len([i for i in ck["items"] if i["severity"] == "warn"]))
+    for i in ck["items"]:
+        fs.ack_flag(i["id"], i["kind"])
+    check("status All Clear", fm.data_health(fs)["review_status"] == "All Clear")
 
     print("\n[10] Net worth history")
     hist = fm.net_worth_history() if hasattr(fm, "net_worth_history") else fs.net_worth_history()
