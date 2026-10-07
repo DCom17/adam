@@ -172,6 +172,37 @@
 
   .hidden { display:none !important; }
   @media (prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
+
+  /* Desktop (same breakpoint as the main app's cockpit, Finance and Health):
+     use the width instead of the centered phone column. Lists: your lists as a
+     card grid, with the stats + New checklist form in a side column. Detail:
+     title/description beside the steps. Archive: cards three-up. */
+  @media (min-width:1100px){
+    body { padding:22px 32px 40px; }
+    .app { max-width:1360px; }
+    .title { padding:14px 12px 4px; }
+    .tabs { max-width:420px; margin:0 auto 20px; }
+    .frame { padding:20px 22px; }
+
+    #viewLists, #viewDetail { display:grid; gap:16px; align-items:start; }
+    #viewLists > *, #viewDetail > * { margin:0; min-width:0; }
+
+    #viewLists { grid-template-columns:minmax(0,2fr) minmax(320px,1fr); grid-template-rows:auto 1fr; }
+    #viewLists > #listsFrame { grid-column:1; grid-row:1 / span 2; }
+    #viewLists > .hero { grid-column:2; grid-row:1; }
+    #viewLists > #newFrame { grid-column:2; grid-row:2; }
+
+    #listWrap, #archWrap { display:grid; gap:12px; align-items:start; }
+    #listWrap { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    #archWrap { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    #listWrap > .card, #archWrap > .card { margin:0; }
+    #listWrap > .empty, #archWrap > .empty { grid-column:1 / -1; }
+
+    #viewDetail { grid-template-columns:minmax(300px,1fr) minmax(0,2fr); }
+    #viewDetail > .backlink { grid-column:1 / -1; justify-self:start; }
+    #viewDetail > #detailMetaFrame { grid-column:1; }
+    #viewDetail > #detailStepsFrame { grid-column:2; grid-row:2; }
+  }
 </style>
 </head>
 <body>
@@ -196,12 +227,12 @@
       <div class="stat"><div class="k">Archived</div><div class="v" id="sArch">—</div></div>
     </div>
 
-    <div class="frame">
+    <div class="frame" id="listsFrame">
       <h2>Your lists</h2>
       <div id="listWrap"></div>
     </div>
 
-    <div class="frame">
+    <div class="frame" id="newFrame">
       <h2>New checklist</h2>
       <div class="field">
         <label for="nTitle">Title</label>
@@ -224,7 +255,7 @@
   <section id="viewDetail" class="hidden">
     <button class="backlink" id="backBtn" type="button">‹ All lists</button>
 
-    <div class="frame">
+    <div class="frame" id="detailMetaFrame">
       <h2 id="dEyebrow">Checklist</h2>
       <div class="field">
         <label for="dTitle">Title</label>
@@ -238,7 +269,7 @@
       <div class="meta" id="dMeta"></div>
     </div>
 
-    <div class="frame">
+    <div class="frame" id="detailStepsFrame">
       <h2>Steps</h2>
       <div class="bar" style="margin:0 0 14px"><i id="dBar" style="width:0%"></i></div>
       <div id="itemWrap"></div>
@@ -347,7 +378,7 @@ async function loadLists(){
     var rows = d.checklists || [];
     $("listWrap").innerHTML = rows.length
       ? rows.map(function(c){ return cardHTML(c, false); }).join("")
-      : '<div class="empty"><b>No checklists yet</b>Make one below — or ask Adam to build one for you.</div>';
+      : '<div class="empty"><b>No checklists yet</b>Make one with New checklist — or ask Adam to build one for you.</div>';
   } catch(e){ fail(e); }
 }
 

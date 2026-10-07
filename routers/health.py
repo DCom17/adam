@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException
 import config
 import garmin
 import health_import as himport
+import health_insights as hi
 import health_store as hs
 import health_metrics as hm
 import integration_config
@@ -79,6 +80,15 @@ async def health_trends(since: str | None = None):
             "target_water_ml": hs.get_setting("target_water_ml"),
             "target_water_amount": hm.from_ml(hs.get_setting("target_water_ml"),
                                               hs.get_setting("water_unit", "oz") or "oz")}
+
+
+@router.get("/health/insights", dependencies=[Depends(require_token)])
+async def health_insights(date: str | None = None):
+    """Each Today card's expanded detail — status, averages, a 14-day series,
+    what stands out, and how to improve — computed by health_insights."""
+    d = date or _today()
+    _check_date(d)
+    return hi.insights(hs, date=d)
 
 
 @router.get("/health/day", dependencies=[Depends(require_token)])

@@ -3,6 +3,27 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.86 - Health explains itself, and every tracker fits your desktop
+
+- **Every Health card opens into the full story.** Tap Calories, Protein,
+  Carbs & Fat, Water, Weight, or any watch stat to see whether you're on
+  track, your recent averages, a 14-day chart, what stands out, and how to
+  improve. Today is never averaged in while it's still in progress, and
+  days you barely logged or didn't wear your watch are set aside instead
+  of counted against you.
+- **Sleep has its own card** on Today, and opens into the same detail.
+- **The Log tab is easier to scan:** Food, Water, and Body are each
+  labelled and color-coded.
+- **Finance, Health, and Checklists use the whole screen on a computer.**
+  Wide windows get a real desktop layout instead of a narrow phone column:
+  side-by-side cards, opened cards that spread their charts and details
+  across the width, and forms beside the lists they fill. Phones look
+  exactly as before.
+- **Copy Operator output in one tap.** The full-output view has a Copy
+  button, uses the whole screen, and its text can be selected.
+- **Fixed:** the weight chart on Trends could print two dates on top of
+  each other when weigh-ins were close together.
+
 ## 0.9.85 - Finance looks back in time, and tells you what's off
 
 - **Every month has its own numbers.** Pick any month and net worth, cash,

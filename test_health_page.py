@@ -53,6 +53,13 @@ def main() -> int:
           "function waterCard(" in html and "function addWater(" in html
           and 'id="waAddBtn"' in html and 'id="tWater"' in html)
     check("water undo wired", "function undoWater(" in html and "/health/water?id=" in html)
+    check("Today cards expand into insights (fail-soft)",
+          "/health/insights?date=" in html and "function insBody(" in html
+          and "function xframe(" in html and 'data-xt="' in html and "INS = null" in html)
+    check("Sleep has its own Today card", 'xframe("sleep", "moon", "Sleep"' in html)
+    check("Log tab sections are visually distinct",
+          all(c in html for c in ('lgroup food', 'lgroup water', 'lgroup body',
+                                  'sec-food', 'sec-water', 'sec-body')))
     check("bare /health is still liveness JSON (not the page)",
           "<title>Health — Adam</title>" not in client.get("/health").text)
 

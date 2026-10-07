@@ -265,8 +265,14 @@
     font-size: 13px; letter-spacing: .06em; margin-bottom: 8px; }
   #opSheet .op-sheet-bar button { border: 1px solid rgba(255,180,84,.5); background: transparent; color: #ffd79a;
     border-radius: 8px; padding: 4px 12px; cursor: pointer; }
-  #opSheetBody { flex: 1; overflow-y: auto; font-size: 13px; color: var(--text); max-width: 900px;
-    width: 100%; margin: 0 auto; }
+  #opSheet .op-sheet-actions { display: flex; gap: 8px; align-items: center; }
+  #opSheetBody { flex: 1; overflow-y: auto; font-size: 13px; color: var(--text);
+    width: 100%; margin: 0; padding: 0 2px;
+    /* Use the FULL screen width (no narrow centered column), and opt back out of the
+       app-wide user-select:none so the output — e.g. a command string to copy into a
+       terminal — can actually be highlighted and copied. */
+    user-select: text; -webkit-user-select: text; }
+  #opSheetBody, #opSheetBody * { -webkit-touch-callout: default; }
   /* One-time Operator consent — a real sheet, not a browser confirm(). */
   #opConsent { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: flex-end;
     justify-content: center; background: rgba(2,4,8,.72); backdrop-filter: blur(3px); }
@@ -792,7 +798,7 @@
       </div>
     </div>
     <div id="opSheet" hidden role="dialog" aria-modal="true" aria-label="Operator full output">
-      <div class="op-sheet-bar"><span>◆ OPERATOR · FULL OUTPUT</span><button type="button" id="opSheetClose">Close</button></div>
+      <div class="op-sheet-bar"><span>◆ OPERATOR · FULL OUTPUT</span><span class="op-sheet-actions"><button type="button" id="opSheetCopy" title="Copy all output to the clipboard">Copy</button><button type="button" id="opSheetClose">Close</button></span></div>
       <div id="opSheetBody"></div>
     </div>
 
@@ -3168,6 +3174,16 @@
     }
     if (sheet) {
       $("opSheetClose").onclick = () => { sheet.hidden = true; sheetBody.innerHTML = ""; };
+      const copyBtn = $("opSheetCopy");
+      if (copyBtn) copyBtn.onclick = async () => {
+        const text = sheetBody.innerText || "";
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); }
+          else { const r = document.createRange(); r.selectNodeContents(sheetBody); const s = getSelection();
+                 s.removeAllRanges(); s.addRange(r); document.execCommand("copy"); s.removeAllRanges(); }
+          copyBtn.textContent = "Copied"; setTimeout(() => { copyBtn.textContent = "Copy"; }, 1400);
+        } catch (_) { copyBtn.textContent = "Copy failed"; setTimeout(() => { copyBtn.textContent = "Copy"; }, 1600); }
+      };
       document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !sheet.hidden) $("opSheetClose").click(); });
     }
     transcript.addEventListener("click", (e) => {

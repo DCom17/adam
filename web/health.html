@@ -340,6 +340,166 @@
   .hp-card.note { border-style:dashed; border-color:rgba(62,230,176,.32); background:rgba(62,230,176,.05); }
   .hp-card.note .tag { color:#04140e; background:linear-gradient(105deg,#eafff6,#6ff0c6 55%,#3ee6b0); }
   .hp-card.note h3 { color:var(--green); }
+
+  /* ===== expandable Today cards (same pattern as Finance) ===== */
+  .xhead { display:flex; align-items:center; gap:10px; width:100%; background:none; border:0; padding:0;
+    margin:0 0 14px; font:inherit; color:var(--cyan); cursor:pointer; text-align:left; }
+  .xhead:focus-visible, .ringcard:focus-visible, .chip:focus-visible { outline:2px solid var(--cyan); outline-offset:3px; }
+  .xhead .xt { flex:1; min-width:0; font-size:11px; font-weight:800; letter-spacing:3px; text-transform:uppercase; }
+  .xhint { font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--faint); }
+  .xchev { width:26px; height:26px; flex:none; display:inline-flex; align-items:center; justify-content:center; border-radius:8px;
+    border:1px solid var(--edge); color:var(--cyan); transition:transform .25s; }
+  .xchev .ico { width:15px; height:15px; }
+  .xcard.open > .xhead .xchev { transform:rotate(180deg); }
+  .xcard:not(.open):hover { border-color:var(--edge-hi); }
+  .xmore { margin-top:15px; padding-top:13px; border-top:1px dashed rgba(143,185,198,.18); animation:xin .22s ease-out; }
+  @keyframes xin { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+
+  /* status pill: color + icon + words, never color alone */
+  .spill { display:inline-flex; align-items:center; gap:5px; flex:none; font-size:9.5px; font-weight:800; letter-spacing:.8px;
+    text-transform:uppercase; padding:3px 9px 3px 7px; border-radius:999px; border:1px solid; white-space:nowrap; }
+  .spill i { font-style:normal; font-size:10px; line-height:1; }
+  .spill.good { color:var(--green); border-color:rgba(62,230,176,.45); background:rgba(62,230,176,.08); }
+  .spill.watch { color:var(--amber); border-color:rgba(247,185,85,.5); background:rgba(247,185,85,.08); }
+  .spill.bad { color:var(--red); border-color:rgba(255,106,138,.5); background:rgba(255,106,138,.08); }
+  .spill.info { color:var(--cyan-soft); border-color:rgba(33,230,255,.4); background:rgba(33,230,255,.07); }
+  .spill.none { color:var(--faint); border-color:rgba(143,185,198,.3); background:rgba(143,185,198,.05); }
+
+  /* ring cards are the toggles for the Calories / Protein detail below them */
+  .ringcard { cursor:pointer; transition:border-color .2s, transform .2s; }
+  .ringcard:hover { border-color:var(--cyan); }
+  .ringcard.on { border-color:var(--cyan); box-shadow:0 16px 40px rgba(0,0,0,.46), 0 0 0 1px var(--cyan), 0 0 30px rgba(33,230,255,.16); }
+  .rc-st { position:relative; display:flex; align-items:center; justify-content:center; gap:6px; margin-top:9px; }
+  .rc-st .xhint { font-size:9px; }
+  @media (max-width:520px){
+    .xhead .xhint, .rc-st .xhint { display:none; }
+    .xhead .xt { letter-spacing:2px; }
+    .rc-st .spill { font-size:8.5px; padding:2px 7px 2px 6px; }
+  }
+  .ring-detail { margin-top:-2px; }
+  .ring-detail .xmore { margin-top:0; padding-top:0; border-top:0; }
+
+  /* detail body */
+  .ins-head { display:flex; align-items:flex-start; gap:10px; }
+  .ins-head p { flex:1; margin:0; font-size:14px; line-height:1.45; color:var(--ink); font-weight:600; }
+  .ins-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:13px; }
+  .ins-stats.n4 { grid-template-columns:repeat(2,1fr); }
+  .istat { border:1px solid var(--edge); background:rgba(4,9,16,.5); border-radius:12px; padding:10px 9px; min-width:0; }
+  .istat .k { font-size:9px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--faint); }
+  .istat .v { margin-top:4px; font-size:16.5px; font-weight:750; color:var(--ink); letter-spacing:-.01em;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .istat .s { margin-top:2px; font-size:10.5px; color:var(--dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ins-chart { margin-top:14px; }
+  .ins-chart svg { display:block; width:100%; height:auto; overflow:visible; }
+  .ins-chart .ibar { cursor:pointer; }
+  .ins-chart .ibar:hover rect.m { filter:brightness(1.25); }
+  .ins-cap { display:flex; justify-content:space-between; gap:10px; margin-top:6px; font-size:10.5px; color:var(--faint); }
+  .ins-sec { margin-top:15px; }
+  .ins-sec h4 { margin:0 0 7px; font-size:10px; font-weight:800; letter-spacing:2.4px; text-transform:uppercase; color:var(--faint); }
+  .ins-sec ul { margin:0; padding:0; list-style:none; }
+  .ins-sec li { position:relative; padding:7px 0 7px 20px; font-size:13px; line-height:1.5; color:var(--text);
+    border-bottom:1px solid rgba(143,185,198,.08); }
+  .ins-sec li:last-child { border-bottom:0; }
+  .ins-sec li::before { position:absolute; left:2px; top:7px; font-size:12px; }
+  .ins-sec.find li::before { content:"●"; font-size:7px; top:13px; left:5px; color:var(--amber); }
+  .ins-sec.tips li::before { content:"→"; color:var(--green); }
+  .ins-sec.keep li::before { content:"✓"; color:var(--green); }
+  .ins-top { display:flex; justify-content:space-between; gap:10px; padding:7px 0; font-size:12.5px;
+    border-bottom:1px solid rgba(143,185,198,.08); }
+  .ins-top:last-child { border-bottom:0; }
+  .ins-top .n { color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ins-top .n small { color:var(--faint); margin-left:5px; }
+  .ins-top .q { color:var(--dim); font-weight:650; flex:none; }
+  .ins-split { display:flex; height:12px; border-radius:7px; overflow:hidden; gap:2px; margin-top:14px; }
+  .ins-split span { display:block; height:100%; }
+  .ins-legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:7px; font-size:11px; color:var(--dim); }
+  .ins-legend b { display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+  .today-foot { text-align:center; font-size:11px; color:var(--faint); line-height:1.6; padding:4px 10px 8px; }
+
+  /* watch chips double as the metric picker */
+  button.chip { font:inherit; color:inherit; cursor:pointer; transition:border-color .2s, background .2s; }
+  button.chip:hover { border-color:var(--edge-hi); }
+  button.chip.on { border-color:var(--cyan); background:rgba(33,230,255,.09); }
+  .chip .cdot { display:block; width:6px; height:6px; border-radius:50%; margin:6px auto 0; }
+  .cdot.good { background:var(--green); } .cdot.watch { background:var(--amber); } .cdot.bad { background:var(--red); }
+  .cdot.info, .cdot.none { background:rgba(143,185,198,.3); }
+  .wm-title { margin:0 0 10px; font-size:12px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--cyan-soft); }
+
+  /* ===== Log tab: each section gets its own color + label so they don't blur together ===== */
+  .lgroup { display:flex; align-items:center; gap:10px; margin:26px 2px 9px; font-size:11px; font-weight:800;
+    letter-spacing:4px; text-transform:uppercase; }
+  .lgroup:first-child { margin-top:2px; }
+  .lgroup::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,currentColor,transparent); opacity:.45; }
+  .lgroup .lgi { width:24px; height:24px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid currentColor; }
+  .lgroup .lgi .ico { width:14px; height:14px; }
+  .lgroup.food { color:var(--amber); } .lgroup.water { color:var(--blue); } .lgroup.body { color:var(--violet); }
+  .frame.sec { border-left-width:4px; }
+  .frame.sec > h2 { font-size:12px; }
+  .frame.sec-food { border-color:rgba(247,185,85,.28); border-left-color:var(--amber);
+    background:linear-gradient(160deg, rgba(247,185,85,.07), rgba(12,20,32,.72) 42%); }
+  .frame.sec-food::after { background:linear-gradient(90deg,transparent,rgba(247,185,85,.55),transparent); }
+  .frame.sec-food > h2 { color:var(--amber); }
+  .frame.sec-food .hglyph { color:var(--amber); background:rgba(247,185,85,.1); border-color:rgba(247,185,85,.35); }
+  .frame.sec-water { border-color:rgba(74,168,255,.28); border-left-color:var(--blue);
+    background:linear-gradient(160deg, rgba(74,168,255,.08), rgba(12,20,32,.72) 42%); }
+  .frame.sec-water::after { background:linear-gradient(90deg,transparent,rgba(74,168,255,.6),transparent); }
+  .frame.sec-water > h2 { color:#8cc8ff; }
+  .frame.sec-water .hglyph { color:#8cc8ff; background:rgba(74,168,255,.1); border-color:rgba(74,168,255,.38); }
+  .frame.sec-water .btn.ghost { color:#8cc8ff; border-color:rgba(74,168,255,.55); }
+  .frame.sec-body { border-color:rgba(167,139,250,.28); border-left-color:var(--violet);
+    background:linear-gradient(160deg, rgba(167,139,250,.08), rgba(12,20,32,.72) 42%); }
+  .frame.sec-body::after { background:linear-gradient(90deg,transparent,rgba(167,139,250,.6),transparent); }
+  .frame.sec-body > h2 { color:var(--violet); }
+  .frame.sec-body .hglyph { color:var(--violet); background:rgba(167,139,250,.1); border-color:rgba(167,139,250,.38); }
+  .frame.sec-body .btn.ghost { color:#c4b5fd; border-color:rgba(167,139,250,.55); }
+  .frame.sec-food .btn.ghost { color:#ffd08a; border-color:rgba(247,185,85,.55); }
+  .subhead { margin:18px 0 0; font-size:10px; font-weight:800; letter-spacing:2.4px; text-transform:uppercase; color:var(--faint); }
+  /* Desktop (same breakpoint as the main app's cockpit and Finance): stop
+     rendering the phone column in the middle of a wide screen. Each tab is a
+     grid; an opened card takes the full row and sets its chart beside the
+     findings/tips (charts are drawn at a fixed ~600px, so they never stretch
+     past ~1.3x). */
+  @media (min-width:1100px){
+    body { padding:22px 32px 40px; }
+    .app { max-width:1440px; }
+    .title { padding:14px 12px 4px; }
+    .tabs { max-width:600px; margin:0 auto 20px; }
+    .frame { padding:20px 22px; }
+
+    #todayBody, #trendsBody, #logView { display:grid; gap:16px; align-items:start; }
+    #todayBody > *, #trendsBody > *, #logView > * { margin:0; min-width:0; }
+    #logView[hidden] { display:none; }
+
+    /* TODAY — rings (2/3) + water counter, then macros | weight | watch */
+    #todayBody { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    #todayBody > .rings2 { grid-column:span 2; }
+    #todayBody > #card-water { grid-column:3; grid-row:1; align-self:stretch; }
+    #todayBody > .ring-detail, #todayBody > .xcard.open, #todayBody > .state-msg, #todayBody > .today-foot { grid-column:1 / -1; }
+    #todayBody > #card-water.open { grid-row:auto; }
+    .ins-wrap { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:0 30px; align-items:start; }
+    .ins-side > .ins-sec:first-child { margin-top:0; }
+
+    /* LOG — the (tall) meal form down the left; today's meals, water and body
+       stacked on the right. The last 1fr row soaks up the form's extra height so
+       the right-hand cards stay packed together. */
+    #logView { grid-template-columns:repeat(2, minmax(0,1fr)); grid-template-rows:repeat(6, auto) 1fr; }
+    #logView > .lgroup.food { grid-column:1 / -1; grid-row:1; }
+    #logView > #logMealFrame { grid-column:1; grid-row:2 / span 6; }
+    #logView > #logMealsFrame { grid-column:2; grid-row:2; }
+    #logView > .lgroup.water { grid-column:2; grid-row:3; }
+    #logView > #logWaterFrame { grid-column:2; grid-row:4; }
+    #logView > .lgroup.body { grid-column:2; grid-row:5; }
+    #logView > #logBodyFrame { grid-column:2; grid-row:6; }
+
+    /* TRENDS — charts two-up */
+    #trendsBody { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    #trendsBody > :only-child, #trendsBody > .ds-note { grid-column:1 / -1; }
+
+    /* SETUP — one card; keep it a readable width, all four macro targets in a row */
+    #setupView { max-width:880px; margin:0 auto; }
+    #setupView .fldrow:first-of-type { grid-template-columns:repeat(4, minmax(0,1fr)); }
+  }
 </style>
 </head>
 
@@ -363,7 +523,8 @@
   <section id="todayView"><div id="todayBody"><div class="state-msg">Loading…</div></div></section>
 
   <section id="logView" hidden>
-    <div class="frame">
+    <div class="lgroup food"><span class="lgi"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a6 6 0 0 0 6-6c0-4.5-4.5-6.5-4-11-3.5 2-7 5.5-7 11a5 5 0 0 0 5 6z"/></svg></span>Food</div>
+    <div class="frame sec sec-food" id="logMealFrame">
       <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a6 6 0 0 0 6-6c0-4.5-4.5-6.5-4-11-3.5 2-7 5.5-7 11a5 5 0 0 0 5 6z"/></svg></span>Log a meal</h2>
       <p class="hint">Snap a photo and Adam estimates the macros — or type them in.</p>
       <div class="dz" id="mealDz">
@@ -395,12 +556,13 @@
       <div id="mealErr" class="err" hidden></div>
     </div>
 
-    <div class="frame">
+    <div class="frame sec sec-food" id="logMealsFrame">
       <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.3-1.4L14.4 21 12 19.6 9.6 21 7.3 19.6 5 21z"/><path d="M8.5 8.5h7M8.5 12.5h7"/></svg></span>Today's meals</h2>
       <div id="mealList"><div class="muted" style="font-size:12.5px">None yet.</div></div>
     </div>
 
-    <div class="frame">
+    <div class="lgroup water"><span class="lgi"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2c3.3 3.9 5.6 6.9 5.6 9.8a5.6 5.6 0 0 1-11.2 0c0-2.9 2.3-5.9 5.6-9.8z"/></svg></span>Water</div>
+    <div class="frame sec sec-water" id="logWaterFrame">
       <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2c3.3 3.9 5.6 6.9 5.6 9.8a5.6 5.6 0 0 1-11.2 0c0-2.9 2.3-5.9 5.6-9.8z"/></svg></span>Water</h2>
       <p class="hint">Log any amount — the counter on Today has one-tap glasses too.</p>
       <div class="fldrow">
@@ -412,14 +574,16 @@
       <div id="waList" style="margin-top:13px"></div>
     </div>
 
-    <div class="frame">
+    <div class="lgroup body"><span class="lgi"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.4-9-9a4.6 4.6 0 0 1 9-2 4.6 4.6 0 0 1 9 2c-2 4.6-9 9-9 9z"/></svg></span>Body</div>
+    <div class="frame sec sec-body" id="logBodyFrame">
       <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M6 8h12"/><path d="M6 8l-2.6 6a2.7 2.7 0 0 0 5.2 0z"/><path d="M18 8l2.6 6a2.7 2.7 0 0 1-5.2 0z"/></svg></span>Weight &amp; daily stats</h2>
       <div class="fldrow">
         <div><label class="fld" for="wVal">Weight</label><input id="wVal" type="number" inputmode="decimal" placeholder="0"></div>
         <div><label class="fld" for="wUnit">Unit</label><select id="wUnit"><option value="lb">lb</option><option value="kg">kg</option></select></div>
       </div>
       <button id="wAddBtn" class="btn wide ghost">LOG WEIGHT</button>
-      <div class="fldrow" style="margin-top:12px">
+      <div class="subhead">Daily stats (if you don't wear a watch)</div>
+      <div class="fldrow">
         <div><label class="fld" for="dSteps">Steps</label><input id="dSteps" type="number" inputmode="numeric" placeholder="0"></div>
         <div><label class="fld" for="dSleep">Sleep (min)</label><input id="dSleep" type="number" inputmode="numeric" placeholder="0"></div>
       </div>
@@ -522,16 +686,26 @@ function toMl(amount, unit){ return amount * (ML_PER[unit] || ML_PER.oz); }
 function unitLabel(u){ return u === "cup" ? "cups" : u; }
 
 // --- today -------------------------------------------------------------------
+// Insights (the expanded-card detail) load alongside the summary but never
+// block it: if /health/insights fails, Today renders exactly as before and the
+// cards simply have nothing extra to open.
+var LAST_SUM = null, INS = null;
+async function loadInsights(){
+  try { INS = await api("/health/insights?date=" + today()); } catch (e){ INS = null; }
+}
 async function loadToday(){
   if (!LS.token){ $("todayBody").innerHTML = '<div class="state-msg">Sign in to Adam first.</div>'; return; }
-  try { renderToday(await api("/health/summary?date=" + today())); }
+  try {
+    var r = await Promise.all([api("/health/summary?date=" + today()), loadInsights()]);
+    renderToday(r[0]);
+  }
   catch (e){ $("todayBody").innerHTML = '<div class="state-msg">Could not load.<br><span class="err">' + esc(e.message) + "</span></div>"; return; }
   refreshWatch();  // pull the day's current watch totals in the background (fail-soft, server-throttled)
 }
 // Re-render Today from a fresh summary WITHOUT the Garmin round-trip — used
 // after a one-tap water add so the counter updates immediately.
 async function reloadToday(){
-  try { renderToday(await api("/health/summary?date=" + today())); } catch (e){}
+  try { var r = await Promise.all([api("/health/summary?date=" + today()), loadInsights()]); renderToday(r[0]); } catch (e){}
 }
 // Ask Adam to re-pull Garmin so "From your watch" shows today's CURRENT totals,
 // not the first sync of the day. Throttled server-side; a no-op when Garmin is
@@ -539,7 +713,7 @@ async function reloadToday(){
 async function refreshWatch(){
   try {
     var r = await api("/health/garmin/refresh", { method: "POST", body: {} });
-    if (r && r.refreshed) renderToday(await api("/health/summary?date=" + today()));
+    if (r && r.refreshed){ var x = await Promise.all([api("/health/summary?date=" + today()), loadInsights()]); renderToday(x[0]); }
   } catch (e){ /* keep the cached numbers — never disrupt the page */ }
 }
 // --- visual components (icons, ring gauges) ----------------------------------
@@ -565,15 +739,19 @@ function gaugeSVG(frac, col, size, sw){
     '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round" ' +
     'stroke-dasharray="' + dash.toFixed(1) + " " + circ.toFixed(1) + '" transform="rotate(-90 ' + c + " " + c + ')" style="filter:drop-shadow(0 0 5px ' + col + ')"/></svg>';
 }
-function ringCard(label, ic, consumed, ring, col, unit){
+function ringCard(id, label, ic, consumed, ring, col, unit){
   ring = ring || {};
+  var on = RING_OPEN === id, sec = ins(id);
   var frac = (ring.progress == null) ? 0 : Math.min(1, ring.progress);
   var sub = (ring.target == null) ? "set a target in Setup" : (g(ring.remaining) + " left of " + g(ring.target));
   var pctTxt = (ring.target != null) ? Math.round(frac * 100) + "%" : "—";
-  return '<div class="ringcard"><div class="rc-head">' + icon(ic) + "<span>" + esc(label) + "</span></div>" +
+  return '<div class="ringcard' + (on ? " on" : "") + '" data-xt="' + id + '" role="button" tabindex="0" aria-expanded="' + on + '"' +
+    ' aria-label="' + esc(label + (sec ? ", " + sec.label : "") + ". " + (on ? "Hide" : "Show") + " trends and tips.") + '">' +
+    '<div class="rc-head">' + icon(ic) + "<span>" + esc(label) + "</span></div>" +
     '<div class="gauge">' + gaugeSVG(frac, col, 134, 12) +
     '<div class="gauge-c"><div class="gv">' + g(consumed) + (unit ? '<small>' + unit + "</small>" : "") + '</div><div class="gl">' + pctTxt + "</div></div></div>" +
-    '<div class="rc-sub">' + esc(sub) + "</div></div>";
+    '<div class="rc-sub">' + esc(sub) + "</div>" +
+    '<div class="rc-st">' + spill(sec) + '<span class="xhint">' + (on ? "Less ▴" : "More ▾") + "</span></div></div>";
 }
 function smallGauge(label, consumed, ring, col, unit){
   ring = ring || {};
@@ -605,14 +783,13 @@ function waterCard(w, rows){
   }).join("");
   var foot = (w.target_amount == null) ? "Set a daily target in Setup"
     : (w.remaining_amount > 0 ? g1(w.remaining_amount) + " " + ul + " to go" : "Target reached ✓");
-  return '<div class="frame"><h2 class="ic">' + hicon("drop") + "Water</h2>" +
-    '<div class="water-row"><div class="gauge">' + gaugeSVG(frac, "#4aa8ff", 96, 10) +
+  return xframe("water", "drop", "Water", '<div class="water-row"><div class="gauge">' + gaugeSVG(frac, "#4aa8ff", 96, 10) +
     '<div class="gauge-c"><div class="gv" style="font-size:19px">' + g1(w.amount || 0) +
     '<small>' + esc(ul) + '</small></div><div class="gl">' + esc(pct) + "</div></div></div>" +
     '<div class="wq">' + quick + "</div></div>" +
     '<div class="wfoot"><span>' + esc(foot) + "</span>" +
     (rows.length ? '<button class="linkbtn" onclick="undoWater(' + Number(rows[0].id) + ',this)">Undo last</button>' : "<span></span>") +
-    "</div></div>";
+    "</div>", ins("water"));
 }
 async function addWater(amount, unit, btn){
   if (btn) btn.disabled = true;
@@ -643,54 +820,283 @@ function mspark(vals){
     '<path d="M' + pts.join(" L") + '" fill="none" stroke="#21e6ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
 }
 
+// --- expandable cards: the detail behind each Today card ----------------------
+// Every number, status, and tip below comes from GET /health/insights
+// (health_insights.py). The page only lays it out — chart geometry is the one
+// thing computed here, and it is pure presentation.
+var OPEN = {};            // which Today cards are expanded
+var RING_OPEN = "";       // "kcal" | "protein" | "" — the two ring cards share one detail slot
+var WATCH_SEL = "";       // which watch metric the "From your watch" detail shows
+var ST_ICON = { good: "✓", watch: "!", bad: "✕", info: "i", none: "…" };
+var SERIES_COL = { kcal: "#21e6ff", protein: "#3ee6b0", macros: "#a78bfa", water: "#4aa8ff",
+  steps: "#21e6ff", sleep: "#a78bfa", resting_hr: "#ff6a8a", stress: "#f7b955",
+  body_battery: "#3ee6b0", active_kcal: "#8df2ff" };
+var DAY_TAPPABLE = { kcal: 1, protein: 1, macros: 1, water: 1 };
+var WATCH_NAMES = { steps: "Steps", sleep: "Sleep", resting_hr: "Resting heart rate",
+  stress: "Stress", body_battery: "Body Battery", active_kcal: "Active calories" };
+
+function ins(id){ return INS ? INS[id] : null; }
+function spill(sec){
+  if (!sec) return "";
+  var st = ST_ICON[sec.status] ? sec.status : "none";
+  return '<span class="spill ' + st + '"><i aria-hidden="true">' + ST_ICON[st] + "</i>" + esc(sec.label || "") + "</span>";
+}
+function xframe(id, ic, title, bodyHtml, sec, moreHtml){
+  var open = !!OPEN[id];
+  return '<div class="frame xcard' + (open ? " open" : "") + '" id="card-' + id + '">' +
+    '<button type="button" class="xhead" data-xt="' + id + '" aria-expanded="' + open + '">' + hicon(ic) +
+    '<span class="xt">' + esc(title) + "</span>" + spill(sec) +
+    '<span class="xhint">' + (open ? "Less" : "More") + '</span><span class="xchev">' + icon("chev") + "</span></button>" +
+    bodyHtml +
+    (open ? '<div class="xmore">' + (moreHtml != null ? moreHtml : insBody(sec, id)) + "</div>" : "") + "</div>";
+}
+
+function insBody(sec, id){
+  if (!sec) return '<div class="muted" style="font-size:12.5px">Trends couldn’t load right now — try again in a moment.</div>';
+  var h = '<div class="ins-head"><p>' + esc(sec.headline) + "</p></div>";
+  var st = sec.stats || [];
+  if (st.length){
+    h += '<div class="ins-stats' + ((st.length === 2 || st.length === 4) ? " n4" : "") + '">' + st.map(function(x){
+      return '<div class="istat"><div class="k">' + esc(x.k) + '</div><div class="v">' + esc(x.v) + "</div>" +
+        (x.sub ? '<div class="s">' + esc(x.sub) + "</div>" : "") + "</div>";
+    }).join("") + "</div>";
+  }
+  h += (id === "weight") ? weightChart(sec) : insChart(sec, id);
+  if (id === "macros" && sec.split) h += splitBar(sec.split);
+  // Main (headline/stats/chart) vs side (findings/top/tips): stacked on a phone,
+  // side by side on desktop.
+  var main = h; h = "";
+  if (sec.findings && sec.findings.length)
+    h += '<div class="ins-sec find"><h4>What stands out</h4><ul>' + sec.findings.map(function(f){ return "<li>" + esc(f) + "</li>"; }).join("") + "</ul></div>";
+  if (sec.top && sec.top.length){
+    h += '<div class="ins-sec"><h4>' + (id === "protein" ? "Top protein sources" : "Top foods by calories") +
+      " · last " + esc(INS.window_days) + " days</h4>" + sec.top.map(function(t){
+        return '<div class="ins-top"><span class="n">' + esc(t.name) + (t.count > 1 ? "<small>×" + esc(t.count) + "</small>" : "") +
+          '</span><span class="q">' + esc(t.v) + "</span></div>";
+      }).join("") + "</div>";
+  }
+  if (sec.tips && sec.tips.length){
+    var keep = sec.status === "good";
+    h += '<div class="ins-sec ' + (keep ? "keep" : "tips") + '"><h4>' + (keep ? "Keep it up" : "How to improve") + "</h4><ul>" +
+      sec.tips.map(function(t){ return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></div>";
+  }
+  return '<div class="ins-wrap"><div class="ins-main">' + main + "</div>" + (h ? '<div class="ins-side">' + h + "</div>" : "") + "</div>";
+}
+
+function shortDate(ds){ var p = String(ds).split("-"); return (+p[1]) + "/" + (+p[2]); }
+function niceNum(v){ return (Math.round(v * 10) / 10).toLocaleString(); }
+
+// 14-day bar chart: one series, an optional dashed target line, a dashed stub
+// for a day with no entry ("no data" is never drawn as a zero bar), and today /
+// partial days faded so a half-logged day never reads as a bad one.
+function insChart(sec, id){
+  var ser = sec.series || [];
+  var vals = ser.filter(function(p){ return p.v != null; }).map(function(p){ return p.v; });
+  if (!vals.length) return "";
+  var col = SERIES_COL[id] || "#21e6ff", tgt = (sec.target != null && sec.target > 0) ? sec.target : null;
+  var W = 560, H = 132, top = 16, base = H - 20, n = ser.length, slot = W / n, bw = Math.max(8, Math.min(26, slot * 0.58));
+  var mx = Math.max.apply(null, vals.concat(tgt ? [tgt] : [])) * 1.08 || 1;
+  var y = function(v){ return base - (v / mx) * (base - top); };
+  var tap = !!DAY_TAPPABLE[id], unit = sec.unit || "";
+  var g = "";
+  ser.forEach(function(p, i){
+    var cx = slot * i + slot / 2, x = cx - bw / 2;
+    var lab = (i === 0 || i === n - 1 || i === Math.floor(n / 2)) ?
+      '<text x="' + cx.toFixed(1) + '" y="' + (H - 4) + '" fill="#5d8894" font-size="11" text-anchor="middle">' + (p.today ? "today" : esc(shortDate(p.date))) + "</text>" : "";
+    var tip = esc(shortDate(p.date) + (p.today ? " (today, in progress)" : "") + ": " +
+      (p.v == null ? "nothing logged" : niceNum(p.v) + (unit ? " " + unit : "")) + (p.partial ? " — looks partial" : ""));
+    var attrs = tap ? ' data-day="' + esc(p.date) + '" role="button" tabindex="0" aria-label="' + tip + '"' : "";
+    var mark;
+    if (p.v == null){
+      mark = '<rect x="' + x.toFixed(1) + '" y="' + (base - 4) + '" width="' + bw.toFixed(1) + '" height="4" rx="2" fill="none" stroke="rgba(143,185,198,.4)" stroke-dasharray="3 2"/>';
+    } else {
+      var yy = y(p.v), hh = Math.max(3, base - yy);
+      var faded = p.today || p.partial;
+      mark = '<rect class="m" x="' + x.toFixed(1) + '" y="' + (base - hh).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hh.toFixed(1) +
+        '" rx="4" fill="' + col + '" fill-opacity="' + (faded ? ".32" : ".9") + '"' +
+        (p.partial ? ' stroke="' + col + '" stroke-dasharray="3 2"' : "") + "/>";
+    }
+    g += '<g class="ibar"' + attrs + "><title>" + tip + "</title>" +
+      '<rect x="' + (cx - slot / 2).toFixed(1) + '" y="0" width="' + slot.toFixed(1) + '" height="' + base + '" fill="transparent"/>' + mark + "</g>" + lab;
+  });
+  var tl = "";
+  if (tgt){
+    var ty = y(tgt);
+    tl = '<line x1="0" x2="' + W + '" y1="' + ty.toFixed(1) + '" y2="' + ty.toFixed(1) + '" stroke="#c9e4ec" stroke-opacity=".45" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+      '<text x="' + W + '" y="' + (ty - 5).toFixed(1) + '" fill="#8fb9c6" font-size="11" text-anchor="end">target ' + esc(niceNum(tgt)) + (unit && unit !== "kcal" ? " " + esc(unit) : "") + "</text>";
+  }
+  var svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc("Last " + n + " days") + '">' +
+    '<line x1="0" x2="' + W + '" y1="' + base + '" y2="' + base + '" stroke="rgba(143,185,198,.18)"/>' + g + tl + "</svg>";
+  var capR = tap ? "tap a bar to open that day" : "dashed = no data";
+  return '<div class="ins-chart">' + svg + '<div class="ins-cap"><span>Last ' + n + " days" +
+    (id === "macros" ? " · meals logged" : (unit ? " · " + esc(unit) : "")) + "</span><span>" + capR + "</span></div></div>";
+}
+
+// Weight: a line positioned by real date (weigh-ins are irregular), with the
+// goal as a dashed line when it's close enough to share the scale.
+function weightChart(sec){
+  var ser = sec.series || [];
+  if (ser.length < 2) return "";
+  var W = 560, H = 150, top = 16, base = H - 22, lp = 8, rp = 40;
+  var t0 = parseLocalDate(ser[0].date).getTime(), t1 = parseLocalDate(ser[ser.length - 1].date).getTime(), span = (t1 - t0) || 1;
+  var vs = ser.map(function(p){ return p.v; }), mn = Math.min.apply(null, vs), mx = Math.max.apply(null, vs);
+  var goal = (sec.target != null && sec.target > 0) ? Number(sec.target) : null;
+  var showGoal = goal != null && Math.abs(goal - mn) <= mn * 0.12 && Math.abs(goal - mx) <= mx * 0.12;
+  if (showGoal){ mn = Math.min(mn, goal); mx = Math.max(mx, goal); }
+  var pad = (mx - mn) * 0.12 || 1; mn -= pad; mx += pad;
+  var x = function(ds){ return lp + (parseLocalDate(ds).getTime() - t0) / span * (W - lp - rp); };
+  var y = function(v){ return top + (1 - (v - mn) / (mx - mn)) * (base - top); };
+  var pts = ser.map(function(p){ return x(p.date).toFixed(1) + "," + y(p.v).toFixed(1); });
+  var unit = sec.unit || "lb";
+  var dots = ser.map(function(p, i){
+    var last = i === ser.length - 1, tip = esc(shortDate(p.date) + ": " + niceNum(p.v) + " " + unit);
+    return '<g class="ibar" data-day="' + esc(p.date) + '" role="button" tabindex="0" aria-label="' + tip + '"><title>' + tip + "</title>" +
+      '<circle cx="' + x(p.date).toFixed(1) + '" cy="' + y(p.v).toFixed(1) + '" r="13" fill="transparent"/>' +
+      '<circle cx="' + x(p.date).toFixed(1) + '" cy="' + y(p.v).toFixed(1) + '" r="' + (last ? 5.5 : 4) + '" fill="#8df2ff" stroke="#04060b" stroke-width="2"/></g>' +
+      (last ? '<text x="' + (x(p.date) + 9).toFixed(1) + '" y="' + (y(p.v) + 4).toFixed(1) + '" fill="#eefafd" font-size="12" font-weight="700">' + esc(niceNum(p.v)) + "</text>" : "");
+  }).join("");
+  var gl = showGoal ? '<line x1="0" x2="' + W + '" y1="' + y(goal).toFixed(1) + '" y2="' + y(goal).toFixed(1) + '" stroke="#3ee6b0" stroke-opacity=".6" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+    '<text x="' + lp + '" y="' + (y(goal) - 5).toFixed(1) + '" fill="#3ee6b0" font-size="11">goal ' + esc(niceNum(goal)) + "</text>" : "";
+  // A stretch of 3+ weeks with no weigh-in is drawn dashed and faint: the line
+  // there is a guess between two points, not a measured path.
+  var segs = "";
+  for (var i = 1; i < ser.length; i++){
+    var gap = (parseLocalDate(ser[i].date) - parseLocalDate(ser[i - 1].date)) / 864e5 > 21;
+    segs += '<path d="M' + pts[i - 1] + " L" + pts[i] + '" fill="none" stroke="#21e6ff" stroke-width="2" stroke-linecap="round"' +
+      (gap ? ' stroke-dasharray="4 5" stroke-opacity=".45"' : "") + "/>";
+  }
+  var svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Weight over time">' + segs +
+    gl + dots +
+    '<text x="' + lp + '" y="' + (H - 4) + '" fill="#5d8894" font-size="11">' + esc(shortDate(ser[0].date)) + "</text>" +
+    '<text x="' + (W - rp) + '" y="' + (H - 4) + '" fill="#5d8894" font-size="11" text-anchor="end">' + esc(shortDate(ser[ser.length - 1].date)) + "</text></svg>";
+  return '<div class="ins-chart">' + svg + '<div class="ins-cap"><span>Weigh-ins, last ' + esc(Math.round(span / 864e5) + 1) + " days" +
+    (goal != null && !showGoal ? " · goal " + esc(niceNum(goal)) + " " + esc(unit) + " is off this scale" : "") +
+    "</span><span>tap a point to open that day</span></div></div>";
+}
+
+function splitBar(sp){
+  var parts = [["Protein", sp.protein, "#3ee6b0"], ["Carbs", sp.carbs, "#a78bfa"], ["Fat", sp.fat, "#f7b955"]];
+  return '<div class="ins-split" role="img" aria-label="' + esc("Calories from protein " + sp.protein + "%, carbs " + sp.carbs + "%, fat " + sp.fat + "%") + '">' +
+    parts.map(function(p){ return '<span style="flex:' + Math.max(1, p[1]) + ";background:" + p[2] + '"></span>'; }).join("") + "</div>" +
+    '<div class="ins-legend">' + parts.map(function(p){ return '<span><b style="background:' + p[2] + '"></b>' + esc(p[0]) + " " + esc(p[1]) + "%</span>"; }).join("") + "</div>";
+}
+
+function watchMore(){
+  var w = ins("watch");
+  if (!w) return insBody(null);
+  var m = w.metrics || {};
+  var sel = (WATCH_SEL && m[WATCH_SEL] && WATCH_SEL !== "sleep") ? WATCH_SEL : "steps";
+  return '<div class="ins-head"><p>' + esc(w.headline) + "</p></div>" +
+    '<div class="xmore" style="margin-top:12px"><div class="wm-title">' + esc(WATCH_NAMES[sel] || sel) + " " + spill(m[sel]) + "</div>" +
+    insBody(m[sel], sel) + "</div>";
+}
+
 function renderToday(s){
+  LAST_SUM = s;
   var r = s.rings || {}, t = s.totals || {};
-  // HERO — big calorie + protein rings
+  // HERO — big calorie + protein rings. Tapping one opens its detail below the pair.
   var html = '<div class="rings2">' +
-    ringCard("Calories", "flame", t.kcal, r.kcal, "#21e6ff", "") +
-    ringCard("Protein", "protein", t.protein_g, r.protein_g, "#3ee6b0", "g") + "</div>";
+    ringCard("kcal", "Calories", "flame", t.kcal, r.kcal, "#21e6ff", "") +
+    ringCard("protein", "Protein", "protein", t.protein_g, r.protein_g, "#3ee6b0", "g") + "</div>";
+  if (RING_OPEN){
+    var rs = ins(RING_OPEN);
+    html += '<div class="frame ring-detail" id="card-' + RING_OPEN + '"><div class="xhead" style="cursor:default">' +
+      hicon(RING_OPEN === "kcal" ? "flame" : "protein") + '<span class="xt">' + (RING_OPEN === "kcal" ? "Calories" : "Protein") +
+      " · trends</span>" + spill(rs) + "</div>" + '<div class="xmore">' + insBody(rs, RING_OPEN) + "</div></div>";
+  }
 
   // Carbs · Fat · Meals
-  html += '<div class="frame"><h2 class="ic">' + hicon("carbs") + 'Carbs · Fat · Meals</h2><div class="dual">' +
+  html += xframe("macros", "carbs", "Carbs · Fat · Meals", '<div class="dual">' +
     smallGauge("Carbs", t.carbs_g, r.carbs_g, "#a78bfa", "g") +
     smallGauge("Fat", t.fat_g, r.fat_g, "#f7b955", "g") +
-    '<div class="sg"><div class="dm-v">' + (t.meals || 0) + '</div><div class="dm-l">meals</div></div></div></div>';
+    '<div class="sg"><div class="dm-v">' + (t.meals || 0) + '</div><div class="dm-l">meals</div></div></div>', ins("macros"));
 
   // Water — the one-tap counter
   html += waterCard(s.water || {}, s.water_today || []);
 
-  // Weight + mini trend
-  html += '<div class="frame"><h2 class="ic">' + hicon("scale") + "Weight</h2>";
+  // Weight + mini trend (the open card shows the full chart instead)
+  var wb = "";
   if (s.weight){
     var toGo = s.weight_goal ? (s.weight.weight - s.weight_goal) : null;
-    html += '<div class="wt-row"><div class="wt-now">' + g1(s.weight.weight) + "<small> " + esc(s.weight.unit) + "</small></div>";
-    if (s.weight_goal) html += '<div class="wt-goal">Goal ' + g1(s.weight_goal) + " " + esc(s.weight_unit || "lb") +
+    wb += '<div class="wt-row"><div class="wt-now">' + g1(s.weight.weight) + "<small> " + esc(s.weight.unit) + "</small></div>";
+    if (s.weight_goal) wb += '<div class="wt-goal">Goal ' + g1(s.weight_goal) + " " + esc(s.weight_unit || "lb") +
       (toGo != null && Math.abs(toGo) >= 0.1 ? "<br>" + (toGo > 0 ? g1(Math.abs(toGo)) + " to go" : "at goal") : "") + "</div>";
-    html += "</div>";
+    wb += "</div>";
     var wt = s.weight_trend || [];
-    if (wt.length >= 2) html += '<div class="mini-spark">' + mspark(wt.map(function(x){ return x.weight; })) + "</div>";
-  } else html += '<div class="muted" style="font-size:12.5px">No weigh-in yet — add one in the Log tab.</div>';
-  html += "</div>";
+    if (wt.length >= 2 && !OPEN.weight) wb += '<div class="mini-spark">' + mspark(wt.map(function(x){ return x.weight; })) + "</div>";
+  } else wb += '<div class="muted" style="font-size:12.5px">No weigh-in yet — add one in the Log tab.</div>';
+  html += xframe("weight", "scale", "Weight", wb, ins("weight"));
 
-  // From your watch — icon chips
-  var dm = s.daily_metric || {};
-  function chip(label, value, cls, ic){ return '<div class="chip ' + cls + '"><div class="cl">' + (ic ? icon(ic) : "") + esc(label) + '</div><div class="cv">' + value + "</div></div>"; }
+  // Sleep — its own card (not just a watch chip), so it's reachable even on a
+  // morning when last night didn't sync. Garmin files a night under the date you
+  // woke up, so today's row is last night.
+  var dm = s.daily_metric || {}, sl = ins("sleep"), sm = dm.sleep_min;
+  var avg = (sl && sl.stats && sl.stats.length) ? sl.stats[0] : null;
+  var sbody = '<div class="wt-row"><div class="wt-now">' +
+    (sm != null && sm > 0 ? Math.floor(sm / 60) + "<small>h </small>" + (sm % 60) + "<small>m</small>" : "—") + "</div>" +
+    '<div class="wt-goal">' + (sm != null && sm > 0 ? "last night" : "last night not synced") +
+    (avg ? "<br>avg " + esc(avg.v) + (avg.sub ? " · " + esc(avg.sub) : "") : "") + "</div></div>";
+  if (!(sm > 0) && !avg)
+    sbody = '<div class="muted" style="font-size:12.5px;line-height:1.6">No sleep data yet. Wear a connected watch to bed, or enter last night’s sleep in the Log tab.</div>';
+  html += xframe("sleep", "moon", "Sleep", sbody, sl);
+
+  // From your watch — icon chips; each chip opens that metric's detail
+  var wm = (ins("watch") || {}).metrics || {};
+  function chip(key, label, value, cls, ic){
+    var st = wm[key] ? wm[key].status : "";
+    var on = OPEN.watch && (WATCH_SEL || "steps") === key;
+    return '<button type="button" class="chip ' + cls + (on ? " on" : "") + '" data-wm="' + key + '" aria-pressed="' + !!on + '"' +
+      ' aria-label="' + esc(label + " " + String(value).replace(/<[^>]+>/g, "") + (wm[key] ? ", " + wm[key].label : "") + ". Show trend.") + '">' +
+      '<div class="cl">' + (ic ? icon(ic) : "") + esc(label) + '</div><div class="cv">' + value + "</div>" +
+      (st ? '<span class="cdot ' + esc(st) + '"></span>' : "") + "</button>";
+  }
   var chips = [];
-  if (dm.steps != null) chips.push(chip("Steps", dm.steps.toLocaleString(), "c-cyan", "steps"));
-  if (dm.sleep_min != null) chips.push(chip("Sleep", Math.floor(dm.sleep_min / 60) + "h " + (dm.sleep_min % 60) + "<small>m</small>", "c-violet", "moon"));
-  if (dm.resting_hr != null) chips.push(chip("Resting HR", dm.resting_hr + " <small>bpm</small>", "c-rose", "heart"));
-  if (dm.stress != null) chips.push(chip("Stress", dm.stress, "c-amber", "gauge"));
-  if (dm.body_battery != null) chips.push(chip("Body Batt", dm.body_battery, "c-green", "gauge"));
-  if (dm.active_kcal != null) chips.push(chip("Active", dm.active_kcal + " <small>kcal</small>", "c-cyan", "flame"));
-  html += '<div class="frame"><h2 class="ic">' + hicon("heart") + 'From your watch</h2>';
-  if (chips.length) html += '<div class="chips">' + chips.join("") + "</div>";
-  else html += '<div class="muted" style="font-size:12.5px;line-height:1.6">No watch data today. Connect Garmin in <b style="color:var(--cyan-soft)">Settings → Add-ons</b> to see steps, sleep, resting heart rate, stress, Body Battery, and active calories here.</div>';
-  html += "</div>";
+  if (dm.steps != null) chips.push(chip("steps", "Steps", dm.steps.toLocaleString(), "c-cyan", "steps"));
+  if (dm.resting_hr != null) chips.push(chip("resting_hr", "Resting HR", dm.resting_hr + " <small>bpm</small>", "c-rose", "heart"));
+  if (dm.stress != null) chips.push(chip("stress", "Stress", dm.stress, "c-amber", "gauge"));
+  if (dm.body_battery != null) chips.push(chip("body_battery", "Body Batt", dm.body_battery, "c-green", "gauge"));
+  if (dm.active_kcal != null) chips.push(chip("active_kcal", "Active", dm.active_kcal + " <small>kcal</small>", "c-cyan", "flame"));
+  var wbody = chips.length ? '<div class="chips">' + chips.join("") + "</div>"
+    : '<div class="muted" style="font-size:12.5px;line-height:1.6">No watch data today. Connect Garmin in <b style="color:var(--cyan-soft)">Settings → Add-ons</b> to see steps, resting heart rate, stress, Body Battery, and active calories here (sleep has its own card above).</div>';
+  html += xframe("watch", "heart", "From your watch", wbody, ins("watch"), OPEN.watch ? watchMore() : null);
 
   if (!t.meals && !s.weight && !chips.length && !(s.water && s.water.ml))
     html += '<div class="state-msg"><b>Nothing logged today.</b><br>Tap a glass of water above, or use the Log tab to add a meal or your weight.</div>';
+  html += '<div class="today-foot">Tap any card for trends and tips. Averages leave out today — it’s still in progress.<br>General wellness guidance, not medical advice.</div>';
   $("todayBody").innerHTML = html;
 }
+
+// One delegated handler for every Today-card interaction.
+function todayAct(t){
+  if (!t || !t.closest) return false;
+  var xt = t.closest("[data-xt]");
+  if (xt){
+    var id = xt.getAttribute("data-xt");
+    if (id === "kcal" || id === "protein") RING_OPEN = (RING_OPEN === id) ? "" : id;
+    else OPEN[id] = !OPEN[id];
+    if (LAST_SUM) renderToday(LAST_SUM);
+    var el = $("card-" + id);
+    if (el && (RING_OPEN === id || OPEN[id])) try { el.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (_){}
+    return true;
+  }
+  var wmEl = t.closest("[data-wm]");
+  if (wmEl){
+    var k = wmEl.getAttribute("data-wm");
+    if (OPEN.watch && (WATCH_SEL || "steps") === k) OPEN.watch = false;
+    else { OPEN.watch = true; WATCH_SEL = k; }
+    if (LAST_SUM) renderToday(LAST_SUM);
+    return true;
+  }
+  var dayEl = t.closest(".ins-chart [data-day]");
+  if (dayEl){ openDay(dayEl.getAttribute("data-day")); return true; }
+  return false;
+}
+$("todayBody").addEventListener("click", function(e){ todayAct(e.target); });
+$("todayBody").addEventListener("keydown", function(e){
+  if (e.key !== "Enter" && e.key !== " ") return;
+  var t = e.target;
+  if (t && t.matches && (t.matches(".ringcard[data-xt]") || t.matches(".ins-chart [data-day]"))){ e.preventDefault(); todayAct(t); }
+});
 
 // --- log ---------------------------------------------------------------------
 async function loadMeals(){
@@ -904,9 +1310,17 @@ function spark(vals, labels, dates){
   var line = "M" + pts.join(" L");
   var area = "M" + xs(0).toFixed(1) + "," + (H - pad) + " L" + pts.join(" L") + " L" + xs(n - 1).toFixed(1) + "," + (H - pad) + " Z";
   var lx = xs(n - 1).toFixed(1), ly = ys(vals[n - 1]).toFixed(1);
-  // Crowded date-positioned labels overlap; keep the ends and thin the middle.
+  // Date-positioned labels collide when weigh-ins are close (07-27 and 07-29
+  // drew on top of each other). Keep the newest, then walk from the oldest and
+  // keep a label only if it clears both the last kept one and the newest.
+  var MIN_GAP = 46, keep = {}, lastX = -Infinity, endX = xs(n - 1);
+  keep[n - 1] = true;
+  for (var k = 0; k < n - 1; k++){
+    var kx = xs(k);
+    if (kx - lastX >= MIN_GAP && endX - kx >= MIN_GAP){ keep[k] = true; lastX = kx; }
+  }
   var ticks = labels.map(function(lb, i){
-    if (!(i === 0 || i === n - 1 || n <= 6)) return "";
+    if (!keep[i]) return "";
     return '<text x="' + xs(i).toFixed(1) + '" y="' + (H - 3) + '" fill="#5d8894" font-size="11" text-anchor="middle" font-family="' + "var(--font)" + '">' + esc(lb) + "</text>";
   }).join("");
   var dots = vals.map(function(v, i){
@@ -1415,6 +1829,8 @@ document.addEventListener("click", async function(ev){
     var GUIDE = [
       { tab: "Today", t: "Your day at a glance",
         d: "Calories and protein sit front and center with rings filling toward your targets, plus carbs, fat, weight, steps, and sleep. The water counter lives here too — tap a glass, bottle, or jug to fill toward your daily goal, and undo a mistap right on the card." },
+      { tab: "Today", t: "Tap any card to go deeper",
+        d: "Every card opens into the last few weeks: averages, a 14-day chart, a status (On track, Worth a look, Off track), what stands out, and specific ways to improve. Tap the Calories or Protein ring, the Sleep card, or any watch stat, to open its detail. Today itself is never judged — it's still in progress — and a day you only half-logged is set aside rather than counted as a bad day." },
       { tab: "Log", t: "Log a meal, water, or your weight",
         d: "Photograph a meal and Adam estimates the macros, or just describe it (e.g. “1 banana”) and Adam fills in the calories and macros — tweak anything, then add. Log an exact amount of water in oz, ml, or cups, and record your weight, steps, and sleep. Everything rolls up into Today's totals." },
       { tab: "Trends", t: "Watch your progress over time",

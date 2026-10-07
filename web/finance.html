@@ -566,6 +566,65 @@
   .gapbar b { display:block; margin-top:3px; color:var(--ink); font-size:13px; }
 
   @media (min-width: 760px) { .app { max-width:720px; } }
+  /* Desktop (same breakpoint as the main app's cockpit): stop rendering the phone
+     column in the middle of a wide screen. Every tab becomes a grid; anything
+     expanded (a "More" card, the net-worth chart) takes the full row so its charts
+     get the width — chartW() follows .app, so they redraw at that size. */
+  @media (min-width: 1100px) {
+    body { padding:22px 32px 40px; }
+    .app { max-width:1440px; }
+    .title { padding:14px 12px 4px; }
+    .tabs { max-width:640px; margin:0 auto 20px; }
+    .frame { padding:20px 22px; }
+
+    #dashBody, #importView, #setupView, #manageView { display:grid; gap:16px; align-items:start; }
+    #dashBody > *, #importView > .frame, #setupView > .frame, #manageView > .frame { margin:0; min-width:0; }
+    #importView[hidden], #setupView[hidden], #manageView[hidden], #importView > [hidden] { display:none; }
+
+    /* DASH — 6-col grid: hero + stacked tiles, then 3+3, then 2+2+2, health full */
+    #dashBody { grid-template-columns:repeat(6, minmax(0,1fr)); }
+    #dashBody > * { grid-column:span 2; }
+    #dashBody > .pbar, #dashBody > .stale, #dashBody > :only-child, #card-health { grid-column:1 / -1; }
+    /* period chips + month picker on one row instead of two full-width bars */
+    #dashBody > .pbar { display:flex; align-items:center; gap:12px; }
+    #dashBody > .pbar .pchips { flex:0 1 600px; min-width:0; }
+    #dashBody > .pbar .prow { flex:1; min-width:0; margin-top:0; }
+    #card-nw { grid-column:span 4; align-self:stretch; padding:24px 26px 12px; }
+    #card-nw .feature-v { font-size:58px; }
+    #card-nw .feature-spark { height:84px; }
+    #dashBody > .tiles { grid-template-columns:1fr; grid-auto-rows:1fr; gap:12px; align-self:stretch; }
+    #dashBody > .tiles .tile { display:flex; flex-direction:column; justify-content:center; padding:14px 18px; }
+    #dashBody > .tiles .tile .tv { margin-top:6px; font-size:26px; }
+    #dashBody > .tiles .tile .tk { font-size:10px; }
+    #card-spend, #card-top { grid-column:span 3; }
+    #dashBody > .xcard.open, #card-nw.open { grid-column:1 / -1; }
+    #card-nw.open + .tiles { grid-column:1 / -1; grid-template-columns:repeat(3,1fr); grid-auto-rows:auto; }
+    #card-health .hchips { grid-template-columns:repeat(6,1fr); }
+    .xcard.open .donut-row .legend { flex:0 1 460px; }
+    /* an opened card's detail: sections two-up; charts and a lone last one span */
+    .xcard.open .xgrid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 36px; align-items:start; }
+    .xgrid > .xsec:has(.chartbox), .xgrid > .xsec:last-child:nth-child(odd) { grid-column:1 / -1; }
+
+    /* REVIEW — check cards two-up under each group heading */
+    .rgroup { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); column-gap:12px; align-items:start; }
+    .rgroup > .subh, .rgroup > .hint { grid-column:1 / -1; }
+
+    /* IMPORT — statement | balances side by side; staged review + pending full width */
+    #importView { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    #impFrame { grid-column:1; grid-row:1; }
+    #balFrame { grid-column:2; grid-row:1; }
+    #reviewFrame, #batchesFrame { grid-column:1 / -1; }
+
+    /* SETUP — settings + rules on the left, the (long) account list on the right */
+    #setupView { grid-template-columns:repeat(2, minmax(0,1fr)); grid-template-rows:auto 1fr; }
+    #setupView > .frame { grid-column:1; }
+    #setupView > #setAcctFrame { grid-column:2; grid-row:1 / span 2; }
+
+    /* MANAGE — imports + snapshots in a side column, transactions get the room */
+    #manageView { grid-template-columns:minmax(0,1fr) minmax(0,2fr); grid-template-rows:auto 1fr; }
+    #manageView > .frame { grid-column:1; }
+    #manageView > #mgTxnFrame { grid-column:2; grid-row:1 / span 2; }
+  }
   @media (max-width: 480px) {
     .nwstats { grid-template-columns:repeat(3,1fr); }
     .nwstats .ns:nth-child(n+4) { display:none; }
@@ -664,7 +723,7 @@
 
   <!-- ================= IMPORT & REVIEW ================= -->
   <section id="importView" hidden>
-    <div class="frame">
+    <div class="frame" id="impFrame">
       <div class="steplbl">Step 1 · Transactions</div>
       <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg></span>Import a statement</h2>
       <p class="hint">Drop a CSV or transaction list from any bank or card. Adam reads it, categorizes
@@ -699,7 +758,7 @@
       <div id="batchesBody"></div>
     </div>
 
-    <div class="frame">
+    <div class="frame" id="balFrame">
       <div class="steplbl">Step 2 · Balances</div>
       <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 3v4M16 3v4"/></svg></span>Update balances</h2>
       <p class="hint">Record each account's balance so your net worth, cash, and debt stay current. Screenshot an account and Adam reads the number for you — or type it. Debts are entered as negatives.</p>
@@ -738,7 +797,7 @@
       <div id="setErr" class="err" hidden></div>
     </div>
 
-    <div class="frame">
+    <div class="frame" id="setAcctFrame">
       <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 4l9 5.5"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3.5 20.5h17"/></svg></span>Accounts</h2>
       <p class="hint">Add each account so Adam knows what counts as cash, investments, or debt.</p>
       <div id="acctBody"></div>
@@ -775,7 +834,7 @@
       <div id="mgImports"><div class="muted" style="font-size:12px">Loading…</div></div>
     </div>
 
-    <div class="frame">
+    <div class="frame" id="mgTxnFrame">
       <h2 class="ic"><span class="hglyph"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14v18l-2.3-1.4L14.4 21 12 19.6 9.6 21 7.3 19.6 5 21z"/><path d="M8.5 8.5h7M8.5 12.5h7"/></svg></span>Transactions</h2>
       <label class="fld" for="mgMonth">Month</label>
       <select id="mgMonth"></select>
@@ -1029,7 +1088,16 @@ function xcard(id, ic, title, sub, summaryHtml, moreFn){
     '<span class="xt">' + esc(title) + (sub ? '<span class="xsub">' + esc(sub) + "</span>" : "") + '</span>' +
     '<span class="xhint">' + (open ? "Less" : "More") + '</span><span class="chev">' + icon("chev") + "</span></button>" +
     '<div class="xsum" data-toggle="' + id + '">' + summaryHtml + "</div>" +
-    (open ? '<div class="xmore">' + moreFn() + "</div>" : "") + "</div>";
+    (open ? '<div class="xmore">' + xsections(moreFn()) + "</div>" : "") + "</div>";
+}
+// Wrap each subh()-headed section of a card's detail in its own box, so the
+// desktop layout can set them two-up (mobile: plain blocks, unchanged). Content
+// before the first heading (filter chips) stays above the grid.
+function xsections(h){
+  var parts = h.split('<div class="subh">');
+  if (parts.length < 2) return h;
+  return (parts[0] ? '<div class="xpre">' + parts[0] + "</div>" : "") + '<div class="xgrid">' +
+    parts.slice(1).map(function(p){ return '<div class="xsec"><div class="subh">' + p + "</div>"; }).join("") + "</div>";
 }
 
 function periodLabel(s){
@@ -1171,7 +1239,7 @@ function renderDashboard(){
   var nAcct = (bk.missing_snapshot || 0) + (bk.no_account || 0) + (bk.unknown_account || 0) + (bk.account_gap || 0);
   var nCat = (bk.unmapped || 0) + (bk.broken_transfer || 0) + (bk.loan_as_spending || 0);
   var open = dh.open_items || 0;
-  html += '<div class="frame"><h2 class="ic">' + hicon("pulse") + 'Data Health</h2><div class="hchips">' +
+  html += '<div class="frame" id="card-health"><h2 class="ic">' + hicon("pulse") + 'Data Health</h2><div class="hchips">' +
     hchip("Status", dh.review_status || "—", dh.review_status === "All Clear" ? "green" : "rose") +
     hchip("Duplicates", bk.duplicate || 0, bk.duplicate ? "amber" : "green") +
     hchip("Accounts", nAcct, nAcct ? "amber" : "green") +
@@ -1307,7 +1375,7 @@ function acctList(s, types, empty){
 // --- bar charts (spending by month, income vs spending) ---------------------
 // Charts draw at their real on-screen width (viewBox = px), so labels stay legible
 // on a phone instead of a 640px drawing being shrunk to fit.
-function chartW(){ var a = document.querySelector(".app"); var w = a ? a.clientWidth - 34 : 600; return Math.max(300, Math.min(686, Math.round(w))); }
+function chartW(){ var a = document.querySelector(".app"); var w = a ? a.clientWidth - 34 : 600; return Math.max(300, Math.min(1400, Math.round(w))); }
 function niceMax(v){ if (v <= 0) return 1; var e = Math.pow(10, Math.floor(Math.log10(v))), f = v / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e; }
 function barTip(el){ return ' data-tip="' + esc(el) + '"'; }
 function stackedSpend(months, cats, colors){

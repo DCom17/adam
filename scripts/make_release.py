@@ -34,6 +34,7 @@ _ROOT_FILES = [
     "finance_store.py", "finance_metrics.py", "finance_import.py",  # Finance Tracker (F1/F2)
     "finance_history.py",  # Finance: balances for any date, period reports, data checks
     "health_store.py", "health_metrics.py", "health_import.py",  # Health Tracker (H1/H2)
+    "health_insights.py",  # Health: per-card trends, status, and how-to-improve detail
     "checklist_store.py",  # Checklists view (user-written + Adam-built step lists)
     "reminder_schedule.py",  # where the user is today (usual week + calendar + Adam's plan) for reminders
     "reminders.py",  # proactive reminders (water/meals/weigh-in/plan/bank CSVs) behind Notifications
