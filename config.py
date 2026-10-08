@@ -37,7 +37,7 @@ CONFIG_ROOT = Path(os.environ.get("ADAM_CONFIG_ROOT", "").strip()
 load_dotenv(CONFIG_ROOT / ".env")  # secrets + machine values
 
 APP_NAME = "adam-local"
-APP_VERSION = "0.9.86"
+APP_VERSION = "0.9.87"
 
 
 # --- Settings file ----------------------------------------------------------
@@ -507,6 +507,10 @@ UPDATE_CHECK_ENABLED = bool(_as("update_check_enabled", True))
 # sqlite3 — no new dependency. The already-persisted JSON stores (approvals,
 # proposed_changes, push_sub, last_result) are intentionally left as-is.
 JOBS_DB = STATE_DIR / "adam.db"
+# Test runs point this elsewhere (tests/conftest.py) so a suite never opens the live
+# install's job history — its startup recovery once flagged live phone turns.
+if os.environ.get("ADAM_JOBS_DB", "").strip():
+    JOBS_DB = Path(os.environ["ADAM_JOBS_DB"].strip())
 # Pre-rename installs (<= 0.9.34) have their job history in jarvis.db; updates
 # preserve data/, so carry it forward once. WAL/SHM sidecars move with it.
 _LEGACY_JOBS_DB = STATE_DIR / "jarvis.db"
@@ -521,6 +525,8 @@ STATE_SCHEMA_VERSION = 1
 # chats + transcripts so every signed-in device shows the same list. Separate
 # SQLite file from the job DB. ON by default; set false to keep chats device-local.
 SESSIONS_DB = STATE_DIR / "sessions.db"
+if os.environ.get("ADAM_SESSIONS_DB", "").strip():   # test runs only (tests/conftest.py)
+    SESSIONS_DB = Path(os.environ["ADAM_SESSIONS_DB"].strip())
 SESSION_SYNC_ENABLED = bool(_get("session_sync_enabled", True))
 # A deleted chat isn't shredded immediately — its transcript is retained as a
 # recoverable tombstone for this many days so an accidental X can be revived with

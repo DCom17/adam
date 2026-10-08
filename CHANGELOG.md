@@ -3,6 +3,26 @@
 All notable changes are documented here. Entries before 0.9.35 use the product's
 old name, Jarvis Voice Local — they are a historical record and were left as written.
 
+## 0.9.87 - Close the app mid-reply and nothing is lost
+
+- **Say "continue" and Adam picks up where it stopped.** If Adam restarts
+  while it's working on your message, the chat keeps its conversation.
+  Just say "continue" (or "go again") and it finishes the request without
+  redoing anything it already saved.
+- **Closing the app no longer loses a reply.** Send a message and close Adam
+  on your phone. When you reopen, the chat shows Adam is still working and
+  the reply lands in it. If the app closed before your message went out,
+  your next message in that chat brings it along.
+- **Your other devices see the reply right away.** A reply to a message you
+  sent from a phone that's now closed shows up on your computer too,
+  without waiting for the phone to reopen.
+- **No stray "Now Playing" tile on the lock screen.** Leaving the app
+  releases audio and the microphone. While Adam is open, the lock screen
+  shows an Adam-branded tile instead.
+- **Swipe away mid-reply, pick up from the same sentence.** If a spoken
+  reply is cut off by leaving the app, the Replay button reads RESUME and
+  continues from where it stopped.
+
 ## 0.9.86 - Health explains itself, and every tracker fits your desktop
 
 - **Every Health card opens into the full story.** Tap Calories, Protein,

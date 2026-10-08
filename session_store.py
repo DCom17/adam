@@ -425,3 +425,48 @@ def get_session_mode(sid: str) -> str | None:
 
 def now_ms() -> int:
     return int(time.time() * 1000)
+
+
+def _esc(s: str) -> str:
+    """Same escaping as the PWA's escapeHtml, so server-written bubbles match."""
+    return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+             .replace('"', "&quot;").replace("'", "&#39;"))
+
+
+def append_turn(key: str, user_text: str, reply: str, *, ts: int,
+                spoken: str = "", sid: str | None = None) -> bool:
+    """Write a finished turn into a chat's synced transcript ON THE SERVER — for a turn
+    whose device never came back for it (the phone app was closed), so every other
+    device still sees the reply without waiting for that phone to reopen. Adds the
+    user's bubble too unless it's already the last thing in the chat (the phone usually
+    synced it before closing). Skips a chat that already holds this reply (last_ts) or
+    was deleted. Returns True when it wrote."""
+    global _SEQ
+    if not key or not (reply or "").strip():
+        return False
+    with _LOCK:
+        conn = _conn()
+        row = conn.execute(
+            "SELECT tx, last_ts, updated, deleted, sid FROM sessions WHERE key=?", (key,)
+        ).fetchone()
+        if row is None or row[3] or int(row[1] or 0) >= int(ts or 0):
+            return False
+        tx = row[0] or ""
+        you = _esc((user_text or "").strip())
+        last_you = tx.rfind('<div class="you">')
+        tail = tx[last_you:] if last_you != -1 else ""
+        has_you = bool(you) and you in tail and '<div class="adam"' not in tail
+        if you and not has_you:
+            tx += f'<div class="you">“{you}”</div>'
+        tx += f'<div class="adam" style="white-space:pre-wrap">{_esc(reply.strip())}</div>'
+        if len(tx) > _TX_MAX:
+            tx = tx[-_TX_MAX:]
+        updated = max(now_ms(), int(row[2] or 0) + 1)
+        _SEQ += 1
+        conn.execute(
+            "UPDATE sessions SET tx=?, last_ts=?, last_spoken=?, sid=?, updated=?, used=?, seq=? "
+            "WHERE key=?",
+            (tx, int(ts), spoken or reply.strip(), sid or row[4], updated, updated, _SEQ, key),
+        )
+        conn.commit()
+    return True

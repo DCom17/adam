@@ -918,6 +918,35 @@ _MODE_ALIASES = {"normal": "voice", "voice": "voice",
 _CHAT_TITLE_MAX = 60
 
 
+# A turn cut off by a restart (job `interrupted`) left the user's message in the Claude
+# session with no reply. The next turn on that session is told so, which is what makes
+# "continue" / "go again" pick the cut-off request back up instead of a blank stare.
+_CUT_OFF_WINDOW_S = 12 * 3600
+
+
+def _cut_off_turn_note(session_id: str | None, job_id: str | None) -> str:
+    try:
+        prev = job_store.last_prior_for_session(session_id, job_id)
+    except Exception:  # noqa: BLE001 — a note must never break a turn
+        return ""
+    if not prev or prev.get("status") != job_store.STATUS_INTERRUPTED:
+        return ""
+    if time.time() - float(prev.get("created_at_ts") or 0) > _CUT_OFF_WINDOW_S:
+        return ""
+    began = (prev.get("input_summary") or "").strip().replace('"', "'")
+    return (
+        "\n\nCUT-OFF TURN: your previous turn in this conversation was cut off before "
+        "you replied (Adam restarted while you were working on it). The user's message "
+        "is already in this conversation"
+        + (f'; it began: "{began}"' if began else "")
+        + ". If the user now says something like \"continue\", \"go again\", \"try "
+        "again\" or \"keep going\", finish that cut-off request now — re-check anything "
+        "you had started and don't repeat a write that already landed. If they moved on "
+        "to something new, answer that, then offer in one short line to finish the "
+        "cut-off request."
+    )
+
+
 def _chat_control_note() -> str:
     """Teach the agent the chat-management directives + the consent rules (open a new
     chat / switch modes). Used in EVERY mode — organizing the conversation is a UI
@@ -1854,6 +1883,14 @@ STREAM_LINE_LIMIT = 16 * 1024 * 1024    # stream-json lines embed whole tool res
 _BACKGROUND_TASKS: set[asyncio.Task] = set()
 
 
+# Normal/voice turns in flight: job id -> chat key + session id. iOS kills a closed
+# web app's poll loop, so on reopen the app asks /turns/running and re-attaches
+# (shows "still working", delivers the reply) instead of looking idle and letting a
+# second turn race the first on the same session. Operator turns keep their own
+# list (operator_session.JOB_CHAT); both feed the same endpoint.
+RUNNING_TURNS: dict[str, dict] = {}
+
+
 def keep_task(task: asyncio.Task) -> asyncio.Task:
     """Anchor a fire-and-forget task so GC can never collect it mid-run."""
     _BACKGROUND_TASKS.add(task)
@@ -2349,6 +2386,8 @@ async def run_claude(
     prompt = prompt + _addon_awareness_note()
     # Hands-free chat management (every mode): rename this chat / open a new one on consent.
     prompt = prompt + _chat_control_note()
+    # The previous turn on this chat was cut off by a restart: say so (every mode).
+    prompt = prompt + _cut_off_turn_note(session_id, job_id)
     # Project folder (every mode): the folder's name, standing instructions, and sibling
     # chats. Empty + cheap for a loose chat or an unknown/deleted project key.
     prompt = prompt + _project_note(project, session_id)
@@ -2895,6 +2934,9 @@ async def _run_job(
             await asyncio.to_thread(
                 _send_push, out["result"], out["session_id"], ts, out["spoken"]
             )
+        if chat and out.get("mode") != "code":
+            keep_task(asyncio.create_task(_sync_unclaimed_reply(
+                job_id, chat, message, out["result"], out["spoken"], out["session_id"], ts)))
     except TurnStopped:
         # Not a failure: the user hit stop. The chat keeps its resume id — the
         # next utterance continues from the last COMPLETED turn.
@@ -2911,6 +2953,37 @@ async def _run_job(
         # An Operator turn that never reached its session (spawn failed) still leaves
         # the reattach list; one that did was already removed by the session.
         operator_session.JOB_CHAT.pop(job_id, None)
+        RUNNING_TURNS.pop(job_id, None)
+
+
+# How long a finished reply waits for its own device to collect it (/poll marks the
+# job delivered) before the server writes it into the synced chat itself. The phone
+# polls every 2.5s while it's watching, so only a closed/suspended app misses this.
+UNCLAIMED_REPLY_WAIT_S = 8.0
+_CARRY_PREFIX = "[My previous message never reached you"
+
+
+async def _sync_unclaimed_reply(job_id: str, chat: str, message: str, result: str,
+                                spoken: str, sid: str | None, ts: int) -> None:
+    """The sending device never came back for this reply (its app was closed), so no
+    device wrote it into the chat — and every OTHER device saw the question but not
+    the answer until that phone reopened. Write it into the server's copy of the chat;
+    sync carries it everywhere. A device that later delivers it dedupes on last_ts."""
+    try:
+        await asyncio.sleep(UNCLAIMED_REPLY_WAIT_S)
+        if session_store is None or not config.SESSION_SYNC_ENABLED:
+            return
+        job = job_store.get_job(job_id)
+        if not job or job.get("delivered"):
+            return
+        text = message or ""
+        if text.startswith(_CARRY_PREFIX) and "]\n\n" in text:
+            text = text.split("]\n\n", 1)[1]   # the app's carried-message wrapper
+        if session_store.append_turn(chat, text, result, ts=ts, spoken=spoken, sid=sid):
+            log.info("job %s: reply not collected by its device — wrote it into chat %s",
+                     job_id, str(chat)[:12])
+    except Exception:  # noqa: BLE001 — best effort; the device still delivers on reopen
+        log.exception("job %s: could not write the unclaimed reply into its chat", job_id)
 
 
 def _end_job_safely(writer, job_id: str, detail: str) -> None:

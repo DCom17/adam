@@ -219,6 +219,11 @@ async def ask_async(request: Request, response: Response, body: AskRequest):
     )
     if mode == "code" and body.chat:
         operator_session.JOB_CHAT[job_id] = str(body.chat)[:200]
+    elif mode != "code":
+        server.RUNNING_TURNS[job_id] = {
+            "chat": str(body.chat)[:200] if body.chat else None,
+            "session_id": body.session_id, "mode": mode,
+        }
     server.keep_task(asyncio.create_task(
         server._run_job(job_id, message, body.session_id, mode, body.attachments,
                         project=body.project, chat=body.chat,
@@ -373,6 +378,17 @@ async def operator_running():
     reload (iOS suspends and reloads backgrounded web apps), so a question asked
     while the phone was away is still answerable when the user comes back."""
     return {"running": operator_session.running_jobs()}
+
+
+@router.get("/turns/running", dependencies=[Depends(require_token)])
+async def turns_running():
+    """Every turn still working right now, any mode — the app re-attaches after iOS
+    kills or reloads it, so a message sent just before closing the app still gets
+    its reply (and a reopened chat shows it's busy instead of inviting a duplicate)."""
+    out = [{"job_id": jid, "operator": False, **info}
+           for jid, info in list(server.RUNNING_TURNS.items())]
+    out += [dict(j, operator=True) for j in operator_session.running_jobs()]
+    return {"running": out}
 
 
 @router.get("/operator/commands", dependencies=[Depends(require_token)])

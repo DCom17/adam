@@ -1822,6 +1822,37 @@
     try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (_) {}
   }
 
+  // The OS media tile (iOS Control Center / lock screen) appears for any page with
+  // a live audio session. Without metadata it shows the bare host name and blank
+  // art, so dress it as Adam: the orb state as the title, the app icon as artwork,
+  // and play/pause wired to the readout's pause/resume. No-ops without the API.
+  const NowPlaying = (() => {
+    const ms = ("mediaSession" in navigator) ? navigator.mediaSession : null;
+    let lastTitle = null;
+    if (ms) {
+      const on = (action, fn) => { try { ms.setActionHandler(action, fn); } catch (_) {} };
+      on("pause", () => { try { if (speaking) pauseTts(); } catch (_) {} });
+      on("play",  () => { try { resumeTts(); } catch (_) {} });
+      on("stop",  () => { try { if (speaking) interruptSpeech(); } catch (_) {} });
+      // Adam isn't a track list — leave skip/seek unhandled so they stay inert.
+      ["previoustrack", "nexttrack", "seekbackward", "seekforward", "seekto"].forEach((a) => on(a, null));
+    }
+    function sync(title) {
+      if (!ms) return;
+      try {
+        if (title && title !== lastTitle && typeof MediaMetadata !== "undefined") {
+          lastTitle = title;
+          ms.metadata = new MediaMetadata({
+            title, artist: "Adam", album: "Adam",
+            artwork: [{ src: "/icon.png", sizes: "512x512", type: "image/png" }],
+          });
+        }
+        ms.playbackState = (speaking && ttsPaused) ? "paused" : speaking ? "playing" : "none";
+      } catch (_) {}
+    }
+    return { sync };
+  })();
+
   const LABELS = { idle: "Standby", listening: "Listening", processing: "Thinking", speaking: "Speaking", muted: "Muted", warming: "Waking…" };
   function setState(s) {
     const _prevState = body.dataset.state;
@@ -1838,6 +1869,7 @@
       } catch (_) {}
     }
     label.textContent = LABELS[s] || s;
+    NowPlaying.sync(LABELS[s] || s);
     // iOS only feeds the mic when a tap started it, so an auto-listen can sit
     // "Listening" yet hear nothing. Tell the user the tap fallback exists.
     subhint.textContent = (s === "listening") ? "tap orb if mic stops responding"
@@ -2050,6 +2082,10 @@
                                     // during that window — a clock gap then is a cold Kokoro render,
                                     // not a wedge. Gen-keyed so a superseded invocation can't stick it.
   let ttsPaused = false;            // true while a replay is paused (its AudioContext suspended)
+  let ttsSentences = [], ttsMarks = [];  // current readout's sentences + [{at,end,i}] clip schedule
+                                    // on the ctx clock — tells us which sentence was playing
+  let parkedText = null;            // rest of a readout cut off by leaving the app; RESUME plays it
+  let parkedKey = null;             // …and the chat it belongs to
   let keepAlive = null;             // near-silent keepalive node ({osc,gain}) that holds the iOS
                                     // output route open from the unlocking tap until real audio plays
   // AnalyserNode tap on the Kokoro playback path — gives the orb the real
@@ -3329,6 +3365,62 @@
     }
   }
 
+  // Same idea for Normal turns: closing the app kills this page's poll loop, but the
+  // turn keeps running on the server. On reopen, find it and watch it again — the chat
+  // shows "still working", Stop works, and the reply lands in its chat — instead of
+  // looking idle and inviting a second message that races the first.
+  let reattachNormalBusy = false, reattachNormalAt = 0;
+  async function reattachNormalTurns() {
+    if (!LS.url || !LS.token || reattachNormalBusy || Date.now() - reattachNormalAt < 3000) return;
+    reattachNormalBusy = true; reattachNormalAt = Date.now();
+    try {
+      const r = await fetch(LS.url + "/turns/running", { headers: { "Authorization": "Bearer " + LS.token } });
+      if (!r.ok) return;
+      const d = await r.json();
+      for (const j of d.running || []) {
+        if (j.operator) continue;   // reattachOperatorTurns owns those
+        let key = null;
+        if (j.chat && Sessions._find(Sessions._all(), j.chat)) key = j.chat;
+        else if (j.session_id) key = Sessions.keyForSid(j.session_id);
+        if (!key || inflight.has(key)) continue;
+        watchNormalJob(key, j.job_id);
+      }
+    } catch (_) {} finally { reattachNormalBusy = false; }
+  }
+  async function watchNormalJob(key, jid) {
+    const onScreen = () => key === Sessions.activeKey();
+    inflight.set(key, jid);
+    if (onScreen()) { refreshBusy(); setState("processing"); label.textContent = "Still working on your last message…"; }
+    refreshStopBtn();
+    const settle = () => { inflight.delete(key); if (onScreen()) refreshBusy(); refreshStopBtn(); };
+    let misses = 0;
+    while (true) {
+      await new Promise((res) => setTimeout(res, POLL_INTERVAL_MS));
+      let job;
+      try {
+        const r = await fetch(LS.url + "/poll/" + jid, { headers: { "Authorization": "Bearer " + LS.token } });
+        if (r.status === 404) { settle(); if (onScreen()) setState(active ? "listening" : "idle"); return; }
+        if (!r.ok) { if (++misses > 600) { settle(); return; } continue; }
+        job = await r.json();
+      } catch (_) { if (++misses > 600) { settle(); return; } continue; }
+      misses = 0;
+      if (job.status === "running") continue;
+      settle();
+      if (job.status === "error") {
+        if (onScreen()) {
+          const err = String(job.error || "");
+          showErr(/stopped by user/i.test(err) ? "Stopped."
+            : err.indexOf("JVL_INTERRUPTED:") !== -1 ? "Adam restarted mid-task. Say “continue” and I'll pick it back up."
+            : (err || "That turn stopped with an error."));
+          setState(active ? "listening" : "idle");
+        }
+        return;
+      }
+      deliverTurnReply(key, onScreen(), job);
+      return;
+    }
+  }
+
   async function handleUtterance(text) {
     const turnKey = Sessions.activeKey();   // the chat this turn belongs to, for its whole life
     const nFiles = pendingFiles.length;
@@ -3394,7 +3486,10 @@
       // This chat's resume id was likely bad — start it fresh next time. Not for an
       // Operator turn: the server already recovers a stale Operator session on its own,
       // so a timeout or crash there must not throw the whole conversation away.
-      if (!(turnMode === "code" && opLive())) Sessions.clearSidFor(turnKey, "turn-failed");
+      // Nor for a turn cut off by an Adam restart: the session is fine and already
+      // holds the unanswered message, so keeping it is what lets "continue" resume.
+      const cutOff = reason === "poll-404" || (detail && String(detail).indexOf("JVL_INTERRUPTED:") !== -1);
+      if (!(turnMode === "code" && opLive()) && !cutOff) Sessions.clearSidFor(turnKey, "turn-failed");
       if (turnKey === Sessions.activeKey()) {
         var authIdx = detail ? detail.indexOf("JVL_AUTH_REQUIRED:") : -1;
         var limitIdx = detail ? detail.indexOf("JVL_LIMIT_REACHED:") : -1;
@@ -3417,9 +3512,10 @@
           // job is either gone (poll-404) or was swept to "interrupted" (the
           // JVL_INTERRUPTED tag). A long code turn is the usual casualty: it can't
           // outlive its server. Say so plainly and recoverably instead of a generic
-          // connection error — the turn is genuinely lost, so re-ask to run it again.
-          showErr("Adam restarted mid-task, so that was lost. Ask again.");
-          speak("I restarted mid-task, sir — ask me that again.");
+          // connection error. The chat keeps its session (above) and the server tells
+          // the next turn this one was cut off, so a plain "continue" picks it back up.
+          showErr("Adam restarted mid-task. Say “continue” and I'll pick it back up.");
+          speak("I restarted mid-task, sir — say continue and I'll pick it back up.");
         } else {
           // Last-resort branch: the failure didn't match any pattern above. This is
           // what a fresh install hits when the first message dies for a reason we
@@ -3469,6 +3565,17 @@
     //    (mirrors how the poll loop tolerates transient poll failures). We only retry on
     //    network/abort errors (no response came back); a real HTTP response is handled
     //    once, so the server can't end up with duplicate jobs.
+    // A message the server never accepted (the app was closed or lost signal before
+    // /ask_async answered) is parked per chat until a job id comes back. The next
+    // message in that chat carries it along, so "continue" has something to continue.
+    let sendText = text;
+    try {
+      const un = JSON.parse(localStorage.getItem("jvl_unsent_" + turnKey) || "null");
+      if (un && un.key === turnKey && un.text && un.ts < startedAt && startedAt - un.ts < 12 * 3600 * 1000) {
+        sendText = "[My previous message never reached you — the app closed or lost connection before it sent: \"" + un.text + "\" — if you already handled it, don't do it twice]\n\n" + text;
+      }
+      localStorage.setItem("jvl_unsent_" + turnKey, JSON.stringify({ key: turnKey, text: sendText, ts: startedAt }));
+    } catch (_) {}
     let jobId = null;
     const KICKOFF_TRIES = 3;
     for (let attempt = 1; ; attempt++) {
@@ -3480,7 +3587,7 @@
           res = await fetch(LS.url + "/ask_async", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + LS.token },
-            body: JSON.stringify(Object.assign({ message: text, session_id: Sessions.activeSid(), mode: currentMode(), attachments: attachmentPaths, chat: turnKey, project: (Projects.get(Sessions.projectOf(turnKey)) ? Sessions.projectOf(turnKey) : null) },
+            body: JSON.stringify(Object.assign({ message: sendText, session_id: Sessions.activeSid(), mode: currentMode(), attachments: attachmentPaths, chat: turnKey, project: (Projects.get(Sessions.projectOf(turnKey)) ? Sessions.projectOf(turnKey) : null) },
                                                (turnSwitch && opLive()) ? { mode_switch: true } : {})),
             signal: ctrl.signal,
           });
@@ -3496,6 +3603,9 @@
         continue;
       }
       // Got an HTTP response — the server answered, so handle it once (no retry → no dup jobs).
+      // A deliberate refusal (auth, Plus, busy) un-parks the message; a restart (503) or
+      // server error keeps it parked so the next message carries it.
+      if (res.status < 500) { try { localStorage.removeItem("jvl_unsent_" + turnKey); } catch (_) {} }
       if (res.status === 403) { clearInterval(tick); endTurn(); showErr("Auth rejected. Check your token in settings."); deactivate(); return; }
       // 503 = Adam is draining an in-flight turn before a restart and isn't taking
       // new ones for a moment. Not a failure — settle calmly and let the user retry.
@@ -3541,6 +3651,7 @@
       try { data = await res.json(); } catch (_) { fail(false, "kickoff-error", "bad json"); return; }
       jobId = data.job_id;
       if (!jobId) { fail(false, "kickoff-error", "No job_id"); return; }
+      try { localStorage.removeItem("jvl_unsent_" + turnKey); } catch (_) {}   // the server has it now
       inflight.set(turnKey, jobId);   // the stop button targets this job while it runs
       refreshStopBtn();
       if (turnMode === "code" && opLive()) { opJob = jobId; OpUI.begin(turnKey, jobId); }
@@ -4280,6 +4391,10 @@
     // nothing able to stop them — not even DEACTIVATE.
     const myGen = ++speakGen;
     ttsPaused = false;              // a fresh readout always starts unpaused
+    if (parkedText !== null) {      // a new readout supersedes one parked by backgrounding
+      parkedText = null;
+      if (replayBtn && !replayBtn.classList.contains("replaying")) replayBtn.textContent = "🔊 REPLAY";
+    }
     clearTimeout(speakWatchdog);
     stopTtsSources();
     lastSpokenText = normalizeForEcho(text);   // arm echo rejection for the post-speech tail (cleaned text)
@@ -4324,6 +4439,7 @@
     speakWatchdog = setTimeout(settle, SPEAK_WEDGE_CAP_MS);
 
     const sentences = splitSentences(text);
+    ttsSentences = sentences; ttsMarks = [];
     let spokenCount = 0;   // sentences successfully scheduled (for mid-stream fallback)
 
     try {
@@ -4384,6 +4500,7 @@
         // First real clip is now scheduled — hand the route off from the silent
         // keepalive, stopping it a beat AFTER real audio begins so there's no gap.
         if (i === 0) stopAudioKeepalive(nextStart + 0.25);
+        ttsMarks.push({ at: nextStart, end: nextStart + audioBuf.duration, i });
         nextStart += audioBuf.duration;
 
         ttsSources.push(source);
@@ -4981,6 +5098,7 @@
       try { focus = new URLSearchParams(location.search).get("ask") || null; } catch (_) {}
     }
     reattachOperatorTurns(focus);
+    reattachNormalTurns();
   }
   // Chats whose mode the user deliberately switched since their last turn: that turn
   // tells the server (mode_switch) to carry the conversation into the new mode.
@@ -5193,6 +5311,11 @@
   function updateReplayBtn() {
     const b = $("replayBtn");
     if (b) b.disabled = !Sessions.lastSpoken(Sessions.activeKey());
+    // A parked readout belongs to the chat it was cut off in — drop it on a switch.
+    if (parkedText !== null && parkedKey !== Sessions.activeKey()) {
+      parkedText = null;
+      if (b && !b.classList.contains("replaying")) b.textContent = "🔊 REPLAY";
+    }
   }
   // Replay doubles as a transport control for the readout it started:
   //   • tap (idle)    → replay the active chat's last reply from the start
@@ -5203,6 +5326,7 @@
   const replayBtn = $("replayBtn");
   function resetReplayBtn() {
     ttsPaused = false;
+    parkedText = null;
     if (replayBtn) { replayBtn.classList.remove("replaying"); replayBtn.textContent = "🔊 REPLAY"; }
   }
   async function startReplay() {
@@ -5224,12 +5348,14 @@
     clearTimeout(speakWatchdog);            // don't let the wall-clock watchdog settle while frozen
     try { audioCtx.suspend(); } catch (_) {}
     if (replayBtn) replayBtn.textContent = "▶ RESUME";
+    NowPlaying.sync();
   }
   function resumeTts() {
     if (!audioCtx || !ttsPaused) return;
     ttsPaused = false;
     try { audioCtx.resume(); } catch (_) {}  // continues; lastSource.onended still settles at the true end
     if (replayBtn) replayBtn.textContent = "PAUSE";
+    NowPlaying.sync();
   }
   if (replayBtn) {
     const HOLD_MS = 500;   // hold duration to trigger a restart — MUST match the .5s CSS line sweep
@@ -5254,7 +5380,16 @@
     replayBtn.addEventListener("pointerleave", cancelHold);
     replayBtn.onclick = () => {
       if (didHold) { didHold = false; return; }   // the line reached the end → already restarted, not a tap
-      if (replayBtn.classList.contains("replaying")) {
+      if (parkedText !== null) {
+        // Pick up a readout cut off by leaving the app, from the sentence it was on.
+        // This tap is the gesture that rebuilds the audio route (unlockAudio).
+        const rest = parkedText;
+        parkedText = null;
+        unlockAudio();
+        replayBtn.classList.add("replaying");
+        replayBtn.textContent = "PAUSE";
+        speak(rest);
+      } else if (replayBtn.classList.contains("replaying")) {
         ttsPaused ? resumeTts() : pauseTts();
       } else {
         startReplay();
@@ -5917,12 +6052,56 @@
     setState(active ? (sttSupported ? "listening" : "idle") : "idle");
     if (active && !muted && sttSupported) scheduleListen(MIC_RESTART_AFTER_SPEAK_MS);
   }
+  // Swiping out mid-reply shouldn't throw the reply away. Work out which sentence
+  // was playing from the clip schedule on the ctx clock (frozen at the pause point
+  // if the user had paused), keep the text from that sentence on, and stop the
+  // readout cleanly. Coming back, the replay button reads RESUME; that tap rebuilds
+  // the audio route and reads on. A frozen context isn't resumed in place — iOS
+  // can hand it back "running" but dead (AUD-16) — so it's re-rendered instead.
+  function parkReadoutForBackground() {
+    let rest = "";
+    try {
+      if (!window.speechSynthesis || !window.speechSynthesis.speaking) {   // Kokoro path only
+        const t = audioCtx ? audioCtx.currentTime : 0;
+        let idx = 0;
+        if (ttsMarks.length) {
+          const cur = ttsMarks.find((m) => m.end > t);
+          idx = cur ? cur.i : ttsMarks[ttsMarks.length - 1].i + 1;
+        }
+        rest = ttsSentences.slice(idx).join(" ").trim();
+      }
+    } catch (_) { rest = ""; }
+    try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (_) {}
+    speakGen++;                 // invalidate the in-flight speak() so it schedules no more audio
+    clearTimeout(speakWatchdog);
+    stopTtsSources();
+    speaking = false;
+    resetReplayBtn();
+    lastSpokenAt = Date.now();
+    setState(active ? (sttSupported ? "listening" : "idle") : "idle");   // recoverForeground re-arms the mic
+    if (rest && replayBtn) {
+      parkedText = rest;
+      try { parkedKey = Sessions.activeKey(); } catch (_) { parkedKey = null; }
+      replayBtn.textContent = "▶ RESUME";
+    }
+  }
   function releaseMicForBackground() {
     // Leaving the foreground: ABORT the recognizer so iOS actually releases the mic.
     // A continuous recognizer left running keeps the mic open (the orange indicator
     // persists after you close the app) and the lingering session contends with the
     // next one on return — leaving "Listening" deaf. We rebuild + restart on return.
     bgInterrupted = true;
+    // Release the audio engine too. A live AudioContext (plus the keepalive tone)
+    // makes iOS show a "Now Playing" tile for the domain on the lock screen and
+    // keeps the play-and-record session (orange mic dot) up. Audio can't play in
+    // the background anyway (the clock freezes), and the next gesture rebuilds the
+    // context via bgInterrupted — so close it now. A readout in progress is PARKED
+    // (rest of the text kept, RESUME on the replay button) rather than lost.
+    if (speaking) parkReadoutForBackground();
+    stopAudioKeepalive();
+    try { audioCtx && audioCtx.close(); } catch (_) {}
+    audioCtx = null; analyser = null;
+    setAudioSession("auto");
     if (recognition) {
       try { recognition.onstart = recognition.onresult = recognition.onerror = recognition.onend = null; } catch (_) {}
       try { recognition.abort(); } catch (_) {}
@@ -5981,6 +6160,7 @@
     recoverForeground();
     refreshPushSilently();
     reattachOperatorTurns();   // an Operator turn may still be working (or asking) — pick it back up
+    reattachNormalTurns();     // …and so may a Normal turn sent just before the app closed
   });
   window.addEventListener("focus", recoverForeground);     // iOS standalone: often unreliable
   window.addEventListener("pageshow", recoverForeground);  // …so don't depend on any one event

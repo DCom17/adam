@@ -25,6 +25,7 @@ product already persists it (last_result.json) and job history needs it.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import threading
 import time
@@ -357,6 +358,20 @@ def get_job(job_id: str) -> dict | None:
     return _row_to_dict(row)
 
 
+def last_prior_for_session(session_id: str | None, exclude_job_id: str | None = None) -> dict | None:
+    """The newest job on this Claude session other than `exclude_job_id` — lets a new
+    turn see that the one before it was cut off (interrupted) and never answered."""
+    if not session_id:
+        return None
+    with _LOCK:
+        row = _conn().execute(
+            "SELECT * FROM jobs WHERE session_id=? AND job_id!=? "
+            "ORDER BY created_at_ts DESC LIMIT 1",
+            (session_id, exclude_job_id or ""),
+        ).fetchone()
+    return _row_to_dict(row)
+
+
 def list_jobs(*, limit: int = 50, status: str | None = None) -> list[dict]:
     """Recent jobs, newest first. Optional exact-status filter."""
     limit = max(1, min(int(limit), 500))
@@ -391,19 +406,66 @@ def recover_interrupted() -> list[dict]:
         rows = c.execute(
             "SELECT * FROM jobs WHERE status IN (?,?)", ACTIVE_STATUSES,
         ).fetchall()
-        recovered = [d for d in (_row_to_dict(r) for r in rows) if d is not None]
-        if recovered:
+        # Only jobs whose owning process is gone. A second process opening the same DB
+        # (a test run, a sandbox instance) must not "interrupt" turns the live server is
+        # still running — 2026-10-07 a pytest run did exactly that to two phone turns.
+        recovered = [d for d in (_row_to_dict(r) for r in rows)
+                     if d is not None and not _owned_by_live_process(d)]
+        for d in recovered:
             c.execute(
                 """UPDATE jobs
                    SET status=?, interrupted_at=?, message=?, error=COALESCE(error,?),
                        updated_at=?, updated_at_ts=?
-                   WHERE status IN (?,?)""",
+                   WHERE job_id=? AND status IN (?,?)""",
                 (STATUS_INTERRUPTED, now_iso, msg, msg, now_iso, _now(),
-                 *ACTIVE_STATUSES),
+                 d["job_id"], *ACTIVE_STATUSES),
             )
+        if recovered:
             c.commit()
     # Re-read so the returned records reflect the new status.
     return [get_job(r["job_id"]) for r in recovered if get_job(r["job_id"])]  # type: ignore
+
+
+# A job a live process still owns is only trusted for this long; past it (a wedged
+# worker, or a recycled PID) startup recovery marks it interrupted anyway.
+_LIVE_OWNER_MAX_AGE_S = 2 * 3600
+
+
+def _pid_alive(pid: int) -> bool:
+    """True if a process with this PID is running. Never signals it (on Windows
+    os.kill(pid, 0) would TERMINATE the process)."""
+    if os.name == "nt":
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        h = k32.OpenProcess(0x1000, False, int(pid))   # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return False
+        try:
+            code = ctypes.c_ulong()
+            return bool(k32.GetExitCodeProcess(h, ctypes.byref(code))) and code.value == 259  # STILL_ACTIVE
+        finally:
+            k32.CloseHandle(h)
+    try:
+        os.kill(int(pid), 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def _owned_by_live_process(job: dict) -> bool:
+    pid = job.get("pid")
+    if not pid or int(pid) == os.getpid():
+        return False
+    if _now() - float(job.get("updated_at_ts") or job.get("created_at_ts") or 0) > _LIVE_OWNER_MAX_AGE_S:
+        return False
+    try:
+        return _pid_alive(int(pid))
+    except Exception:  # noqa: BLE001 — unsure = recover as before
+        return False
 
 
 def sweep(ttl_seconds: int) -> int:
