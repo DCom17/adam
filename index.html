@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campos Systems LLC — private, local-first software</title>
+<meta name="description" content="Campos Systems LLC builds private, local-first software that runs on your own machine and answers only to you. No accounts, no servers of ours, no telemetry.">
+<link rel="canonical" href="https://adam.camposenterprises.org/">
+<link rel="icon" href="icon.png" type="image/png">
+<link rel="apple-touch-icon" href="icon.png">
+
+<!-- Static page, one file. 'unsafe-inline' covers the single inline <style> and
+     the tiny inline <script>; everything else is locked down. No external
+     requests, no forms, no cookies. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Campos Systems">
+<meta property="og:title" content="Campos Systems LLC — private, local-first software">
+<meta property="og:description" content="We build software that runs on your own machine and answers only to you. No accounts, no servers of ours, no telemetry.">
+<meta property="og:image" content="https://adam.camposenterprises.org/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://adam.camposenterprises.org/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Campos Systems LLC">
+<meta name="twitter:description" content="Private, local-first software that runs on your own machine and answers only to you.">
+<meta name="twitter:image" content="https://adam.camposenterprises.org/og.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Campos Systems LLC",
+  "url": "https://adam.camposenterprises.org/",
+  "logo": "https://adam.camposenterprises.org/icon.png",
+  "description": "Campos Systems LLC builds private, local-first software that runs on your own machine and answers only to you.",
+  "email": "hello@camposenterprises.org"
+}
+</script>
+
+<style>
+  :root {
+    --bg: #04060b;
+    --bg-soft: #071019;
+    --panel: rgba(10, 20, 30, .55);
+    --edge: rgba(33, 230, 255, .15);
+    --edge-hi: rgba(33, 230, 255, .4);
+    --cyan: #21e6ff;
+    --cyan-soft: #8df2ff;
+    --ink: #eefafd;
+    --text: #c9e4ec;
+    --dim: #8fb9c6;
+    --faint: #5d8894;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background:
+      radial-gradient(ellipse 70% 55% at 50% -8%, rgba(33,230,255,.10), transparent 70%),
+      radial-gradient(ellipse 45% 40% at 85% 25%, rgba(33,120,255,.06), transparent 70%),
+      var(--bg);
+    color: var(--text); min-height: 100vh;
+    font: 16px/1.65 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  img { max-width: 100%; }
+  ::selection { background: rgba(33,230,255,.28); color: #fff; }
+
+  /* nav */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px clamp(18px, 4vw, 44px);
+    background: rgba(4, 6, 11, .4);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid transparent; transition: background .35s, border-color .35s;
+  }
+  nav.scrolled { background: rgba(4, 6, 11, .8); border-bottom-color: rgba(33,230,255,.08); }
+  .brand { display: flex; align-items: center; gap: 13px; }
+  .brand:hover { text-decoration: none; }
+  .brand img {
+    width: 34px; height: 34px;
+    filter: drop-shadow(0 0 10px rgba(33,230,255,.45)); transition: filter .3s, transform .3s;
+  }
+  .brand:hover img { filter: drop-shadow(0 0 16px rgba(33,230,255,.75)); transform: scale(1.05); }
+  .wordmark {
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: 16px; font-weight: 800; letter-spacing: 4.5px; text-indent: 1px;
+    background: linear-gradient(100deg, #fff 30%, var(--cyan-soft) 70%, var(--cyan));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .nav-links { display: flex; align-items: center; gap: clamp(16px, 2.6vw, 30px); }
+  .nav-links a {
+    font-size: 12.5px; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--dim); font-weight: 600;
+  }
+  .nav-links a:hover { color: var(--ink); text-decoration: none; }
+  @media (max-width: 560px) { .nav-links a.nav-hide { display: none; } }
+
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 40px); }
+
+  /* hero */
+  .hero { padding: clamp(150px, 26vh, 240px) 0 clamp(70px, 12vh, 120px); text-align: center; }
+  .hero .glyph { width: 112px; height: 112px; margin: 0 auto 34px; display: block; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: 4.5px; font-weight: 700;
+    color: var(--cyan); text-transform: uppercase;
+  }
+  .hero h1 {
+    margin: 20px auto 0; max-width: 760px;
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: clamp(36px, 6.4vw, 66px); font-weight: 700; line-height: 1.08;
+    letter-spacing: -0.02em; color: var(--ink);
+  }
+  .hero h1 em { font-style: normal;
+    background: linear-gradient(100deg, #fff, var(--cyan-soft) 55%, var(--cyan));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero .sub { margin: 24px auto 0; max-width: 580px; font-size: clamp(16px, 2vw, 19px); color: var(--dim); }
+
+  section { padding: clamp(48px, 8vh, 80px) 0; }
+  section + section { border-top: 1px solid rgba(33,230,255,.07); }
+  .label {
+    display: flex; align-items: center; gap: 12px; justify-content: center;
+    font-size: 12px; letter-spacing: 4.5px; font-weight: 700;
+    color: var(--cyan); text-transform: uppercase; margin-bottom: 26px;
+  }
+  .label::before, .label::after { content: ""; width: 26px; height: 1px; background: var(--cyan); opacity: .55; }
+  h2 {
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: clamp(24px, 3.4vw, 36px); font-weight: 700; line-height: 1.18;
+    letter-spacing: -0.015em; color: var(--ink); text-align: center; max-width: 680px; margin: 0 auto;
+  }
+  .section-sub { margin: 16px auto 0; max-width: 620px; color: var(--dim); text-align: center; }
+
+  /* principles */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 40px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--edge); border-radius: 18px;
+    padding: 26px 24px 28px; transition: transform .35s, border-color .35s;
+  }
+  .card:hover { transform: translateY(-4px); border-color: var(--edge-hi); }
+  .card .glyph {
+    width: 40px; height: 40px; border-radius: 12px; margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(33,230,255,.09); border: 1px solid var(--edge);
+  }
+  .card .glyph svg { width: 20px; height: 20px; stroke: var(--cyan); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .card h3 { font-size: 16px; color: var(--ink); margin-bottom: 9px; font-weight: 700; }
+  .card p { font-size: 14.5px; color: var(--dim); }
+
+  /* product panel */
+  .product {
+    margin-top: 40px; display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center;
+    background: rgba(12, 26, 36, .5); border: 1px solid var(--edge-hi); border-radius: 22px;
+    padding: 34px clamp(26px, 4vw, 40px);
+  }
+  @media (max-width: 640px) { .product { grid-template-columns: 1fr; text-align: center; } }
+  .product .pmark { width: 92px; height: 92px; }
+  @media (max-width: 640px) { .product .pmark { margin: 0 auto; } }
+  .product .name {
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: 26px; font-weight: 700; color: var(--ink); letter-spacing: -0.01em;
+  }
+  .product .tag { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--cyan); font-weight: 700; margin-bottom: 6px; }
+  .product p { margin-top: 12px; color: var(--dim); font-size: 15px; max-width: 560px; }
+  @media (max-width: 640px) { .product p { margin-left: auto; margin-right: auto; } }
+  .btns { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 12px; }
+  @media (max-width: 640px) { .btns { justify-content: center; } }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px; padding: 12px 24px; border-radius: 11px;
+    font-weight: 800; font-size: 12.5px; letter-spacing: 2px; text-transform: uppercase;
+    transition: transform .25s, filter .25s, background .25s;
+  }
+  .btn.solid { background: linear-gradient(105deg, #eafcff, #8df2ff 55%, #21e6ff); color: #03222a; box-shadow: 0 0 30px rgba(33,230,255,.18); }
+  .btn.solid:hover { text-decoration: none; transform: translateY(-2px); filter: brightness(1.06); }
+  .btn.ghost { border: 1px solid var(--edge-hi); color: var(--ink); }
+  .btn.ghost:hover { text-decoration: none; background: rgba(33,230,255,.07); }
+
+  /* contact */
+  .contact { text-align: center; }
+  .contact .mail {
+    display: inline-block; margin-top: 22px;
+    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+    font-size: clamp(22px, 3.4vw, 32px); font-weight: 700;
+    background: linear-gradient(100deg, #fff, var(--cyan-soft) 55%, var(--cyan));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  footer { padding: 40px 0 56px; border-top: 1px solid rgba(33,230,255,.08); }
+  .foot-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 26px; padding-bottom: 20px; }
+  .foot-links a { font-size: 12.5px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--dim); font-weight: 600; }
+  .foot-links a:hover { color: var(--ink); text-decoration: none; }
+  .colophon { font-size: 13px; color: var(--faint); line-height: 1.8; text-align: center; }
+
+  .rv { opacity: 0; transform: translateY(26px); transition: opacity .8s cubic-bezier(.16,1,.3,1), transform .8s cubic-bezier(.16,1,.3,1); }
+  .rv.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .rv { opacity: 1; transform: none; transition: none; }
+    .card, .btn { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <a class="brand" href="#top">
+    <img src="logo.png" alt="Campos Systems logo">
+    <span class="wordmark">CAMPOS&nbsp;SYSTEMS</span>
+  </a>
+  <div class="nav-links">
+    <a class="nav-hide" href="#what">What we build</a>
+    <a class="nav-hide" href="#product">Adam</a>
+    <a href="#contact">Contact</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <!-- connected-nodes mark, inline for crispness in both themes -->
+    <svg class="glyph" viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <filter id="g" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.2" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <g filter="url(#g)" stroke="#21e6ff" fill="#21e6ff">
+        <path d="M50 24 L74 66 L26 66 Z" fill="none" stroke-width="2" opacity=".55"/>
+        <line x1="50" y1="50" x2="50" y2="24" stroke-width="2.4"/>
+        <line x1="50" y1="50" x2="74" y2="66" stroke-width="2.4"/>
+        <line x1="50" y1="50" x2="26" y2="66" stroke-width="2.4"/>
+        <circle cx="50" cy="24" r="6.5"/>
+        <circle cx="74" cy="66" r="6.5"/>
+        <circle cx="26" cy="66" r="6.5"/>
+        <circle cx="50" cy="50" r="9" fill="#8df2ff"/>
+        <circle cx="50" cy="50" r="4" fill="#ffffff"/>
+      </g>
+    </svg>
+    <div class="eyebrow">Campos Systems LLC</div>
+    <h1>Software that answers <em>only to you.</em></h1>
+    <p class="sub">We build private, local-first tools that run on your own machine —
+    no accounts to create, no servers of ours in the loop, and nothing phoning home.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+<section id="what">
+  <div class="label rv">What we build</div>
+  <h2 class="rv">Private by architecture, not by promise.</h2>
+  <p class="section-sub rv">A privacy policy can change. Architecture can't be walked back.
+  Our software is built so there's simply no server of ours to trust in the first place.</p>
+  <div class="cards">
+    <div class="card rv">
+      <div class="glyph"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-2.8 8.1-7 10-4.2-1.9-7-5.6-7-10V6l7-3z"/></svg></div>
+      <h3>Local-first</h3>
+      <p>It runs on your computer. Your notes, history, and data live in plain files you can open,
+      copy, and keep — never on a server of ours.</p>
+    </div>
+    <div class="card rv">
+      <div class="glyph"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.6 2.6L16 9"/></svg></div>
+      <h3>You stay in control</h3>
+      <p>Nothing acts behind your back. Actions wait for your approval, with backups and a plain log.
+      Zero telemetry, zero crash reporting — ever.</p>
+    </div>
+    <div class="card rv">
+      <div class="glyph"><svg viewBox="0 0 24 24"><path d="M6 10V7a6 6 0 0 1 12 0v3"/><rect x="4" y="10" width="16" height="11" rx="2"/></svg></div>
+      <h3>No lock-in</h3>
+      <p>No accounts, no subscriptions holding your data hostage. If you stop paying any attention
+      to us, your software keeps working.</p>
+    </div>
+  </div>
+</section>
+
+<section id="product">
+  <div class="label rv">Our software</div>
+  <div class="product rv">
+    <img class="pmark" src="icon.png" alt="Adam">
+    <div>
+      <div class="tag">Personal AI · Free · Windows</div>
+      <div class="name">Adam</div>
+      <p>A personal AI assistant that lives on your PC. It remembers what you're juggling,
+      plans your days onto your calendar, tracks your life on a personal dashboard, and checks in
+      morning and night. Runs on your own Claude; nothing leaves your machine. Free to download.</p>
+      <div class="btns">
+        <a class="btn solid" href="https://github.com/DCom17/adam-releases/releases/latest/download/adam-setup.exe">Download for Windows</a>
+        <a class="btn ghost" href="https://github.com/DCom17/adam-releases/releases">Releases &amp; changelog</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="contact">
+  <div class="label rv">Contact</div>
+  <h2 class="rv">Questions, or want to work together?</h2>
+  <p class="section-sub rv">We read everything that comes in.</p>
+  <a class="mail rv" href="mailto:hello@camposenterprises.org">hello@camposenterprises.org</a>
+</section>
+
+<footer>
+  <div class="foot-links">
+    <a href="#what">What we build</a>
+    <a href="#product">Adam</a>
+    <a href="mailto:hello@camposenterprises.org">Contact</a>
+    <a href="https://github.com/DCom17/adam-releases/releases">Adam releases</a>
+  </div>
+  <div class="colophon">
+    © 2026 Campos Systems LLC · Private, local-first software.<br>
+    Security reports: <a href="mailto:security@camposenterprises.org">security@camposenterprises.org</a>
+  </div>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var nav = document.getElementById("nav");
+  addEventListener("scroll", function () {
+    nav.classList.toggle("scrolled", scrollY > 30);
+  }, { passive: true });
+
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    document.querySelectorAll(".rv").forEach(function (el) { el.classList.add("in"); });
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    var i = 0;
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      e.target.style.transitionDelay = (i++ * 80) + "ms";
+      e.target.classList.add("in");
+      io.unobserve(e.target);
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+  document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
+})();
+</script>
+
+</body>
+</html>
