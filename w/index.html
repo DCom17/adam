@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My week with Adam</title>
+<meta name="description" content="A week of quests, streaks and XP with Adam.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="../adam-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="../adam-icon.png">
+
+<!-- Week-card links (Adam app, 2026-11-03). The card's counts ride in the query string
+     (streak, quests, XP, level/rank, best weekday, strongest stat, Adam's line; never money,
+     health or quest titles) and this page redraws them. No server, nothing stored; the only
+     outside request is ../get.js asking Apple's public lookup whether the App Store listing is live. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://itunes.apple.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Adam">
+<meta property="og:title" content="My week with Adam">
+<meta property="og:description" content="Tap to see the card.">
+<meta property="og:image" content="https://adam.camposenterprises.org/w/card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://adam.camposenterprises.org/w/card.png">
+
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: #02050b; color: #eef2f6;
+         font: 17px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+  main { width: 100%; max-width: 420px; text-align: center; }
+  .card { background: linear-gradient(#071423, #02050b); border: 1px solid rgba(33,230,255,.3);
+          border-radius: 24px; padding: 26px 18px 18px; margin-bottom: 18px; }
+  img.logo { width: 72px; height: 72px; border-radius: 18px; }
+  .kicker { margin: 14px 0 2px; font-weight: 800; letter-spacing: 4px; font-size: 14px; color: #18dcf0; }
+  .range { color: #c9dde6; font-weight: 600; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0 16px; }
+  .tile { background: #0b1626; border: 1px solid; border-radius: 16px; padding: 12px 4px 10px; }
+  .tile b { display: block; font-size: 32px; line-height: 1.1; font-weight: 800; }
+  .tile span { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #8fb9c6; }
+  .line { margin: 4px 0; color: #e6f4f8; font-weight: 600; }
+  .line.stat { color: #18dcf0; }
+  .quote { margin: 16px 0 2px; font-style: italic; font-weight: 600; font-size: 19px; }
+  .by { font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #8fb9c6; }
+  .foot { display: flex; justify-content: space-between; margin-top: 18px; padding-top: 12px;
+          border-top: 1px solid rgba(255,255,255,.08); font-size: 14px; font-weight: 700; color: #c9dde6; }
+  .foot .brand { color: #18dcf0; letter-spacing: 1px; }
+  a.btn { display: block; padding: 15px 18px; border-radius: 14px; font-weight: 600;
+          text-decoration: none; margin: 0 0 12px; border: 1px solid #2a3846; color: #eef2f6; }
+  a.soon { border-style: dashed; color: #8a99a6; }
+  .bad { color: #ffb4a8; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card" id="card">
+    <img class="logo" src="../adam-icon.png" alt="Adam">
+    <div class="kicker" id="kicker">MY WEEK WITH ADAM</div>
+    <div class="range" id="range"></div>
+    <div class="tiles">
+      <div class="tile" style="border-color:rgba(255,200,80,.45)"><b id="s" style="color:#ffc850">0</b><span id="sL">DAY STREAK</span></div>
+      <div class="tile" style="border-color:rgba(61,220,151,.45)"><b id="q" style="color:#3ddc97">0</b><span id="qL">QUESTS</span></div>
+      <div class="tile" style="border-color:rgba(24,220,240,.45)"><b id="x" style="color:#18dcf0">0</b><span>XP</span></div>
+    </div>
+    <div class="line" id="best" hidden></div>
+    <div class="line stat" id="top" hidden></div>
+    <div class="line" id="boss" hidden></div>
+    <div class="quote" id="quote" hidden></div>
+    <div class="by" id="by" hidden>— ADAM</div>
+    <div class="foot"><span id="lvl"></span><span class="brand">ADAM</span></div>
+  </div>
+  <p class="bad" id="bad" hidden>This link looks incomplete.</p>
+  <a class="btn" id="get" data-get="Get Adam on the App Store">Adam is coming soon to the App Store</a>
+</main>
+<script>
+(function () {
+  // Everything is set with textContent: the query is outside input.
+  var p = new URLSearchParams(location.search);
+  var es = p.get('h') === 'es';
+  var $ = function (id) { return document.getElementById(id); };
+  var clip = function (s, n) { return (s || '').replace(/\s+/g, ' ').trim().slice(0, n); };
+  var num = function (k) { var n = parseInt(p.get(k), 10); return isFinite(n) && n >= 0 ? n : null; };
+  var show = function (id, text) { if (text) { $(id).textContent = text; $(id).hidden = false; } };
+  if (es) {
+    document.documentElement.lang = 'es';
+    document.title = 'Mi semana con Adam';
+    $('kicker').textContent = 'MI SEMANA CON ADAM';
+    $('sL').textContent = 'DÍAS DE RACHA';
+    $('qL').textContent = 'MISIONES';
+    $('bad').textContent = 'Este enlace parece incompleto.';
+    $('get').setAttribute('data-get', 'Consigue Adam en el App Store');
+    $('get').textContent = 'Adam llegará pronto al App Store';
+    $('get').setAttribute('data-soon', 'Adam llegará pronto al App Store');
+  }
+  if (p.get('v') !== '1' || num('s') === null || num('q') === null || num('x') === null) {
+    $('card').hidden = true;
+    $('bad').hidden = false;
+    return;
+  }
+  $('range').textContent = clip(p.get('r'), 40);
+  $('s').textContent = num('s');
+  $('q').textContent = num('q');
+  $('x').textContent = num('x').toLocaleString(es ? 'es-419' : 'en-US');
+  var d = clip(p.get('d'), 40).split('~');
+  if (d[0] && d[1]) {
+    var n = parseInt(d[1], 10) || 0;
+    show('best', es ? 'Mejor día: ' + d[0] + ', ' + n + (n === 1 ? ' misión' : ' misiones')
+                    : 'Best day: ' + d[0] + ', ' + n + (n === 1 ? ' quest' : ' quests'));
+  }
+  var t = clip(p.get('t'), 30);
+  if (t) show('top', (es ? 'Lo más fuerte: ' : 'Strongest: ') + t.charAt(0).toUpperCase() + t.slice(1));
+  show('boss', clip(p.get('b'), 80));
+  var a = clip(p.get('a'), 160);
+  if (a) { show('quote', '“' + a + '”'); $('by').hidden = false; }
+  var lv = num('l'), rk = clip(p.get('k'), 4);
+  if (lv !== null) $('lvl').textContent = (es ? 'Nivel ' : 'Level ') + lv + (rk ? (es ? ' · Rango ' : ' · Rank ') + rk : '');
+})();
+</script>
+<script src="../get.js"></script>
+</body>
+</html>

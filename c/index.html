@@ -6,13 +6,14 @@
 <title>Challenge on Adam</title>
 <meta name="description" content="A friend challenged you on Adam. Tap to open it in the app.">
 <meta name="robots" content="noindex">
-<link rel="icon" href="../icon.png" type="image/png">
-<link rel="apple-touch-icon" href="../icon.png">
+<link rel="icon" href="../adam-icon.png" type="image/png">
+<link rel="apple-touch-icon" href="../adam-icon.png">
 
 <!-- Challenge links (Adam app, 2026-11-03). The whole challenge rides in the query string;
      this page only hands it to the app as adamlite://challenge?<same query>. No server,
-     nothing stored, no external requests. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+     nothing stored; the only outside request is ../get.js asking Apple's public lookup whether
+     the App Store listing is live. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://itunes.apple.com; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 
 <meta property="og:type" content="website">
@@ -39,18 +40,18 @@
           text-decoration: none; margin: 0 0 12px; }
   a.primary { background: #18dcf0; color: #04121a; }
   a.ghost { border: 1px solid #2a3846; color: #eef2f6; }
+  a.soon { border-style: dashed; color: #8a99a6; }
   small { display: block; margin-top: 18px; color: #6f7f8e; font-size: 13px; }
   .bad { color: #ffb4a8; }
 </style>
 </head>
 <body>
 <main>
-  <img class="logo" src="../icon.png" alt="Adam">
+  <img class="logo" src="../adam-icon.png" alt="Adam">
   <h1>Challenge on Adam</h1>
   <p id="msg">Opening Adam…</p>
   <a class="btn primary" id="open" href="adamlite://challenge">Open in Adam</a>
-  <!-- iOS: TestFlight until the App Store listing (ASC 6822980989) is live; then https://apps.apple.com/app/id6822980989 -->
-  <a class="btn ghost" id="get" href="https://testflight.apple.com/join/mmzQefaA">Don't have Adam? Get it</a>
+  <a class="btn ghost" id="get" data-get="Don't have Adam? Get it on the App Store">Adam is coming soon to the App Store</a>
   <small>Once Adam is installed, come back to this message and tap the link again.</small>
 </main>
 <script>
@@ -67,13 +68,11 @@
   }
   var app = 'adamlite://challenge' + q;
   open.href = app;
-  if (/Android/i.test(navigator.userAgent)) {
-    document.getElementById('get').href = 'https://play.google.com/store/apps/details?id=org.camposenterprises.adam';
-  }
   // Try the app right away; the button stays for when the browser blocks the jump.
   setTimeout(function () { location.href = app; }, 50);
   setTimeout(function () { msg.textContent = 'Tap below to open the challenge.'; }, 1500);
 })();
 </script>
+<script src="../get.js"></script>
 </body>
 </html>
