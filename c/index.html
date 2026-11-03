@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Challenge on Adam</title>
+<meta name="description" content="A friend challenged you on Adam. Tap to open it in the app.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="../icon.png" type="image/png">
+<link rel="apple-touch-icon" href="../icon.png">
+
+<!-- Challenge links (Adam app, 2026-11-03). The whole challenge rides in the query string;
+     this page only hands it to the app as adamlite://challenge?<same query>. No server,
+     nothing stored, no external requests. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Adam">
+<meta property="og:title" content="Challenge on Adam">
+<meta property="og:description" content="Tap to open it in Adam.">
+<meta property="og:image" content="https://adam.camposenterprises.org/c/card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://adam.camposenterprises.org/c/card.png">
+
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: #05070c; color: #eef2f6;
+         font: 17px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+  main { width: 100%; max-width: 420px; text-align: center; }
+  img.logo { width: 96px; height: 96px; border-radius: 22px; }
+  h1 { font-size: 30px; margin: 18px 0 6px; color: #18dcf0; letter-spacing: .5px; }
+  p { margin: 0 0 18px; color: #a9b6c2; }
+  a.btn { display: block; padding: 15px 18px; border-radius: 14px; font-weight: 600;
+          text-decoration: none; margin: 0 0 12px; }
+  a.primary { background: #18dcf0; color: #04121a; }
+  a.ghost { border: 1px solid #2a3846; color: #eef2f6; }
+  small { display: block; margin-top: 18px; color: #6f7f8e; font-size: 13px; }
+  .bad { color: #ffb4a8; }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="../icon.png" alt="Adam">
+  <h1>Challenge on Adam</h1>
+  <p id="msg">Opening Adam…</p>
+  <a class="btn primary" id="open" href="adamlite://challenge">Open in Adam</a>
+  <!-- iOS: TestFlight until the App Store listing (ASC 6822980989) is live; then https://apps.apple.com/app/id6822980989 -->
+  <a class="btn ghost" id="get" href="https://testflight.apple.com/join/mmzQefaA">Don't have Adam? Get it</a>
+  <small>Once Adam is installed, come back to this message and tap the link again.</small>
+</main>
+<script>
+(function () {
+  var q = location.search || '';
+  var open = document.getElementById('open');
+  var msg = document.getElementById('msg');
+  // Only a real challenge query is handed on (it always starts with v=).
+  if (!/^\?v=\d/.test(q)) {
+    msg.textContent = "This link looks incomplete. Ask your friend to send it again.";
+    msg.className = 'bad';
+    open.style.display = 'none';
+    return;
+  }
+  var app = 'adamlite://challenge' + q;
+  open.href = app;
+  if (/Android/i.test(navigator.userAgent)) {
+    document.getElementById('get').href = 'https://play.google.com/store/apps/details?id=org.camposenterprises.adam';
+  }
+  // Try the app right away; the button stays for when the browser blocks the jump.
+  setTimeout(function () { location.href = app; }, 50);
+  setTimeout(function () { msg.textContent = 'Tap below to open the challenge.'; }, 1500);
+})();
+</script>
+</body>
+</html>
