@@ -10,8 +10,8 @@
 <link rel="apple-touch-icon" href="../adam-icon.png">
 
 <!-- Week-card links (Adam app, 2026-11-03). The card's counts ride in the query string
-     (streak, quests, XP, level/rank, best weekday, strongest stat, Adam's line; never money,
-     health or quest titles) and this page redraws them. No server, nothing stored; the only
+     (streak, quests, XP, level/rank, best weekday, strongest stat; never money, health or
+     quest titles; long v=1 links also carried Adam's line) and this page redraws them. No server, nothing stored; the only
      outside request is ../get.js asking Apple's public lookup whether the App Store listing is live. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://itunes.apple.com; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
@@ -81,6 +81,39 @@
 (function () {
   // Everything is set with textContent: the query is outside input.
   var p = new URLSearchParams(location.search);
+  // Short form (app 2026-11-03, link-only share):
+  // d = monday.streak.quests.xp.level.rank.bestWeekday.bestCount.stat.bossHits.lang (monday = base-36
+  // days since 1970; empty = none; lang e|s), b = the boss name if the person chose to show it.
+  // It's turned into the long (v=1) params below, so one renderer handles both.
+  var sd = (p.get('d') || '').split('.');
+  if (!p.get('v') && sd.length >= 11) {
+    var es0 = sd[10] === 's', loc = es0 ? 'es-419' : 'en-US';
+    var mon = parseInt(sd[0], 36);
+    var int = function (v) { return /^\d{1,9}$/.test(v) ? v : ''; };
+    if (isFinite(mon)) {
+      var D = 864e5, a0 = new Date(mon * D), b0 = new Date(mon * D + 6 * D);
+      var f = function (dt, o) { o.timeZone = 'UTC'; return dt.toLocaleDateString(loc, o); };
+      var same = a0.getUTCMonth() === b0.getUTCMonth();
+      p.set('r', f(a0, { month: 'short', day: 'numeric' }) + ' – ' + f(b0, same ? { day: 'numeric' } : { month: 'short', day: 'numeric' }));
+      var wd = int(sd[6]), bc = int(sd[7]);
+      // mon + k days is weekday (k + 1) % 7, so weekday wd is mon + (wd + 6) % 7.
+      if (wd !== '' && +wd < 7 && bc) p.set('d', f(new Date(mon * D + ((+wd + 6) % 7) * D), { weekday: 'long' }) + '~' + bc);
+      else p.delete('d');
+    } else p.delete('d');
+    var STATS = es0 ? ['salud', 'finanzas', 'mente', 'disciplina', 'social', 'carrera'] : ['health', 'finance', 'mind', 'discipline', 'social', 'career'];
+    if (int(sd[8]) !== '' && STATS[+sd[8]]) p.set('t', STATS[+sd[8]]);
+    var hits = int(sd[9]);
+    if (hits) {
+      var hw = +hits === 1 ? (es0 ? '1 golpe' : '1 hit') : hits + (es0 ? ' golpes' : ' hits');
+      var bn = clip0(p.get('b'), 40);
+      p.set('b', bn ? bn + (es0 ? ' recibió ' : ' took ') + hw : (es0 ? 'Un jefe recibió ' : 'A boss took ') + hw);
+    } else p.delete('b');
+    p.set('s', int(sd[1])); p.set('q', int(sd[2])); p.set('x', int(sd[3])); p.set('l', int(sd[4]));
+    p.set('k', /^[A-Z]{1,3}$/.test(sd[5]) ? sd[5] : '');
+    if (es0) p.set('h', 'es');
+    p.set('v', '1');
+  }
+  function clip0(s, n) { return (s || '').replace(/\s+/g, ' ').trim().slice(0, n); }
   var es = p.get('h') === 'es';
   var $ = function (id) { return document.getElementById(id); };
   var clip = function (s, n) { return (s || '').replace(/\s+/g, ' ').trim().slice(0, n); };
